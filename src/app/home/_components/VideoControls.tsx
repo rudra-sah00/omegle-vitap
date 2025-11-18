@@ -20,71 +20,78 @@ export default function VideoControls({
   onStop,
 }: VideoControlsProps) {
   return (
-    <div 
-      className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 p-2 md:p-4"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="flex flex-col md:flex-row items-center justify-between gap-2 md:gap-0">
-        <div className="flex items-center space-x-2 md:space-x-4">
-          <button
-            onClick={onMicToggle}
-            className={
-              "px-3 md:px-6 py-1.5 md:py-2 text-xs md:text-base rounded-lg font-semibold transition-colors " +
-              (isMicOn
-                ? "bg-white text-gray-900 hover:bg-gray-200"
-                : "bg-red-600 text-white hover:bg-red-700")
-            }
-          >
-            {isMicOn ? "🎤" : "🔇"}
-            <span className="hidden md:inline ml-1">{isMicOn ? "Mute" : "Unmute"}</span>
-          </button>
+    <>
+      {/* Camera and Mic controls (same style as preview) */}
+      <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 flex gap-3 z-10">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onCameraToggle();
+          }}
+          className={`p-3 rounded-full shadow-lg transition-all ${
+            isCameraOn
+              ? "bg-white text-gray-900 hover:bg-gray-100"
+              : "bg-red-600 text-white hover:bg-red-700"
+          }`}
+          title={isCameraOn ? "Turn off camera" : "Turn on camera"}
+        >
+          {isCameraOn ? (
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+            </svg>
+          ) : (
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A2 2 0 0018 13V7a1 1 0 00-1.447-.894l-2 1A1 1 0 0014 8v.586l-2-2V6a2 2 0 00-2-2H7.414l-3.707-3.707zM2 6a2 2 0 012-2h.586L2 1.414V6zm10 8.586l-2-2V14a2 2 0 01-2 2H4a2 2 0 01-2-2v-2.586L10 8.586V14.586z" clipRule="evenodd" />
+            </svg>
+          )}
+        </button>
 
-          <button
-            onClick={onCameraToggle}
-            className={
-              "px-3 md:px-6 py-1.5 md:py-2 text-xs md:text-base rounded-lg font-semibold transition-colors " +
-              (isCameraOn
-                ? "bg-white text-gray-900 hover:bg-gray-200"
-                : "bg-red-600 text-white hover:bg-red-700")
-            }
-          >
-            {isCameraOn ? "📹" : "📷"}
-            <span className="hidden md:inline ml-1">{isCameraOn ? "Stop" : "Start"}</span>
-          </button>
-        </div>
-
-        <div className="flex items-center space-x-2 md:space-x-4">
-          {/* Network quality indicator */}
-          <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-gray-800 rounded-lg">
-            <div className={`w-2 h-2 rounded-full ${
-              networkQuality === 'excellent' ? 'bg-green-500' :
-              networkQuality === 'good' ? 'bg-yellow-500' :
-              networkQuality === 'poor' ? 'bg-orange-500' : 'bg-red-500'
-            }`}></div>
-            <span className="text-white text-xs capitalize">{networkQuality}</span>
-          </div>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onNext();
-            }}
-            className="px-4 md:px-8 py-1.5 md:py-2 text-xs md:text-base rounded-lg font-semibold bg-orange-600 text-white hover:bg-orange-700 transition-colors"
-          >
-            ⏭️ <span className="hidden md:inline">Next</span>
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onStop();
-            }}
-            className="px-4 md:px-8 py-1.5 md:py-2 text-xs md:text-base rounded-lg font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors"
-          >
-            ⏹️ <span className="hidden md:inline">Stop</span>
-          </button>
-        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onMicToggle();
+          }}
+          className={`p-3 rounded-full shadow-lg transition-all ${
+            isMicOn
+              ? "bg-white text-gray-900 hover:bg-gray-100"
+              : "bg-red-600 text-white hover:bg-red-700"
+          }`}
+          title={isMicOn ? "Mute microphone" : "Unmute microphone"}
+        >
+          {isMicOn ? (
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
+            </svg>
+          ) : (
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-.622-.622A7 7 0 0017 8a1 1 0 00-2 0 5.003 5.003 0 01-.9 2.857l-1.23-1.23A2.99 2.99 0 0013 8V4a3 3 0 00-5.905-.75L5.586 1.707a1 1 0 00-1.414 1.414l.621.621-.621-.621zM8 4.414L7 3.414V4a3 3 0 003 3h.586L8 4.414zM5 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07A6.995 6.995 0 0013.938 14L5 8z" clipRule="evenodd" />
+            </svg>
+          )}
+        </button>
       </div>
-    </div>
+
+      {/* Next and Stop buttons at bottom */}
+      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-3 z-10">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onNext();
+          }}
+          className="px-8 py-3 rounded-lg font-semibold bg-orange-600 text-white hover:bg-orange-700 transition-colors shadow-lg"
+        >
+          Next
+        </button>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onStop();
+          }}
+          className="px-8 py-3 rounded-lg font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors shadow-lg"
+        >
+          Stop
+        </button>
+      </div>
+    </>
   );
 }

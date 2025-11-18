@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import ChatWindow from "./_components/ChatWindow";
 import VideoPanel from "./_components/VideoPanel";
 import VideoControls from "./_components/VideoControls";
@@ -15,6 +16,18 @@ import { useMediaDevices } from "@/hooks/useMediaDevices";
 import { agoraService } from "@/services/agoraService";
 
 export default function HomePage() {
+  const router = useRouter();
+
+  // Check if user has submitted their info
+  useEffect(() => {
+    const userInfo = localStorage.getItem("userInfo");
+    if (!userInfo) {
+      // Redirect to landing page if no user info
+      router.push("/");
+      return;
+    }
+  }, [router]);
+
   // UI State
   const [isMicOn, setIsMicOn] = useState(false); // Start disabled
   const [isCameraOn, setIsCameraOn] = useState(false); // Start disabled
@@ -228,26 +241,24 @@ export default function HomePage() {
   };
 
   const handleStartWithPermissions = async () => {
-    // Ensure we have both camera and mic before starting
+    // Start searching with current camera/mic state (don't force them on)
     try {
-      // Create tracks if they don't exist
-      if (!previewVideoTrack) {
+      // Only create tracks if user has them enabled
+      if (isCameraOn && !previewVideoTrack) {
         const videoTracks = await agoraService.createLocalTracks(true, false);
         if (videoTracks.videoTrack) {
           setPreviewVideoTrack(videoTracks.videoTrack);
-          setIsCameraOn(true);
         }
       }
       
-      if (!previewAudioTrack) {
+      if (isMicOn && !previewAudioTrack) {
         const audioTracks = await agoraService.createLocalTracks(false, true);
         if (audioTracks.audioTrack) {
           setPreviewAudioTrack(audioTracks.audioTrack);
-          setIsMicOn(true);
         }
       }
       
-      // Now start searching
+      // Now start searching with current state
       searchForPartner();
     } catch (error: any) {
       console.error('Failed to get permissions:', error);
@@ -283,13 +294,15 @@ export default function HomePage() {
           onToggleControls={handleLocalVideoClick}
         >
           {/* Pre-call controls (camera/mic above Start button) */}
-          {!isConnected && !isSearching && showPreCallControls && (
+          {!isConnected && showPreCallControls && (
             <PreCallControls
               isMicOn={isMicOn}
               isCameraOn={isCameraOn}
               onMicToggle={handlePreviewMicToggle}
               onCameraToggle={handlePreviewCameraToggle}
               onStart={handleStartWithPermissions}
+              onStop={handleStop}
+              isSearching={isSearching}
             />
           )}
 
@@ -307,7 +320,7 @@ export default function HomePage() {
           )}
 
           {/* Stop searching button */}
-          {isSearching && (
+          {isSearching && !showPreCallControls && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -319,8 +332,8 @@ export default function HomePage() {
             </button>
           )}
 
-          {/* In-call controls overlay */}
-          {isConnected && showControls && (
+          {/* In-call controls - always visible during connection */}
+          {isConnected && (
             <VideoControls
               isMicOn={isMicOn}
               isCameraOn={isCameraOn}

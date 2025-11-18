@@ -6,6 +6,8 @@ interface PreCallControlsProps {
   onMicToggle: () => void;
   onCameraToggle: () => void;
   onStart: () => void;
+  onStop?: () => void;
+  isSearching?: boolean;
 }
 
 export default function PreCallControls({
@@ -14,6 +16,8 @@ export default function PreCallControls({
   onMicToggle,
   onCameraToggle,
   onStart,
+  onStop,
+  isSearching = false,
 }: PreCallControlsProps) {
   return (
     <>
@@ -66,15 +70,23 @@ export default function PreCallControls({
         </button>
       </div>
 
-      {/* Start button */}
+      {/* Start / Stop Searching button */}
       <button
         onClick={(e) => {
           e.stopPropagation();
-          onStart();
+          if (isSearching && onStop) {
+            onStop();
+          } else {
+            onStart();
+          }
         }}
-        className="absolute bottom-6 left-1/2 transform -translate-x-1/2 px-12 py-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg text-lg z-10"
+        className={`absolute bottom-6 left-1/2 transform -translate-x-1/2 px-12 py-4 rounded-lg font-semibold transition-colors shadow-lg text-lg z-10 ${
+          isSearching
+            ? 'bg-red-600 text-white hover:bg-red-700'
+            : 'bg-blue-600 text-white hover:bg-blue-700'
+        }`}
       >
-        Start
+        {isSearching ? 'Stop Searching' : 'Start'}
       </button>
     </>
   );

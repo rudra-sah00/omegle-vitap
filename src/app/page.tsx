@@ -6,15 +6,24 @@ import Link from "next/link";
 import Header from "@/app/_components/Header";
 import MainLayout from "@/app/_components/MainLayout";
 import InfoBox from "@/app/_components/InfoBox";
+import UserInfoModal from "@/app/_components/UserInfoModal";
 
 export default function Home() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showUserInfoModal, setShowUserInfoModal] = useState(false);
   const router = useRouter();
 
   const handleEnter = () => {
     if (agreedToTerms) {
-      router.push("/home");
+      setShowUserInfoModal(true);
     }
+  };
+
+  const handleUserInfoSubmit = (name: string, gender: string) => {
+    // Store user info in localStorage
+    localStorage.setItem("userInfo", JSON.stringify({ name, gender, timestamp: Date.now() }));
+    setShowUserInfoModal(false);
+    router.push("/home");
   };
 
   return (
@@ -60,6 +69,13 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      {/* User Info Modal */}
+      <UserInfoModal
+        isOpen={showUserInfoModal}
+        onSubmit={handleUserInfoSubmit}
+        onClose={() => setShowUserInfoModal(false)}
+      />
     </MainLayout>
   );
 }

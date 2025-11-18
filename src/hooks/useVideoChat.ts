@@ -106,6 +106,7 @@ export function useVideoChat(
       console.log('Joined video channel:', channelName, 'Video:', shouldPublishVideo, 'Audio:', shouldPublishAudio);
     } catch (error) {
       console.error('Failed to join video channel:', error);
+      isJoiningRef.current = false; // Reset on error
     } finally {
       isJoiningRef.current = false;
     }
@@ -126,10 +127,13 @@ export function useVideoChat(
       await agoraService.leaveChannel();
       setRemoteUsers([]);
       setIsJoined(false);
-      isJoiningRef.current = false;
+      isJoiningRef.current = false; // Reset joining flag
       console.log('Left video channel');
     } catch (error) {
       console.error('Failed to leave video channel:', error);
+      // Reset flags even on error
+      isJoiningRef.current = false;
+      setIsJoined(false);
     }
   }, [localVideoTrack, localAudioTrack]);
 

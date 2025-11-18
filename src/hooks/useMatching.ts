@@ -28,6 +28,7 @@ export function useMatching(
 
   const unsubscribePartnerRef = useRef<(() => void) | null>(null);
   const searchIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const partnerConnectedCallbackRef = useRef<(() => void) | null>(null);
   const partnerDisconnectedCallbackRef = useRef<(() => void) | null>(null);
 
@@ -40,6 +41,23 @@ export function useMatching(
 
   // Connect to partner
   const connectToPartner = (newPartnerId: string) => {
+    // Prevent duplicate connections
+    if (isConnected || partnerId) {
+      console.log('Already connected, ignoring duplicate connection attempt');
+      return;
+    }
+
+    // Clear search intervals/timeouts immediately
+    if (searchIntervalRef.current) {
+      clearInterval(searchIntervalRef.current);
+      searchIntervalRef.current = null;
+    }
+    
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+
     setPartnerId(newPartnerId);
     
     const channel = [userId, newPartnerId].sort().join('_');
@@ -47,11 +65,6 @@ export function useMatching(
     
     setIsSearching(false);
     setIsConnected(true);
-    
-    if (searchIntervalRef.current) {
-      clearInterval(searchIntervalRef.current);
-      searchIntervalRef.current = null;
-    }
     
     setTimeout(() => {
       onSystemMessage('You are now connected with a stranger!');
@@ -97,13 +110,22 @@ export function useMatching(
 
   // Search for partner
   const searchForPartner = async () => {
-    if (!userId || isConnected || isSearching) return;
+    if (!userId || isConnected || isSearching) {
+      console.log('Cannot search: already searching or connected');
+      return;
+    }
 
     setIsSearching(true);
     
     try {
-      await userQueueService.addToQueue(userId);
-      console.log('Added to queue, searching for partner...');
+      // Get user info from localStorage
+      const userInfoStr = localStorage.getItem('userInfo');
+      const userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
+      const gender = userInfo?.gender || 'other';
+      const name = userInfo?.name || 'Anonymous';
+
+      await userQueueService.addToQueue(userId, gender, name);
+      console.log(`Added to queue as ${gender}, searching for partner...`);
 
       const partner = await userQueueService.tryInstantMatch(userId);
       
@@ -111,6 +133,12 @@ export function useMatching(
         console.log('Instant match found:', partner);
         connectToPartner(partner);
         return;
+      }
+
+      // Clear any existing listener before setting new one
+      if (unsubscribePartnerRef.current) {
+        unsubscribePartnerRef.current();
+        unsubscribePartnerRef.current = null;
       }
 
       const unsubscribe = userQueueService.onPartnerConnected(userId, (partnerId) => {
@@ -131,8 +159,25 @@ export function useMatching(
             clearInterval(searchIntervalRef.current);
             searchIntervalRef.current = null;
           }
+          if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+            searchTimeoutRef.current = null;
+          }
+          // Actually connect to the partner!
+          connectToPartner(partner);
         }
       }, 500);
+
+      // Auto-cancel search after 15 seconds
+      searchTimeoutRef.current = setTimeout(async () => {
+        console.log('Search timeout after 15 seconds');
+        if (searchIntervalRef.current) {
+          clearInterval(searchIntervalRef.current);
+          searchIntervalRef.current = null;
+        }
+        await disconnectFromPartner();
+        setIsSearching(false);
+      }, 15000);
 
     } catch (error) {
       console.error('Failed to search for partner:', error);
@@ -144,13 +189,20 @@ export function useMatching(
   const handleNext = async () => {
     if (!userId) return;
 
+    // Clear messages and states first
     onClearMessages();
-    setIsSearching(true);
     setIsConnected(false);
+    setPartnerId("");
+    setChannelName("");
 
-    disconnectFromPartner().then(() => {
+    // Disconnect from current partner and queue
+    await disconnectFromPartner();
+    
+    // Small delay before starting new search to ensure cleanup
+    setTimeout(() => {
+      setIsSearching(true);
       searchForPartner();
-    });
+    }, 100);
   };
 
   // Handle stop
@@ -164,6 +216,11 @@ export function useMatching(
     if (searchIntervalRef.current) {
       clearInterval(searchIntervalRef.current);
       searchIntervalRef.current = null;
+    }
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
     }
 
     if (unsubscribePartnerRef.current) {
@@ -186,8 +243,22 @@ export function useMatching(
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      disconnectFromPartner();
+      // Cleanup all timers and listeners on unmount
+      if (searchIntervalRef.current) {
+        clearInterval(searchIntervalRef.current);
+      }
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      if (unsubscribePartnerRef.current) {
+        unsubscribePartnerRef.current();
+      }
+      
+      // Remove from queue
       if (userId) {
+        userQueueService.removeFromQueue(userId).catch(err => 
+          console.error('Cleanup error:', err)
+        );
         userQueueService.cleanup(userId);
       }
     };
