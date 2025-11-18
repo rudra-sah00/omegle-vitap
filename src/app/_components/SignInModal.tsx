@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { UserService } from "@/services";
 import { Modal } from "@/components/ui";
 
 interface SignInModalProps {
@@ -25,7 +26,15 @@ export default function SignInModal({ isOpen, onClose, onSignInSuccess }: SignIn
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       
-      console.log("User signed in:", result.user);
+      // Save user to Firestore
+      await UserService.createOrUpdateUser(
+        result.user.uid,
+        result.user.email,
+        result.user.displayName,
+        result.user.photoURL
+      );
+      
+      console.log("User signed in and saved to Firestore:", result.user.uid);
       onSignInSuccess();
       onClose();
       

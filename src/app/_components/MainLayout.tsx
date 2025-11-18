@@ -6,7 +6,7 @@ interface MainLayoutProps {
 
 export default function MainLayout({ children }: MainLayoutProps) {
   return (
-    <div className="flex min-h-screen flex-col bg-blue-500 overflow-hidden">
+    <div className="flex min-h-screen flex-col bg-white overflow-hidden">
       {children}
     </div>
   );

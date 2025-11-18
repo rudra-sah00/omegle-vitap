@@ -1,15 +1,25 @@
 "use client";
 
+import { useState } from "react";
 import ProtectedRoute from "@/app/_components/ProtectedRoute";
 import VideoPlaceholder from "./_components/VideoPlaceholder";
 import ChatWindow from "./_components/ChatWindow";
+import StartChatModal from "./_components/StartChatModal";
 
 export default function HomePage() {
+  const [hasStarted, setHasStarted] = useState(false);
+
+  const handleStartChat = () => {
+    setHasStarted(true);
+  };
+
   return (
     <ProtectedRoute>
+      <StartChatModal isOpen={!hasStarted} onStart={handleStartChat} />
+      
       <div className="flex h-screen bg-white overflow-hidden">
-        {/* Left side - Video panels - takes more space */}
-        <div className="flex-1 flex flex-col gap-4 p-4">
+        {/* Left side - Video panels */}
+        <div className="flex flex-col gap-4 p-4" style={{ width: '60%' }}>
           {/* Stranger's video - equal size */}
           <div className="flex-1 min-h-0">
             <VideoPlaceholder label="Waiting for stranger..." fullHeight />
@@ -21,8 +31,8 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Right side - Chat window - fixed width */}
-        <div className="w-96 flex-shrink-0">
+        {/* Right side - Chat window - takes remaining space */}
+        <div className="flex-1">
           <ChatWindow />
         </div>
       </div>
