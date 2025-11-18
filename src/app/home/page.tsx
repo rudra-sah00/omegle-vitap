@@ -1,29 +1,56 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import VideoPlaceholder from "./_components/VideoPlaceholder";
+import { useState, useRef, useEffect } from "react";
 import ChatWindow from "./_components/ChatWindow";
+import VideoPanel from "./_components/VideoPanel";
+import VideoControls from "./_components/VideoControls";
+import PreCallControls from "./_components/PreCallControls";
+import MobileChat from "./_components/MobileChat";
+import MobileChatButton from "./_components/MobileChatButton";
 import { useChat } from "@/hooks/useChat";
-import { userQueueService } from "@/services/userQueueService";
+import { useVideoChat } from "@/hooks/useVideoChat";
+import { useMatching } from "@/hooks/useMatching";
+import { useKeyboardShortcuts, useVideoRenderer } from "@/hooks/useUIHelpers";
+import { useMediaDevices } from "@/hooks/useMediaDevices";
+import { agoraService } from "@/services/agoraService";
 
 export default function HomePage() {
   // UI State
-  const [isMicOn, setIsMicOn] = useState(true);
-  const [isCameraOn, setIsCameraOn] = useState(true);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isMicOn, setIsMicOn] = useState(false); // Start disabled
+  const [isCameraOn, setIsCameraOn] = useState(false); // Start disabled
   const [showControls, setShowControls] = useState(false);
+  const [showMobileChat, setShowMobileChat] = useState(false);
+  const [showPreCallControls, setShowPreCallControls] = useState(true);
   
-  // User & matching state
-  const [userId, setUserId] = useState<string>("");
-  const [partnerId, setPartnerId] = useState<string>("");
-  const [channelName, setChannelName] = useState<string>("");
-  const [isSearching, setIsSearching] = useState(false);
+  // Preview tracks (before connecting)
+  const [previewVideoTrack, setPreviewVideoTrack] = useState<any>(null);
+  const [previewAudioTrack, setPreviewAudioTrack] = useState<any>(null);
   
-  // Refs for cleanup
-  const unsubscribePartnerRef = useRef<(() => void) | null>(null);
-  const searchIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Refs
+  const localVideoRef = useRef<HTMLDivElement | null>(null);
+  const remoteVideoRef = useRef<HTMLDivElement | null>(null);
+  const hideControlsTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Chat hook
+  // Initialize Agora client only
+  useMediaDevices();
+
+  // Matching hook with chat callbacks (initialize first to get userId and channelName)
+  const matching = useMatching(
+    (msg: string) => {}, // Temporary, will be replaced
+    () => {} // Temporary, will be replaced
+  );
+  const {
+    userId,
+    channelName,
+    isSearching,
+    isConnected,
+    searchForPartner,
+    handleNext,
+    handleStop,
+  } = matching;
+
+  // Chat hook with actual userId and channelName from matching
+  const chat = useChat(userId, channelName);
   const {
     messages,
     partnerTyping,
@@ -31,316 +58,284 @@ export default function HomePage() {
     sendSystemMessage,
     setTypingIndicator,
     clearMessages,
-    cleanup: cleanupChat,
-  } = useChat(userId, channelName);
+  } = chat;
 
-  // Generate userId on mount
+  // Video chat hook (pass preview state for track publishing)
+  const {
+    localVideoTrack,
+    remoteUsers,
+    isJoined,
+    networkQuality,
+    toggleMic,
+    toggleCamera,
+    leaveChannel,
+  } = useVideoChat(userId, channelName, isConnected, isCameraOn, isMicOn);
+
+  // Render local video (either preview or connected)
   useEffect(() => {
-    const newUserId = userQueueService.generateUserId();
-    setUserId(newUserId);
-    console.log('Generated user ID:', newUserId);
-  }, []);
+    if (!isConnected && previewVideoTrack && localVideoRef.current) {
+      // Show preview before connecting
+      previewVideoTrack.play(localVideoRef.current);
+      console.log('Playing preview video');
+    } else if (isConnected && localVideoTrack && localVideoRef.current) {
+      // Show connected video
+      localVideoTrack.play(localVideoRef.current);
+      console.log('Playing connected video');
+    }
+  }, [previewVideoTrack, localVideoTrack, isConnected]);
 
-  // Search for partner - INSTANT MATCHING
-  const searchForPartner = async () => {
-    if (!userId || isConnected || isSearching) return;
+  // Render remote video
+  useVideoRenderer(
+    remoteVideoRef, 
+    remoteUsers.length > 0 && remoteUsers[0].videoTrack ? remoteUsers[0].videoTrack : null,
+    true
+  );
 
-    setIsSearching(true);
-    
-    try {
-      // Add self to queue
-      await userQueueService.addToQueue(userId);
-      console.log('Added to queue, searching for partner...');
-
-      // Try instant match first
-      const partner = await userQueueService.tryInstantMatch(userId);
-      
-      if (partner) {
-        // INSTANT MATCH FOUND!
-        console.log('Instant match found:', partner);
-        connectToPartner(partner);
-        return;
+  // Cleanup preview tracks when connecting
+  useEffect(() => {
+    if (isConnected && (previewVideoTrack || previewAudioTrack)) {
+      console.log('Cleaning up preview tracks...');
+      if (previewVideoTrack) {
+        previewVideoTrack.close();
+        setPreviewVideoTrack(null);
       }
+      if (previewAudioTrack) {
+        previewAudioTrack.close();
+        setPreviewAudioTrack(null);
+      }
+    }
+  }, [isConnected, previewVideoTrack, previewAudioTrack]);
 
-      // No instant match - listen for someone else to match us
-      const unsubscribe = userQueueService.onPartnerConnected(userId, (partnerId) => {
-        if (partnerId) {
-          console.log('Partner connected:', partnerId);
-          connectToPartner(partnerId);
-        }
-      });
+  // Auto-hide pre-call controls after 3 seconds
+  useEffect(() => {
+    if (!isConnected && !isSearching && showPreCallControls) {
+      // Clear existing timer
+      if (hideControlsTimerRef.current) {
+        clearTimeout(hideControlsTimerRef.current);
+      }
       
-      unsubscribePartnerRef.current = unsubscribe;
+      // Set new timer to hide controls after 3 seconds
+      hideControlsTimerRef.current = setTimeout(() => {
+        setShowPreCallControls(false);
+      }, 3000);
 
-      // Keep trying to match every 500ms (fast!)
-      searchIntervalRef.current = setInterval(async () => {
-        const partner = await userQueueService.tryInstantMatch(userId);
-        if (partner) {
-          console.log('Found partner in polling:', partner);
-          
-          // Clear search interval
-          if (searchIntervalRef.current) {
-            clearInterval(searchIntervalRef.current);
-            searchIntervalRef.current = null;
+      return () => {
+        if (hideControlsTimerRef.current) {
+          clearTimeout(hideControlsTimerRef.current);
+        }
+      };
+    }
+  }, [isConnected, isSearching, showPreCallControls]);
+
+  // Show controls on video click
+  const handleLocalVideoClick = () => {
+    if (!isConnected && !isSearching) {
+      setShowPreCallControls(true);
+    } else if (isConnected) {
+      setShowControls(!showControls);
+    }
+  };
+
+  // Keyboard shortcuts (ESC to skip)
+  useKeyboardShortcuts(isConnected, handleNext);
+
+  // Handlers for preview (before connecting)
+  const handlePreviewMicToggle = async () => {
+    if (!isMicOn) {
+      // Turn ON microphone
+      try {
+        if (!previewAudioTrack) {
+          // Create new audio track
+          const tracks = await agoraService.createLocalTracks(false, true);
+          if (tracks.audioTrack) {
+            setPreviewAudioTrack(tracks.audioTrack);
+            console.log('Microphone enabled');
           }
+        } else {
+          // Re-enable existing track
+          await previewAudioTrack.setEnabled(true);
+          console.log('Microphone re-enabled');
         }
-      }, 500); // Much faster - 500ms instead of 2000ms
-
-    } catch (error) {
-      console.error('Failed to search for partner:', error);
-      setIsSearching(false);
-    }
-  };
-
-  // Connect to partner - extracted for reuse
-  const connectToPartner = (partnerId: string) => {
-    setPartnerId(partnerId);
-    
-    // Create channel name (sorted to ensure both users get same name)
-    const channel = [userId, partnerId].sort().join('_');
-    setChannelName(channel);
-    
-    setIsSearching(false);
-    setIsConnected(true);
-    
-    // Clear interval if exists
-    if (searchIntervalRef.current) {
-      clearInterval(searchIntervalRef.current);
-      searchIntervalRef.current = null;
-    }
-    
-    // Send system message
-    setTimeout(() => {
-      sendSystemMessage('You are now connected with a stranger!');
-    }, 300);
-
-    // Listen for partner disconnect - disconnect immediately when partner leaves
-    const unsubDisconnect = userQueueService.onPartnerDisconnected(userId, () => {
-      console.log('Partner disconnected! Showing "Stranger has disconnected"');
-      sendSystemMessage('Stranger has disconnected.');
-      
-      // Auto-disconnect after 2 seconds
-      setTimeout(() => {
-        handlePartnerLeft();
-      }, 2000);
-    });
-
-    // Store the disconnect listener (will be cleaned up on next/stop)
-    if (unsubscribePartnerRef.current) {
-      unsubscribePartnerRef.current();
-    }
-    unsubscribePartnerRef.current = unsubDisconnect;
-  };
-
-  // Handle when partner leaves
-  const handlePartnerLeft = () => {
-    setIsConnected(false);
-    setPartnerId("");
-    setChannelName("");
-    clearMessages();
-    
-    // Clean up listeners
-    if (unsubscribePartnerRef.current) {
-      unsubscribePartnerRef.current();
-      unsubscribePartnerRef.current = null;
-    }
-  };
-
-  // Handle start button
-  const handleStart = () => {
-    searchForPartner();
-  };
-
-  // Handle next/skip - FAST AS FUCK
-  const handleNext = async () => {
-    if (!userId) return;
-
-    // Clear messages immediately (no wait)
-    clearMessages();
-    
-    // Set searching state immediately for UI feedback
-    setIsSearching(true);
-    setIsConnected(false);
-
-    // Cleanup in background (don't wait)
-    disconnectFromPartner().then(() => {
-      // Immediately start searching again
-      searchForPartner();
-    });
-  };
-
-  // Disconnect from partner - optimized
-  const disconnectFromPartner = async () => {
-    // Clear search interval
-    if (searchIntervalRef.current) {
-      clearInterval(searchIntervalRef.current);
-      searchIntervalRef.current = null;
-    }
-
-    // Unsubscribe from partner listener
-    if (unsubscribePartnerRef.current) {
-      unsubscribePartnerRef.current();
-      unsubscribePartnerRef.current = null;
-    }
-
-    // Remove from queue and clear channel
-    try {
-      // removeFromQueue will automatically delete the chat
-      if (userId) {
-        await userQueueService.removeFromQueue(userId);
+        setIsMicOn(true);
+      } catch (error: any) {
+        console.error('Failed to enable microphone:', error);
+        if (error?.code === 'PERMISSION_DENIED' || error?.name === 'NotAllowedError') {
+          alert('Please allow microphone access');
+        }
       }
-    } catch (error) {
-      console.error('Disconnect error:', error);
+    } else {
+      // Turn OFF microphone
+      if (previewAudioTrack) {
+        await previewAudioTrack.setEnabled(false);
+        console.log('Microphone disabled');
+      }
+      setIsMicOn(false);
     }
-
-    // Reset state
-    setPartnerId("");
-    setChannelName("");
   };
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      disconnectFromPartner();
-      cleanupChat();
-      if (userId) {
-        userQueueService.cleanup(userId);
+  const handlePreviewCameraToggle = async () => {
+    if (!isCameraOn) {
+      // Turn ON camera
+      try {
+        if (!previewVideoTrack) {
+          // Create new video track
+          const tracks = await agoraService.createLocalTracks(true, false);
+          if (tracks.videoTrack) {
+            setPreviewVideoTrack(tracks.videoTrack);
+            console.log('Camera enabled');
+          }
+        } else {
+          // Re-enable existing track
+          await previewVideoTrack.setEnabled(true);
+          console.log('Camera re-enabled');
+        }
+        setIsCameraOn(true);
+      } catch (error: any) {
+        console.error('Failed to enable camera:', error);
+        if (error?.code === 'PERMISSION_DENIED' || error?.name === 'NotAllowedError') {
+          alert('Please allow camera access');
+        }
       }
-    };
-  }, [userId]);
-
-  // ESC key to disconnect (like Omegle)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isConnected) {
-        e.preventDefault();
-        handleNext();
+    } else {
+      // Turn OFF camera
+      if (previewVideoTrack) {
+        await previewVideoTrack.setEnabled(false);
+        console.log('Camera disabled');
       }
-    };
+      setIsCameraOn(false);
+    }
+  };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isConnected]);
+  // Handlers for connected state (use videoChat toggles and sync state)
+  const handleConnectedMicToggle = async () => {
+    await toggleMic();
+    // Sync state from useVideoChat
+    setIsMicOn(prev => !prev);
+  };
 
-  // Handle message send
+  const handleConnectedCameraToggle = async () => {
+    await toggleCamera();
+    // Sync state from useVideoChat
+    setIsCameraOn(prev => !prev);
+  };
+
   const handleSendMessage = (message: string) => {
     sendMessage(message);
   };
 
-  // Handle typing
   const handleTyping = () => {
     setTypingIndicator();
   };
 
+  const handleStartWithPermissions = async () => {
+    // Ensure we have both camera and mic before starting
+    try {
+      // Create tracks if they don't exist
+      if (!previewVideoTrack) {
+        const videoTracks = await agoraService.createLocalTracks(true, false);
+        if (videoTracks.videoTrack) {
+          setPreviewVideoTrack(videoTracks.videoTrack);
+          setIsCameraOn(true);
+        }
+      }
+      
+      if (!previewAudioTrack) {
+        const audioTracks = await agoraService.createLocalTracks(false, true);
+        if (audioTracks.audioTrack) {
+          setPreviewAudioTrack(audioTracks.audioTrack);
+          setIsMicOn(true);
+        }
+      }
+      
+      // Now start searching
+      searchForPartner();
+    } catch (error: any) {
+      console.error('Failed to get permissions:', error);
+      if (error?.code === 'PERMISSION_DENIED' || error?.name === 'NotAllowedError') {
+        alert('Please allow camera and microphone access to start chatting.');
+      } else {
+        alert('Failed to access camera/microphone. Please check your devices.');
+      }
+    }
+  };
+
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
-      {/* Left side - Video panels */}
-      <div className="flex flex-col gap-4 p-4" style={{ width: '60%' }}>
-        {/* Stranger's video - equal size */}
-        <div className="flex-1 min-h-0">
-          <VideoPlaceholder 
-            label={isSearching ? "Searching for someone..." : (isConnected ? "Stranger's video" : "Waiting for stranger...")} 
-            fullHeight 
-          />
-        </div>
+    <div className="flex flex-col md:flex-row h-screen bg-white overflow-hidden">
+      {/* Video panels - full height on mobile, 65% width on desktop */}
+      <div className="flex flex-col gap-2 md:gap-4 p-2 md:p-4 w-full md:w-[65%] h-full">
+        {/* Stranger's video */}
+        <VideoPanel
+          videoRef={remoteVideoRef}
+          isRemote={true}
+          isConnected={isConnected}
+          isSearching={isSearching}
+          remoteUsers={remoteUsers}
+        />
         
-        {/* Your video - equal size with controls */}
-        <div 
-          className="flex-1 min-h-0 relative"
-          onClick={() => setShowControls(!showControls)}
+        {/* Your video */}
+        <VideoPanel
+          videoRef={localVideoRef}
+          isRemote={false}
+          isConnected={isConnected}
+          isSearching={isSearching}
+          isCameraOn={isCameraOn}
+          hasVideoTrack={!!(previewVideoTrack || localVideoTrack)}
+          onToggleControls={handleLocalVideoClick}
         >
-          <VideoPlaceholder label="Your video" isUser={true} fullHeight />
-          
-          {/* Start button in center (only when not connected and not searching) */}
-          {!isConnected && !isSearching && (
+          {/* Pre-call controls (camera/mic above Start button) */}
+          {!isConnected && !isSearching && showPreCallControls && (
+            <PreCallControls
+              isMicOn={isMicOn}
+              isCameraOn={isCameraOn}
+              onMicToggle={handlePreviewMicToggle}
+              onCameraToggle={handlePreviewCameraToggle}
+              onStart={handleStartWithPermissions}
+            />
+          )}
+
+          {/* Start button - always visible when not connected/searching */}
+          {!isConnected && !isSearching && !showPreCallControls && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleStart();
+                handleStartWithPermissions();
               }}
-              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 px-12 py-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg text-lg z-10"
+              className="absolute bottom-6 left-1/2 transform -translate-x-1/2 px-12 py-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg text-lg z-10"
             >
               Start
             </button>
           )}
 
-          {/* Searching indicator with Stop button */}
+          {/* Stop searching button */}
           {isSearching && (
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center z-10">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-white text-sm bg-black bg-opacity-50 px-4 py-2 rounded mb-4">
-                Looking for someone to chat with...
-              </p>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  disconnectFromPartner();
-                }}
-                className="px-8 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors shadow-lg"
-              >
-                Stop Searching
-              </button>
-            </div>
-          )}
-
-          {/* Controls overlay (only when connected and clicked) */}
-          {isConnected && showControls && (
-            <div 
-              className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 p-4"
-              onClick={(e) => e.stopPropagation()}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleStop();
+              }}
+              className="absolute bottom-6 left-1/2 transform -translate-x-1/2 px-8 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors shadow-lg z-10"
             >
-              <div className="flex items-center justify-center space-x-4">
-                <button
-                  onClick={() => setIsMicOn(!isMicOn)}
-                  className={
-                    "px-6 py-2 rounded-lg font-semibold transition-colors " +
-                    (isMicOn
-                      ? "bg-white text-gray-900 hover:bg-gray-200"
-                      : "bg-red-600 text-white hover:bg-red-700")
-                  }
-                >
-                  {isMicOn ? "🎤 Mute" : "🔇 Unmute"}
-                </button>
-
-                <button
-                  onClick={() => setIsCameraOn(!isCameraOn)}
-                  className={
-                    "px-6 py-2 rounded-lg font-semibold transition-colors " +
-                    (isCameraOn
-                      ? "bg-white text-gray-900 hover:bg-gray-200"
-                      : "bg-red-600 text-white hover:bg-red-700")
-                  }
-                >
-                  {isCameraOn ? "📹 Stop Camera" : "📷 Start Camera"}
-                </button>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleNext();
-                  }}
-                  className="px-8 py-2 rounded-lg font-semibold bg-orange-600 text-white hover:bg-orange-700 transition-colors"
-                >
-                  ⏭️ Next
-                </button>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    disconnectFromPartner();
-                  }}
-                  className="px-8 py-2 rounded-lg font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors"
-                >
-                  ⏹️ Stop
-                </button>
-              </div>
-            </div>
+              Stop Searching
+            </button>
           )}
-        </div>
+
+          {/* In-call controls overlay */}
+          {isConnected && showControls && (
+            <VideoControls
+              isMicOn={isMicOn}
+              isCameraOn={isCameraOn}
+              networkQuality={networkQuality}
+              onMicToggle={handleConnectedMicToggle}
+              onCameraToggle={handleConnectedCameraToggle}
+              onNext={handleNext}
+              onStop={handleStop}
+            />
+          )}
+        </VideoPanel>
       </div>
 
-      {/* Right side - Chat window */}
-      <div className="flex-1">
+      {/* Desktop Chat - Hidden on mobile, 35% width on desktop */}
+      <div className="hidden md:block w-[35%] border-l border-gray-200 h-full">
         <ChatWindow 
           messages={messages}
           partnerTyping={partnerTyping}
@@ -348,8 +343,27 @@ export default function HomePage() {
           onSendMessage={handleSendMessage}
           onTyping={handleTyping}
           isConnected={isConnected}
+          userId={userId}
         />
       </div>
+
+      {/* Mobile Chat Button */}
+      <MobileChatButton
+        messageCount={messages.length}
+        onClick={() => setShowMobileChat(true)}
+      />
+
+      {/* Mobile Chat Popup */}
+      <MobileChat
+        messages={messages}
+        partnerTyping={partnerTyping}
+        isConnected={isConnected}
+        showMobileChat={showMobileChat}
+        onClose={() => setShowMobileChat(false)}
+        onSendMessage={handleSendMessage}
+        onTyping={handleTyping}
+        userId={userId}
+      />
     </div>
   );
 }

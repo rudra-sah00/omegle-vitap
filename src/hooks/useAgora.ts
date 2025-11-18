@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import {
+import type {
   IAgoraRTCClient,
   IAgoraRTCRemoteUser,
   ICameraVideoTrack,
@@ -58,65 +58,74 @@ export function useAgora({
 
   // Initialize client and setup event listeners
   useEffect(() => {
-    const client = agoraService.initClient();
-    clientRef.current = client;
-
-    // Event listeners
-    client.on("user-published", async (user, mediaType) => {
+    const initializeClient = async () => {
       try {
-        if (mediaType === "video" || mediaType === "audio") {
-          await agoraService.subscribeToUser(user, mediaType);
-          
-          if (mediaType === "video") {
-            console.log("Remote user video published:", user.uid);
+        const client = await agoraService.initClient();
+        clientRef.current = client;
+
+        // Event listeners
+        client.on("user-published", async (user, mediaType) => {
+          try {
+            if (mediaType === "video" || mediaType === "audio") {
+              await agoraService.subscribeToUser(user, mediaType);
+              
+              if (mediaType === "video") {
+                console.log("Remote user video published:", user.uid);
+              }
+              if (mediaType === "audio") {
+                console.log("Remote user audio published:", user.uid);
+                user.audioTrack?.play();
+              }
+              
+              setRemoteUsers([...agoraService.getRemoteUsers()]);
+            }
+          } catch (err) {
+            console.error("Error subscribing to user:", err);
           }
-          if (mediaType === "audio") {
-            console.log("Remote user audio published:", user.uid);
-            user.audioTrack?.play();
-          }
-          
+        });
+
+        client.on("user-unpublished", (user, mediaType) => {
+          console.log("User unpublished:", user.uid, mediaType);
           setRemoteUsers([...agoraService.getRemoteUsers()]);
-        }
+        });
+
+        client.on("user-joined", (user) => {
+          console.log("User joined:", user.uid);
+          setRemoteUsers([...agoraService.getRemoteUsers()]);
+        });
+
+        client.on("user-left", (user) => {
+          console.log("User left:", user.uid);
+          setRemoteUsers([...agoraService.getRemoteUsers()]);
+        });
+
+        client.on("connection-state-change", (curState, prevState, reason) => {
+          console.log("Connection state changed:", curState, "from:", prevState, "reason:", reason);
+          setConnectionState(curState);
+        });
+
+        client.on("token-privilege-will-expire", async () => {
+          try {
+            console.log("Token expiring, renewing...");
+            const token = await requestToken(channel, uid);
+            await client.renewToken(token);
+          } catch (err) {
+            console.error("Error renewing token:", err);
+          }
+        });
       } catch (err) {
-        console.error("Error subscribing to user:", err);
+        console.error("Failed to initialize Agora client:", err);
+        setError("Failed to initialize video client");
       }
-    });
+    };
 
-    client.on("user-unpublished", (user, mediaType) => {
-      console.log("User unpublished:", user.uid, mediaType);
-      setRemoteUsers([...agoraService.getRemoteUsers()]);
-    });
-
-    client.on("user-joined", (user) => {
-      console.log("User joined:", user.uid);
-      setRemoteUsers([...agoraService.getRemoteUsers()]);
-    });
-
-    client.on("user-left", (user) => {
-      console.log("User left:", user.uid);
-      setRemoteUsers([...agoraService.getRemoteUsers()]);
-    });
-
-    client.on("connection-state-change", (curState, prevState, reason) => {
-      console.log("Connection state changed:", curState, "from:", prevState, "reason:", reason);
-      setConnectionState(curState);
-    });
-
-    client.on("token-privilege-will-expire", async () => {
-      try {
-        console.log("Token expiring, renewing...");
-        const token = await requestToken(channel, uid);
-        await client.renewToken(token);
-      } catch (err) {
-        console.error("Error renewing token:", err);
-      }
-    });
+    initializeClient();
 
     return () => {
       // Cleanup
       agoraService.destroy();
     };
-  }, []);
+  }, [channel, uid]);
 
   // Join channel
   const joinChannel = useCallback(async () => {

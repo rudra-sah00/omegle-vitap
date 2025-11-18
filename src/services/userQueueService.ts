@@ -1,4 +1,4 @@
-import { getDatabase, ref, set, get, remove, onValue, push, update, serverTimestamp } from 'firebase/database';
+import { getDatabase, ref, set, get, remove, onValue, push, update, serverTimestamp, onDisconnect } from 'firebase/database';
 import app from '@/lib/firebase';
 import { chatService } from './chatService';
 
@@ -24,14 +24,24 @@ class UserQueueService {
     return this.userId;
   }
 
-  // Add user to waiting queue
+  // Add user to waiting queue with auto-cleanup on disconnect
   async addToQueue(userId: string): Promise<void> {
+    if (!userId) {
+      console.error('Cannot add to queue: userId is undefined');
+      return;
+    }
+
     const userRef = ref(this.db, `queue/${userId}`);
     await set(userRef, {
       userId,
       status: 'waiting',
       timestamp: serverTimestamp(),
     });
+
+    // Setup auto-cleanup if user disconnects unexpectedly
+    const disconnectRef = onDisconnect(userRef);
+    await disconnectRef.remove();
+    console.log(`Auto-cleanup enabled for ${userId}`);
   }
 
   // Find a random waiting partner (excluding current user)
@@ -53,8 +63,15 @@ class UserQueueService {
     return waitingUsers[randomIndex].userId;
   }
 
-  // Try to match immediately (atomic operation)
-  async tryInstantMatch(currentUserId: string): Promise<string | null> {
+  // Try to match immediately (atomic operation with retry)
+  async tryInstantMatch(currentUserId: string, retryCount: number = 0): Promise<string | null> {
+    const MAX_RETRIES = 3;
+    
+    if (retryCount >= MAX_RETRIES) {
+      console.log('Max retries reached for instant match');
+      return null;
+    }
+
     const queueRef = ref(this.db, 'queue');
     const snapshot = await get(queueRef);
 
@@ -71,52 +88,94 @@ class UserQueueService {
     const randomIndex = Math.floor(Math.random() * waitingUsers.length);
     const partner = waitingUsers[randomIndex];
 
-    // Immediately mark both as connected
-    await this.markAsConnected(currentUserId, partner.userId);
+    if (!partner || !partner.userId) {
+      console.error('Invalid partner data');
+      return null;
+    }
+
+    // Verify partner still waiting before marking connected
+    const partnerRef = ref(this.db, `queue/${partner.userId}`);
+    const partnerSnapshot = await get(partnerRef);
     
-    return partner.userId;
+    if (!partnerSnapshot.exists() || partnerSnapshot.val()?.status !== 'waiting') {
+      console.log('Partner no longer available, retrying...');
+      return this.tryInstantMatch(currentUserId, retryCount + 1); // Retry with another partner
+    }
+
+    // Immediately mark both as connected
+    try {
+      await this.markAsConnected(currentUserId, partner.userId);
+      return partner.userId;
+    } catch (error) {
+      console.error('Failed to mark as connected, retrying...', error);
+      return this.tryInstantMatch(currentUserId, retryCount + 1);
+    }
   }
 
   // Mark two users as connected
   async markAsConnected(userId1: string, userId2: string): Promise<void> {
+    if (!userId1 || !userId2) {
+      console.error('Cannot mark as connected: userId is undefined');
+      return;
+    }
+
     const updates: Record<string, any> = {};
     updates[`queue/${userId1}/status`] = 'connected';
     updates[`queue/${userId1}/partnerId`] = userId2;
     updates[`queue/${userId2}/status`] = 'connected';
     updates[`queue/${userId2}/partnerId`] = userId1;
 
-    await update(ref(this.db), updates);
+    try {
+      await update(ref(this.db), updates);
+      console.log(`Marked ${userId1} and ${userId2} as connected`);
+    } catch (error) {
+      console.error('Failed to mark users as connected:', error);
+      throw error;
+    }
   }
 
   // Remove user from queue (on disconnect/next)
   async removeFromQueue(userId: string): Promise<void> {
+    if (!userId) {
+      console.error('Cannot remove from queue: userId is undefined');
+      return;
+    }
+
     const userRef = ref(this.db, `queue/${userId}`);
     
-    // First check if user has a partner
-    const snapshot = await get(userRef);
-    if (snapshot.exists()) {
-      const userData = snapshot.val();
-      const partnerId = userData.partnerId;
+    try {
+      // First check if user has a partner
+      const snapshot = await get(userRef);
+      if (snapshot.exists()) {
+        const userData = snapshot.val();
+        const partnerId = userData.partnerId;
 
-      // Create channel name to delete chat
-      if (partnerId) {
-        const channelName = [userId, partnerId].sort().join('_');
-        // Delete chat room immediately
-        await chatService.clearChannel(channelName);
-        console.log(`Chat channel ${channelName} deleted`);
+        // Delete chat immediately if user was connected
+        if (partnerId) {
+          const channelName = [userId, partnerId].sort().join('_');
+          // Delete chat room immediately
+          try {
+            await chatService.clearChannel(channelName);
+            console.log(`Chat channel ${channelName} deleted immediately`);
+          } catch (chatError) {
+            console.error('Failed to clear chat channel:', chatError);
+          }
+
+          // Set partner back to waiting (don't block on this)
+          const partnerRef = ref(this.db, `queue/${partnerId}`);
+          update(partnerRef, {
+            status: 'waiting',
+            partnerId: null,
+          }).catch(err => console.error('Failed to update partner status:', err));
+        }
+
+        // Remove current user from queue
+        await remove(userRef);
+        console.log(`User ${userId} removed from queue`);
       }
-
-      // Remove current user
-      await remove(userRef);
-
-      // If partner exists, set them back to waiting
-      if (partnerId) {
-        const partnerRef = ref(this.db, `queue/${partnerId}`);
-        await update(partnerRef, {
-          status: 'waiting',
-          partnerId: null,
-        });
-      }
+    } catch (error) {
+      console.error('Failed to remove user from queue:', error);
+      throw error;
     }
   }
 

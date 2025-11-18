@@ -10,6 +10,7 @@ interface ChatWindowProps {
   onSendMessage: (message: string) => void;
   onTyping: () => void;
   isConnected: boolean;
+  userId: string;
 }
 
 export default function ChatWindow({ 
@@ -18,7 +19,8 @@ export default function ChatWindow({
   partnerOnline,
   onSendMessage, 
   onTyping,
-  isConnected 
+  isConnected,
+  userId
 }: ChatWindowProps) {
   const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -100,8 +102,8 @@ export default function ChatWindow({
               </div>
             ) : (
               <div className="text-sm">
-                <span className={`font-semibold ${msg.senderId === 'You' ? 'text-blue-600' : 'text-red-600'}`}>
-                  {msg.senderId === 'system' ? 'System' : msg.senderId}:
+                <span className={`font-semibold ${msg.senderId === userId ? 'text-blue-600' : 'text-red-600'}`}>
+                  {msg.senderId === userId ? 'You' : 'Stranger'}:
                 </span>
                 <span className="ml-2 text-gray-800">{msg.message}</span>
                 <span className="ml-2 text-xs text-gray-400">
@@ -115,26 +117,26 @@ export default function ChatWindow({
       </div>
 
       {/* Input area */}
-      <form onSubmit={handleSend} className="border-t border-gray-300 p-4 flex-shrink-0 bg-gray-50">
-        <div className="flex gap-2">
+      <div className="border-t border-gray-300 p-3 flex-shrink-0 bg-white">
+        <form onSubmit={handleSend} className="flex items-center gap-2">
           <input
             type="text"
             value={inputMessage}
             onChange={handleInputChange}
             placeholder={isConnected ? "Type a message..." : "Connect to start chatting"}
             disabled={!isConnected}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black disabled:bg-gray-100 disabled:cursor-not-allowed text-sm"
             autoComplete="off"
           />
           <button
             type="submit"
             disabled={!isConnected || !inputMessage.trim()}
-            className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+            className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-sm whitespace-nowrap"
           >
             Send
           </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }

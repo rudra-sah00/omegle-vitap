@@ -47,6 +47,7 @@ export function useChat(userId: string, channelName: string) {
     if (!channelName || !userId || !message.trim()) return;
 
     try {
+      // Send with actual userId so we can distinguish between users
       await chatService.sendMessage(channelName, userId, message);
       // Stop typing indicator
       await chatService.setTypingStatus(channelName, userId, false);

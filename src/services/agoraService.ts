@@ -1,4 +1,4 @@
-import AgoraRTC, {
+import type {
   IAgoraRTCClient,
   IAgoraRTCRemoteUser,
   ICameraVideoTrack,
@@ -7,6 +7,9 @@ import AgoraRTC, {
   IRemoteAudioTrack,
   UID,
 } from "agora-rtc-sdk-ng";
+
+// Dynamic import for Agora RTC (client-side only)
+let AgoraRTC: any = null;
 
 // Agora Configuration
 const APP_ID = process.env.NEXT_PUBLIC_AGORA_APP_ID || "";
@@ -42,9 +45,15 @@ export class AgoraService {
   /**
    * Initialize Agora client
    */
-  public initClient(mode: "rtc" | "live" = "rtc"): IAgoraRTCClient {
+  public async initClient(mode: "rtc" | "live" = "rtc"): Promise<IAgoraRTCClient> {
     if (this.client) {
       return this.client;
+    }
+
+    // Ensure AgoraRTC is loaded
+    if (!AgoraRTC) {
+      const module = await import("agora-rtc-sdk-ng");
+      AgoraRTC = module.default;
     }
 
     this.client = AgoraRTC.createClient({
@@ -52,7 +61,7 @@ export class AgoraService {
       codec: "vp8",
     });
 
-    return this.client;
+    return this.client!;
   }
 
   /**
@@ -179,7 +188,8 @@ export class AgoraService {
    */
   public async leaveChannel(): Promise<void> {
     if (!this.client) {
-      throw new Error("Client not initialized.");
+      console.warn("Client not initialized, nothing to leave.");
+      return; // Don't throw, just return
     }
 
     try {
