@@ -42,7 +42,6 @@ export class UserService {
         // Create new user
         await setDoc(userRef, {
           ...userData,
-          roomId: null,
           createdAt: Date.now(),
           isDeleted: false,
           showName: false,
@@ -68,22 +67,6 @@ export class UserService {
       return null;
     } catch (error) {
       console.error("Error getting user:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update user's room ID
-   */
-  static async updateUserRoom(uid: string, roomId: string | null): Promise<void> {
-    try {
-      const userRef = doc(firestore, USERS_COLLECTION, uid);
-      await updateDoc(userRef, {
-        roomId,
-        lastActive: Date.now(),
-      });
-    } catch (error) {
-      console.error("Error updating user room:", error);
       throw error;
     }
   }
@@ -115,6 +98,22 @@ export class UserService {
       });
     } catch (error) {
       console.error("Error marking user as deleted:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Recover deleted account
+   */
+  static async recoverAccount(uid: string): Promise<void> {
+    try {
+      const userRef = doc(firestore, USERS_COLLECTION, uid);
+      await updateDoc(userRef, {
+        isDeleted: false,
+        lastActive: Date.now(),
+      });
+    } catch (error) {
+      console.error("Error recovering account:", error);
       throw error;
     }
   }
