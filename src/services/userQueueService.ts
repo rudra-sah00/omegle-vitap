@@ -11,6 +11,7 @@ export interface QueueUser {
   name?: string;
   year?: string;
   interests?: string;
+  recentPartners?: string[]; // Track last 5 partners to avoid consecutive matches
 }
 
 class UserQueueService {
@@ -29,7 +30,7 @@ class UserQueueService {
   }
 
   // Add user to waiting queue with auto-cleanup on disconnect
-  async addToQueue(userId: string, gender?: string, name?: string, year?: string, interests?: string): Promise<void> {
+  async addToQueue(userId: string, gender?: string, name?: string, year?: string, interests?: string, recentPartners?: string[]): Promise<void> {
     if (!userId) {
       return;
     }
@@ -43,6 +44,7 @@ class UserQueueService {
       name: name || 'Anonymous',
       year: year || '',
       interests: interests || '',
+      recentPartners: recentPartners || [], // Include recent partners list
     });
 
     // Setup auto-cleanup if user disconnects unexpectedly
@@ -50,7 +52,7 @@ class UserQueueService {
     await disconnectRef.remove();
   }
 
-  // Find a random waiting partner with gender preference (excluding current user)
+  // Find a random waiting partner with gender preference (excluding current user and recent partners)
   async findPartner(currentUserId: string, currentUserGender?: string): Promise<string | null> {
     const queueRef = ref(this.db, 'queue');
     const snapshot = await get(queueRef);
@@ -58,12 +60,16 @@ class UserQueueService {
     if (!snapshot.exists()) return null;
 
     const users = snapshot.val();
-    // CRITICAL: Only match with users who are waiting AND have no partner
+    const currentUser = users[currentUserId] as QueueUser;
+    const recentPartnerIds = currentUser?.recentPartners || [];
+
+    // CRITICAL: Only match with users who are waiting AND have no partner AND not recently matched
     const waitingUsers = Object.values(users).filter(
       (user: any) => 
         user.status === 'waiting' && 
         user.userId !== currentUserId &&
-        !user.partnerId // Ensure they're not already matched
+        !user.partnerId && // Ensure they're not already matched
+        !recentPartnerIds.includes(user.userId) // Exclude recent partners
     ) as QueueUser[];
 
     if (waitingUsers.length === 0) return null;
@@ -109,16 +115,18 @@ class UserQueueService {
 
     const users = snapshot.val();
     
-    // Get current user's gender
+    // Get current user's gender and recent partners
     const currentUser = users[currentUserId] as QueueUser;
     const currentUserGender = currentUser?.gender;
+    const recentPartnerIds = currentUser?.recentPartners || [];
 
-    // CRITICAL: Only match with users who are waiting AND have no partner
+    // CRITICAL: Only match with users who are waiting AND have no partner AND not recently matched
     const waitingUsers = Object.values(users).filter(
       (user: any) => 
         user.status === 'waiting' && 
         user.userId !== currentUserId &&
-        !user.partnerId // Ensure they're not already matched
+        !user.partnerId && // Ensure they're not already matched
+        !recentPartnerIds.includes(user.userId) // Exclude recent partners
     ) as QueueUser[];
 
     if (waitingUsers.length === 0) return null;
@@ -157,9 +165,30 @@ class UserQueueService {
     // Immediately mark both as connected using atomic transaction
     try {
       await this.markAsConnected(currentUserId, partner.userId);
+      // Add partner to recent partners list for both users
+      await this.addToRecentPartners(currentUserId, partner.userId);
+      await this.addToRecentPartners(partner.userId, currentUserId);
       return partner.userId;
     } catch (error) {
       return this.tryInstantMatch(currentUserId, retryCount + 1);
+    }
+  }
+
+  // Add partner to recent partners list (keep last 5)
+  private async addToRecentPartners(userId: string, partnerId: string): Promise<void> {
+    const userRef = ref(this.db, `queue/${userId}`);
+    const snapshot = await get(userRef);
+    
+    if (snapshot.exists()) {
+      const userData = snapshot.val();
+      const recentPartners = userData.recentPartners || [];
+      
+      // Add new partner and keep only last 5
+      const updatedRecent = [partnerId, ...recentPartners.filter((id: string) => id !== partnerId)].slice(0, 5);
+      
+      await update(userRef, {
+        recentPartners: updatedRecent
+      });
     }
   }
 

@@ -1,0 +1,16 @@
+# Cache control for static assets
+/hero.png
+  Cache-Control: public, max-age=31536000, immutable
+
+# OG Image headers
+/opengraph-image
+  Cache-Control: public, max-age=86400
+  Content-Type: image/png
+
+# HTML pages should not be cached aggressively
+/*
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: strict-origin-when-cross-origin

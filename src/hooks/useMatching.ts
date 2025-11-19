@@ -26,6 +26,7 @@ export function useMatching(
   const [channelName, setChannelName] = useState<string>("");
   const [isSearching, setIsSearching] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [recentPartners, setRecentPartners] = useState<string[]>([]);
 
   const unsubscribePartnerRef = useRef<(() => void) | null>(null);
   const searchIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -37,6 +38,17 @@ export function useMatching(
   useEffect(() => {
     const newUserId = userQueueService.generateUserId();
     setUserId(newUserId);
+    
+    // Load recent partners from localStorage
+    const storedRecent = localStorage.getItem('recentPartners');
+    if (storedRecent) {
+      try {
+        const parsed = JSON.parse(storedRecent);
+        setRecentPartners(Array.isArray(parsed) ? parsed : []);
+      } catch (e) {
+        setRecentPartners([]);
+      }
+    }
   }, []);
 
   // Connect to partner
@@ -58,6 +70,11 @@ export function useMatching(
     }
 
     setPartnerId(newPartnerId);
+
+    // Track this partner in recent partners (keep last 5)
+    const updatedRecent = [newPartnerId, ...recentPartners.filter(id => id !== newPartnerId)].slice(0, 5);
+    setRecentPartners(updatedRecent);
+    localStorage.setItem('recentPartners', JSON.stringify(updatedRecent));
 
     const channel = [userId, newPartnerId].sort().join('_');
     setChannelName(channel);
@@ -130,7 +147,7 @@ export function useMatching(
       const year = userInfo?.year || '';
       const interests = userInfo?.interests || '';
 
-      await userQueueService.addToQueue(userId, gender, name, year, interests);
+      await userQueueService.addToQueue(userId, gender, name, year, interests, recentPartners);
 
       const partner = await userQueueService.tryInstantMatch(userId);
 
@@ -190,20 +207,23 @@ export function useMatching(
   const handleNext = async () => {
     if (!userId) return;
 
-    // Clear messages and states first
+    // Show system message first
+    onSystemMessage('Looking for a new stranger...');
+
+    // Disconnect from current partner and queue FIRST
+    await disconnectFromPartner();
+    
+    // Clear messages and states
     onClearMessages();
     setIsConnected(false);
     setPartnerId("");
     setChannelName("");
 
-    // Disconnect from current partner and queue
-    await disconnectFromPartner();
-
-    // Small delay before starting new search to ensure cleanup
+    // Wait a bit longer to ensure cleanup is complete
     setTimeout(() => {
       setIsSearching(true);
       searchForPartner();
-    }, 100);
+    }, 300);
   };
 
   // Handle stop

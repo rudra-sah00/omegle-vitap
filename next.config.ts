@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
+  // Ensure trailing slashes for proper static export
+  trailingSlash: true,
+  // Generate static params for dynamic routes
+  experimental: {
+    optimizePackageImports: ['@/components', '@/hooks'],
+  },
 };
 
 export default nextConfig;
