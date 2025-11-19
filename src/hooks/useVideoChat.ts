@@ -14,7 +14,8 @@ export function useVideoChat(
   channelName: string,
   enabled: boolean,
   shouldPublishVideo: boolean = true,
-  shouldPublishAudio: boolean = true
+  shouldPublishAudio: boolean = true,
+  onError?: (message: string) => void
 ) {
   const [localVideoTrack, setLocalVideoTrack] = useState<ICameraVideoTrack | null>(null);
   const [localAudioTrack, setLocalAudioTrack] = useState<IMicrophoneAudioTrack | null>(null);
@@ -73,10 +74,29 @@ export function useVideoChat(
 
       // Get RTC token
       const uid = Math.floor(Math.random() * 100000) + 1; // Range: 1-100000 (never 0)
-      const token = await requestToken(channelName, uid);
+      let token: string;
+      
+      try {
+        token = await requestToken(channelName, uid);
+      } catch (tokenError) {
+        isJoiningRef.current = false;
+        // Rethrow with clear error message
+        throw new Error('Unable to connect to video service. Please try again.');
+      }
+
+      // Validate token before joining
+      if (!token || token.trim() === '') {
+        isJoiningRef.current = false;
+        throw new Error('Unable to connect to video service. Please try again.');
+      }
 
       // Join channel
-      await agoraService.joinChannel(channelName, token, uid);
+      try {
+        await agoraService.joinChannel(channelName, token, uid);
+      } catch (joinError) {
+        isJoiningRef.current = false;
+        throw new Error('Unable to join video call. Please try again.');
+      }
 
       // Create and publish local tracks based on preview state
       const tracks = await agoraService.createLocalTracks(shouldPublishVideo, shouldPublishAudio);
@@ -104,11 +124,26 @@ export function useVideoChat(
 
       setIsJoined(true);
     } catch (error) {
-      isJoiningRef.current = false; // Reset on error
+      isJoiningRef.current = false;
+      // Cleanup any created tracks on error
+      if (localVideoTrack) {
+        localVideoTrack.close();
+        setLocalVideoTrack(null);
+      }
+      if (localAudioTrack) {
+        localAudioTrack.close();
+        setLocalAudioTrack(null);
+      }
+      // Call error callback if provided
+      if (onError && error instanceof Error) {
+        onError(error.message);
+      }
+      // Rethrow error to be handled by caller
+      throw error;
     } finally {
       isJoiningRef.current = false;
     }
-  }, [userId, channelName, enabled, isJoined, shouldPublishVideo, shouldPublishAudio]);
+  }, [userId, channelName, enabled, isJoined, shouldPublishVideo, shouldPublishAudio, onError]);
 
   // Leave channel
   const leaveChannel = useCallback(async () => {

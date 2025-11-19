@@ -1,0 +1,17 @@
+{
+  "name": "Omegle VITAP",
+  "short_name": "Omegle",
+  "description": "Connect with random people worldwide through video and text chat",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#667eea",
+  "icons": [
+    {
+      "src": "/hero.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

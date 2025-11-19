@@ -37,13 +37,21 @@ export async function requestToken(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error("Connection failed. Please check your internet and try again.");
+      throw new Error("Unable to connect to video service. Please try again.");
     }
 
     const data: RTCTokenResponse = await response.json();
+    
+    if (!data.token) {
+      throw new Error("Unable to connect to video service. Please try again.");
+    }
+    
     return data.token;
   } catch (error) {
-    throw error;
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Unable to connect to video service. Please try again.");
   }
 }
 

@@ -54,6 +54,13 @@ export class AgoraService {
     if (!AgoraRTC) {
       const module = await import("agora-rtc-sdk-ng");
       AgoraRTC = module.default;
+      
+      // Disable Agora SDK logs in production
+      if (process.env.NODE_ENV === 'production') {
+        AgoraRTC.setLogLevel(4); // 4 = NONE (no logs)
+      } else {
+        AgoraRTC.setLogLevel(1); // 1 = ERROR (only errors in development)
+      }
     }
 
     this.client = AgoraRTC.createClient({

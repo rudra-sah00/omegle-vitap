@@ -45,7 +45,11 @@ export default function HomePage() {
   // Matching hook with chat callbacks (initialize first to get userId and channelName)
   const matching = useMatching(
     (msg: string) => {}, // Temporary, will be replaced
-    () => {} // Temporary, will be replaced
+    () => {}, // Temporary, will be replaced
+    (errorMsg: string) => {
+      // Only show error toast for video connection failures
+      showError(errorMsg);
+    }
   );
   const {
     userId,
@@ -79,7 +83,21 @@ export default function HomePage() {
     toggleMic,
     toggleCamera,
     leaveChannel,
-  } = useVideoChat(userId, channelName, isConnected, isCameraOn, isMicOn);
+  } = useVideoChat(
+    userId, 
+    channelName, 
+    isConnected, 
+    isCameraOn, 
+    isMicOn,
+    (errorMsg: string) => {
+      // Show error toast only for video connection failures
+      showError(errorMsg);
+      // Optionally disconnect the match if video fails
+      if (isConnected) {
+        handleStop();
+      }
+    }
+  );
 
   // Sync preview state with connected state when connected
   useEffect(() => {

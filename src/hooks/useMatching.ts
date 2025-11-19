@@ -18,7 +18,8 @@ interface UseMatchingReturn {
 
 export function useMatching(
   onSystemMessage: (message: string) => void,
-  onClearMessages: () => void
+  onClearMessages: () => void,
+  onError?: (message: string) => void
 ): UseMatchingReturn {
   const [userId, setUserId] = useState<string>("");
   const [partnerId, setPartnerId] = useState<string>("");
@@ -63,7 +64,8 @@ export function useMatching(
 
     setIsSearching(false);
 
-    // Show "You're now chatting" message immediately
+    // Show "You're now chatting" message after a delay
+    // This allows time for video connection to initialize
     setTimeout(() => {
       onSystemMessage('You are now connected with a stranger!');
       setIsConnected(true);
