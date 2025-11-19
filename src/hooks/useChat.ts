@@ -1,8 +1,14 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { chatService, ChatMessage } from '@/services/chatService';
+import { useEffect, useRef, useState, useCallback } from "react";
+import { chatService, ChatMessage } from "@/services/chatService";
 
+/**
+ * Hook for managing real-time chat functionality
+ * @param userId - Current user's ID
+ * @param channelName - Name of the chat channel to join
+ * @returns Chat state and control functions
+ */
 export function useChat(userId: string, channelName: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [partnerTyping, setPartnerTyping] = useState(false);
@@ -43,27 +49,31 @@ export function useChat(userId: string, channelName: string) {
   }, [channelName, userId]);
 
   // Send message
-  const sendMessage = useCallback(async (message: string) => {
-    if (!channelName || !userId || !message.trim()) return;
+  const sendMessage = useCallback(
+    async (message: string) => {
+      if (!channelName || !userId || !message.trim()) return;
 
-    try {
-      // Send with actual userId so we can distinguish between users
-      await chatService.sendMessage(channelName, userId, message);
-      // Stop typing indicator
-      await chatService.setTypingStatus(channelName, userId, false);
-    } catch (error) {
-    }
-  }, [channelName, userId]);
+      try {
+        // Send with actual userId so we can distinguish between users
+        await chatService.sendMessage(channelName, userId, message);
+        // Stop typing indicator
+        await chatService.setTypingStatus(channelName, userId, false);
+      } catch (_error) {}
+    },
+    [channelName, userId]
+  );
 
   // Send system message
-  const sendSystemMessage = useCallback(async (message: string) => {
-    if (!channelName) return;
+  const sendSystemMessage = useCallback(
+    async (message: string) => {
+      if (!channelName) return;
 
-    try {
-      await chatService.sendSystemMessage(channelName, message);
-    } catch (error) {
-    }
-  }, [channelName]);
+      try {
+        await chatService.sendSystemMessage(channelName, message);
+      } catch (_error) {}
+    },
+    [channelName]
+  );
 
   // Set typing indicator
   const setTypingIndicator = useCallback(async () => {
@@ -81,8 +91,7 @@ export function useChat(userId: string, channelName: string) {
       typingTimeoutRef.current = setTimeout(async () => {
         await chatService.setTypingStatus(channelName, userId, false);
       }, 3000);
-    } catch (error) {
-    }
+    } catch (_error) {}
   }, [channelName, userId]);
 
   // Clear all messages
@@ -92,8 +101,7 @@ export function useChat(userId: string, channelName: string) {
     try {
       await chatService.clearChannel(channelName);
       setMessages([]);
-    } catch (error) {
-    }
+    } catch (_error) {}
   }, [channelName]);
 
   // Cleanup

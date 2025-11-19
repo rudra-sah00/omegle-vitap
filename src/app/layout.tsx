@@ -14,13 +14,15 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Omegle VITAP - Chat with Random Strangers",
-  description: "Connect with random people worldwide through video and text chat. Anonymous, safe, and free. Start chatting now!",
+  description:
+    "Connect with random people worldwide through video and text chat. Anonymous, safe, and free. Start chatting now!",
   keywords: ["omegle", "random chat", "video chat", "stranger chat", "anonymous chat", "vitap"],
   authors: [{ name: "Omegle VITAP" }],
   metadataBase: new URL("https://vitap.in"),
   openGraph: {
     title: "Omegle VITAP - Chat with Random Strangers",
-    description: "Connect with random people worldwide through video and text chat. Anonymous, safe, and free.",
+    description:
+      "Connect with random people worldwide through video and text chat. Anonymous, safe, and free.",
     url: "https://vitap.in",
     siteName: "Omegle VITAP",
     images: [
@@ -38,7 +40,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Omegle VITAP - Chat with Random Strangers",
-    description: "Connect with random people worldwide through video and text chat. Anonymous, safe, and free.",
+    description:
+      "Connect with random people worldwide through video and text chat. Anonymous, safe, and free.",
     images: ["https://vitap.in/public_brand.png"],
     creator: "@omeaglevitap",
   },
@@ -53,9 +56,9 @@ export const metadata: Metadata = {
     googleBot: {
       index: true,
       follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
     },
   },
 };
@@ -77,11 +80,7 @@ export default function RootLayout({
         <meta name="twitter:image" content="https://vitap.in/public_brand.png" />
         <link rel="canonical" href="https://vitap.in" />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>{children}</body>
     </html>
   );
 }

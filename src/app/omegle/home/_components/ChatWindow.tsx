@@ -13,14 +13,14 @@ interface ChatWindowProps {
   userId: string;
 }
 
-export default function ChatWindow({ 
-  messages, 
-  partnerTyping, 
+export default function ChatWindow({
+  messages,
+  partnerTyping,
   partnerOnline,
-  onSendMessage, 
+  onSendMessage,
   onTyping,
   isConnected,
-  userId
+  userId,
 }: ChatWindowProps) {
   const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -33,15 +33,15 @@ export default function ChatWindow({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputMessage(e.target.value);
-    
+
     // Trigger typing indicator
     onTyping();
-    
+
     // Clear existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
-    
+
     // Stop typing indicator after 1 second of no typing
     typingTimeoutRef.current = setTimeout(() => {
       // Typing stopped
@@ -53,7 +53,7 @@ export default function ChatWindow({
     if (inputMessage.trim() && isConnected) {
       onSendMessage(inputMessage.trim());
       setInputMessage("");
-      
+
       // Clear typing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -67,18 +67,33 @@ export default function ChatWindow({
       <div className="flex-shrink-0 bg-gray-100 border-b border-gray-300 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${partnerOnline ? 'bg-green-500' : 'bg-gray-400'}`} />
+            <div
+              className={`w-2 h-2 rounded-full ${partnerOnline ? "bg-green-500" : "bg-gray-400"}`}
+            />
             <span className="text-sm font-medium text-gray-700">
-              {isConnected ? (partnerOnline ? 'Stranger is online' : 'Waiting for stranger...') : 'Not connected'}
+              {isConnected
+                ? partnerOnline
+                  ? "Stranger is online"
+                  : "Waiting for stranger..."
+                : "Not connected"}
             </span>
           </div>
           {partnerTyping && (
             <div className="flex items-center gap-1 text-xs text-gray-500">
               <span>Stranger is typing</span>
               <div className="flex gap-1">
-                <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div
+                  className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"
+                  style={{ animationDelay: "0ms" }}
+                />
+                <div
+                  className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"
+                  style={{ animationDelay: "150ms" }}
+                />
+                <div
+                  className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"
+                  style={{ animationDelay: "300ms" }}
+                />
               </div>
             </div>
           )}
@@ -93,21 +108,24 @@ export default function ChatWindow({
             <p className="text-xs">Click "Start" to begin chatting</p>
           </div>
         )}
-        
+
         {messages.map((msg) => (
-          <div key={msg.id} className={`${msg.type === 'system' ? 'text-center' : ''}`}>
-            {msg.type === 'system' ? (
-              <div className="text-xs text-gray-500 italic">
-                {msg.message}
-              </div>
+          <div key={msg.id} className={`${msg.type === "system" ? "text-center" : ""}`}>
+            {msg.type === "system" ? (
+              <div className="text-xs text-gray-500 italic">{msg.message}</div>
             ) : (
               <div className="text-sm">
-                <span className={`font-semibold ${msg.senderId === userId ? 'text-blue-600' : 'text-red-600'}`}>
-                  {msg.senderId === userId ? 'You' : 'Stranger'}:
+                <span
+                  className={`font-semibold ${msg.senderId === userId ? "text-blue-600" : "text-red-600"}`}
+                >
+                  {msg.senderId === userId ? "You" : "Stranger"}:
                 </span>
                 <span className="ml-2 text-gray-800">{msg.message}</span>
                 <span className="ml-2 text-xs text-gray-400">
-                  {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(msg.timestamp).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </span>
               </div>
             )}

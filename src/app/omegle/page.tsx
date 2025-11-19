@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { database, ref, set, push } from "@/lib/firebase";
+// Firebase imports available if needed
 import { Toast } from "@/components/ui";
 import { useToast } from "@/hooks/useToast";
 
@@ -30,29 +30,29 @@ export default function OmegleLanding() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const name = nameRef.current?.value?.trim() || "";
     const interests = interestsRef.current?.value?.trim() || "";
-    
+
     if (!name || !selectedYear || !selectedGender) {
       warning("Please fill in all required fields (Name, Year, and Gender)");
       return;
     }
-    
+
     const userInfo = {
       name,
       year: selectedYear,
       gender: selectedGender,
       interests,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
-    
+
     try {
       // Only store in localStorage - don't add to Firebase until user starts searching
       localStorage.setItem("userInfo", JSON.stringify(userInfo));
-      
+
       router.push("/omegle/home");
-    } catch (error) {
+    } catch (_error) {
       showError("Unable to save your information. Please try again.");
     }
   };
@@ -89,7 +89,7 @@ export default function OmegleLanding() {
                   required
                 />
               </div>
-              
+
               {/* Custom Year Selector */}
               <div className="relative">
                 <button
@@ -106,10 +106,15 @@ export default function OmegleLanding() {
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </button>
-                
+
                 {showYearDropdown && (
                   <div className="absolute z-10 w-full mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
                     {years.map((year) => (

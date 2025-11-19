@@ -1,23 +1,49 @@
 import { useState, useCallback } from "react";
 import { agoraService } from "@/services/agoraService";
 
+/**
+ * Video quality settings for Agora streams
+ */
 export interface VideoQuality {
+  /** Video resolution preset */
   resolution: "120p" | "240p" | "360p" | "480p" | "720p" | "1080p";
+  /** Target frame rate */
   frameRate: 15 | 24 | 30;
 }
 
+/**
+ * Audio quality profile settings
+ */
 export interface AudioQuality {
-  profile: "music_standard" | "speech_standard" | "speech_low_quality" | "music_high_quality" | "music_high_quality_stereo";
+  /** Audio encoding profile */
+  profile:
+    | "music_standard"
+    | "speech_standard"
+    | "speech_low_quality"
+    | "music_high_quality"
+    | "music_high_quality_stereo";
 }
 
+/**
+ * Beauty effect configuration options
+ */
 export interface BeautyEffectOptions {
+  /** Contrast level for lightening (0-2) */
   lighteningContrastLevel?: 0 | 1 | 2;
+  /** Lightening intensity (0-1) */
   lighteningLevel?: number;
+  /** Skin smoothness level (0-1) */
   smoothnessLevel?: number;
+  /** Redness intensity (0-1) */
   rednessLevel?: number;
+  /** Sharpness level (0-1) */
   sharpnessLevel?: number;
 }
 
+/**
+ * Hook for managing advanced Agora media controls
+ * @returns Media control functions and device state
+ */
 export function useAgoraControls() {
   const [volume, setVolume] = useState(100);
   const [isBeautyEnabled, setIsBeautyEnabled] = useState(false);
@@ -118,14 +144,17 @@ export function useAgoraControls() {
   /**
    * Toggle beauty effect
    */
-  const toggleBeautyEffect = useCallback(async (enabled: boolean, options?: BeautyEffectOptions) => {
-    try {
-      await agoraService.setBeautyEffect(enabled, options);
-      setIsBeautyEnabled(enabled);
-    } catch (error) {
-      throw error;
-    }
-  }, []);
+  const toggleBeautyEffect = useCallback(
+    async (enabled: boolean, options?: BeautyEffectOptions) => {
+      try {
+        await agoraService.setBeautyEffect(enabled, options);
+        setIsBeautyEnabled(enabled);
+      } catch (error) {
+        throw error;
+      }
+    },
+    []
+  );
 
   /**
    * Enable dual stream mode

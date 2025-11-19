@@ -3,23 +3,43 @@
 import { useState, useEffect, useRef } from "react";
 import { userQueueService } from "@/services/userQueueService";
 
+/**
+ * Return type for useMatching hook
+ */
 interface UseMatchingReturn {
+  /** Current user's ID */
   userId: string;
+  /** Matched partner's ID */
   partnerId: string;
+  /** Active channel name for communication */
   channelName: string;
+  /** Whether currently searching for a partner */
   isSearching: boolean;
+  /** Whether connected to a partner */
   isConnected: boolean;
+  /** Start searching for a partner */
   searchForPartner: () => void;
+  /** Skip to next partner */
   handleNext: () => void;
+  /** Stop searching and disconnect */
   handleStop: () => void;
+  /** Register callback for when partner connects */
   onPartnerConnected: (callback: () => void) => void;
+  /** Register callback for when partner disconnects */
   onPartnerDisconnected: (callback: () => void) => void;
 }
 
+/**
+ * Hook for managing user matching and partner connections
+ * @param onSystemMessage - Callback for system messages
+ * @param onClearMessages - Callback to clear chat messages
+ * @param _onError - Optional error handler callback
+ * @returns Matching state and control functions
+ */
 export function useMatching(
   onSystemMessage: (message: string) => void,
   onClearMessages: () => void,
-  onError?: (message: string) => void
+  _onError?: (message: string) => void
 ): UseMatchingReturn {
   const [userId, setUserId] = useState<string>("");
   const [partnerId, setPartnerId] = useState<string>("");
@@ -38,14 +58,14 @@ export function useMatching(
   useEffect(() => {
     const newUserId = userQueueService.generateUserId();
     setUserId(newUserId);
-    
+
     // Load recent partners from localStorage
-    const storedRecent = localStorage.getItem('recentPartners');
+    const storedRecent = localStorage.getItem("recentPartners");
     if (storedRecent) {
       try {
         const parsed = JSON.parse(storedRecent);
         setRecentPartners(Array.isArray(parsed) ? parsed : []);
-      } catch (e) {
+      } catch (_e) {
         setRecentPartners([]);
       }
     }
@@ -72,11 +92,14 @@ export function useMatching(
     setPartnerId(newPartnerId);
 
     // Track this partner in recent partners (keep last 5)
-    const updatedRecent = [newPartnerId, ...recentPartners.filter(id => id !== newPartnerId)].slice(0, 5);
+    const updatedRecent = [
+      newPartnerId,
+      ...recentPartners.filter((id) => id !== newPartnerId),
+    ].slice(0, 5);
     setRecentPartners(updatedRecent);
-    localStorage.setItem('recentPartners', JSON.stringify(updatedRecent));
+    localStorage.setItem("recentPartners", JSON.stringify(updatedRecent));
 
-    const channel = [userId, newPartnerId].sort().join('_');
+    const channel = [userId, newPartnerId].sort().join("_");
     setChannelName(channel);
 
     setIsSearching(false);
@@ -84,7 +107,7 @@ export function useMatching(
     // Show "You're now chatting" message after a delay
     // This allows time for video connection to initialize
     setTimeout(() => {
-      onSystemMessage('You are now connected with a stranger!');
+      onSystemMessage("You are now connected with a stranger!");
       setIsConnected(true);
     }, 300);
 
@@ -95,7 +118,7 @@ export function useMatching(
 
     // Listen for partner disconnect
     const unsubDisconnect = userQueueService.onPartnerDisconnected(userId, () => {
-      onSystemMessage('Stranger has disconnected.');
+      onSystemMessage("Stranger has disconnected.");
 
       if (partnerDisconnectedCallbackRef.current) {
         partnerDisconnectedCallbackRef.current();
@@ -140,12 +163,12 @@ export function useMatching(
 
     try {
       // Get user info from localStorage
-      const userInfoStr = localStorage.getItem('userInfo');
+      const userInfoStr = localStorage.getItem("userInfo");
       const userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
-      const gender = userInfo?.gender || 'other';
-      const name = userInfo?.name || 'Anonymous';
-      const year = userInfo?.year || '';
-      const interests = userInfo?.interests || '';
+      const gender = userInfo?.gender || "other";
+      const name = userInfo?.name || "Anonymous";
+      const year = userInfo?.year || "";
+      const interests = userInfo?.interests || "";
 
       await userQueueService.addToQueue(userId, gender, name, year, interests, recentPartners);
 
@@ -173,7 +196,6 @@ export function useMatching(
       searchIntervalRef.current = setInterval(async () => {
         const partner = await userQueueService.tryInstantMatch(userId);
         if (partner) {
-
           if (searchIntervalRef.current) {
             clearInterval(searchIntervalRef.current);
             searchIntervalRef.current = null;
@@ -197,8 +219,7 @@ export function useMatching(
         setIsSearching(false);
         onSystemMessage('No match found. Click "Start" to search again.');
       }, 15000);
-
-    } catch (error) {
+    } catch (_error) {
       setIsSearching(false);
     }
   };
@@ -236,15 +257,15 @@ export function useMatching(
       setChannelName("");
 
       // Show searching message
-      onSystemMessage('Looking for a new stranger...');
+      onSystemMessage("Looking for a new stranger...");
 
       // Wait for cleanup to complete before searching
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Start new search
       setIsSearching(true);
       searchForPartner();
-    } catch (error) {
+    } catch (_error) {
       setIsSearching(false);
     }
   };
@@ -258,7 +279,7 @@ export function useMatching(
 
     // If connected, disconnect from partner
     if (isConnected) {
-      onSystemMessage('You have disconnected.');
+      onSystemMessage("You have disconnected.");
       setIsConnected(false);
       setPartnerId("");
       setChannelName("");
@@ -292,8 +313,7 @@ export function useMatching(
       if (userId) {
         await userQueueService.removeFromQueue(userId);
       }
-    } catch (error) {
-    }
+    } catch (_error) {}
 
     setPartnerId("");
     setChannelName("");
@@ -318,7 +338,7 @@ export function useMatching(
         // Use Promise.allSettled to ensure both cleanups attempt to run
         Promise.allSettled([
           userQueueService.removeFromQueue(userId),
-          userQueueService.cleanup(userId)
+          userQueueService.cleanup(userId),
         ]);
       }
     };

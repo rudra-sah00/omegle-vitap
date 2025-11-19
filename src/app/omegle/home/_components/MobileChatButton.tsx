@@ -14,7 +14,7 @@ export default function MobileChatButton({ messageCount, onClick }: MobileChatBu
       <span className="text-2xl">💬</span>
       {messageCount > 0 && (
         <span className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-          {messageCount > 9 ? '9+' : messageCount}
+          {messageCount > 9 ? "9+" : messageCount}
         </span>
       )}
     </button>

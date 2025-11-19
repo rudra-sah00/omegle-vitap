@@ -9,31 +9,55 @@ import type {
 } from "agora-rtc-sdk-ng";
 
 // Dynamic import for Agora RTC (client-side only)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let AgoraRTC: any = null;
 
 // Agora Configuration
 const APP_ID = process.env.NEXT_PUBLIC_AGORA_APP_ID || "";
 
+/**
+ * Configuration for Agora RTC connection
+ */
 export interface AgoraConfig {
+  /** Agora application ID */
   appId: string;
+  /** Channel name to join */
   channel: string;
+  /** RTC token for authentication (null for testing mode) */
   token: string | null;
+  /** User ID */
   uid: UID;
 }
 
+/**
+ * Local media tracks container
+ */
 export interface MediaTracks {
+  /** Local video track */
   videoTrack: ICameraVideoTrack | null;
+  /** Local audio track */
   audioTrack: IMicrophoneAudioTrack | null;
 }
 
+/**
+ * Remote user information
+ */
 export interface RemoteUser {
+  /** Remote user ID */
   uid: UID;
+  /** Whether remote user has video */
   hasVideo: boolean;
+  /** Whether remote user has audio */
   hasAudio: boolean;
+  /** Remote video track */
   videoTrack?: IRemoteVideoTrack;
+  /** Remote audio track */
   audioTrack?: IRemoteAudioTrack;
 }
 
+/**
+ * Service for managing Agora RTC functionality including tracks, channels, and media controls
+ */
 export class AgoraService {
   private client: IAgoraRTCClient | null = null;
   private localTracks: MediaTracks = {
@@ -54,9 +78,9 @@ export class AgoraService {
     if (!AgoraRTC) {
       const module = await import("agora-rtc-sdk-ng");
       AgoraRTC = module.default;
-      
+
       // Disable Agora SDK logs in production
-      if (process.env.NODE_ENV === 'production') {
+      if (process.env.NODE_ENV === "production") {
         AgoraRTC.setLogLevel(4); // 4 = NONE (no logs)
       } else {
         AgoraRTC.setLogLevel(1); // 1 = ERROR (only errors in development)
@@ -81,11 +105,7 @@ export class AgoraService {
   /**
    * Join a channel
    */
-  public async joinChannel(
-    channel: string,
-    token: string | null,
-    uid: UID
-  ): Promise<UID> {
+  public async joinChannel(channel: string, token: string | null, uid: UID): Promise<UID> {
     if (!this.client) {
       throw new Error("Client not initialized. Call initClient() first.");
     }
@@ -130,8 +150,7 @@ export class AgoraService {
       } else if (enableVideo) {
         this.localTracks.videoTrack = await AgoraRTC.createCameraVideoTrack();
       } else if (enableAudio) {
-        this.localTracks.audioTrack =
-          await AgoraRTC.createMicrophoneAudioTrack();
+        this.localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
       }
 
       return this.localTracks;
@@ -493,13 +512,16 @@ export class AgoraService {
   /**
    * Enable/disable video beauty effects
    */
-  public async setBeautyEffect(enabled: boolean, options?: {
-    lighteningContrastLevel?: 0 | 1 | 2;
-    lighteningLevel?: number;
-    smoothnessLevel?: number;
-    rednessLevel?: number;
-    sharpnessLevel?: number;
-  }): Promise<void> {
+  public async setBeautyEffect(
+    enabled: boolean,
+    options?: {
+      lighteningContrastLevel?: 0 | 1 | 2;
+      lighteningLevel?: number;
+      smoothnessLevel?: number;
+      rednessLevel?: number;
+      sharpnessLevel?: number;
+    }
+  ): Promise<void> {
     if (!this.localTracks.videoTrack) {
       throw new Error("Camera not available");
     }
@@ -514,6 +536,7 @@ export class AgoraService {
   /**
    * Get video track statistics
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public getVideoStats(): any {
     if (!this.localTracks.videoTrack) {
       return null;
@@ -524,6 +547,7 @@ export class AgoraService {
   /**
    * Get audio track statistics
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public getAudioStats(): any {
     if (!this.localTracks.audioTrack) {
       return null;
@@ -534,6 +558,7 @@ export class AgoraService {
   /**
    * Get RTC stats for the client
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public async getRTCStats(): Promise<any> {
     if (!this.client) {
       throw new Error("Connection not ready");
@@ -544,6 +569,7 @@ export class AgoraService {
   /**
    * Get remote video stats
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public getRemoteVideoStats(user: IAgoraRTCRemoteUser): any {
     if (!this.client) {
       return null;
@@ -554,6 +580,7 @@ export class AgoraService {
   /**
    * Get remote audio stats
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public getRemoteAudioStats(user: IAgoraRTCRemoteUser): any {
     if (!this.client) {
       return null;
@@ -638,7 +665,12 @@ export class AgoraService {
    * Enable/disable audio processing (AEC, AGC, ANS)
    */
   public async setAudioProfile(
-    profile: "music_standard" | "speech_standard" | "speech_low_quality" | "music_high_quality" | "music_high_quality_stereo"
+    _profile:
+      | "music_standard"
+      | "speech_standard"
+      | "speech_low_quality"
+      | "music_high_quality"
+      | "music_high_quality_stereo"
   ): Promise<void> {
     if (!this.localTracks.audioTrack) {
       throw new Error("Microphone not available");
@@ -647,14 +679,15 @@ export class AgoraService {
     try {
       // Note: Audio processing is configured during track creation
       // This is a placeholder for profile management
-    } catch (error) {
-      throw error;
+    } catch (_error) {
+      throw _error;
     }
   }
 
   /**
    * Get network quality stats
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public async getNetworkQuality(): Promise<any> {
     if (!this.client) {
       return null;
@@ -663,7 +696,7 @@ export class AgoraService {
     try {
       const stats = await this.client.getRTCStats();
       return stats;
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }
@@ -732,7 +765,7 @@ export class AgoraService {
   /**
    * Enable/disable echo cancellation
    */
-  public async setEchoCancellation(enabled: boolean): Promise<void> {
+  public async setEchoCancellation(_enabled: boolean): Promise<void> {
     // Echo cancellation is set during track creation
     // This is for reference
   }
@@ -740,7 +773,7 @@ export class AgoraService {
   /**
    * Enable/disable noise suppression
    */
-  public async setNoiseSuppression(enabled: boolean): Promise<void> {
+  public async setNoiseSuppression(_enabled: boolean): Promise<void> {
     // Noise suppression is set during track creation
     // This is for reference
   }
@@ -748,7 +781,7 @@ export class AgoraService {
   /**
    * Enable/disable auto gain control
    */
-  public async setAutoGainControl(enabled: boolean): Promise<void> {
+  public async setAutoGainControl(_enabled: boolean): Promise<void> {
     // Auto gain control is set during track creation
     // This is for reference
   }
@@ -764,6 +797,7 @@ export class AgoraService {
       bitrate?: number;
     },
     withAudio?: boolean
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
     try {
       const screenTrack = await AgoraRTC.createScreenVideoTrack(
@@ -794,6 +828,7 @@ export class AgoraService {
    */
   public static checkBrowserCompatibility(): {
     compatible: boolean;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     details: any;
   } {
     const result = AgoraRTC.checkSystemRequirements();

@@ -1,14 +1,24 @@
 import { useState, useCallback } from "react";
 import { ToastType } from "@/components/ui/Toast";
 
+/**
+ * Internal toast data structure
+ */
 interface ToastData {
+  /** Unique toast identifier */
   id: number;
+  /** Toast message content */
   message: string;
+  /** Type of toast (success, error, warning, info) */
   type: ToastType;
 }
 
 let toastId = 0;
 
+/**
+ * Hook for managing toast notifications
+ * @returns Toast management functions and current toast list
+ */
 export function useToast() {
   const [toasts, setToasts] = useState<ToastData[]>([]);
 

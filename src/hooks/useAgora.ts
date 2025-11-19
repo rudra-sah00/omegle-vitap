@@ -8,35 +8,63 @@ import type {
 import { agoraService } from "@/services/agoraService";
 import { requestToken } from "@/services/agoraTokenService";
 
+/**
+ * Configuration options for useAgora hook
+ */
 export interface UseAgoraOptions {
+  /** Channel name to join */
   channel: string;
+  /** User ID (0 for auto-generated) */
   uid?: number;
+  /** Enable video on join */
   enableVideo?: boolean;
+  /** Enable audio on join */
   enableAudio?: boolean;
+  /** Auto-join channel on mount */
   autoJoin?: boolean;
 }
 
+/**
+ * Return type for useAgora hook
+ */
 export interface UseAgoraReturn {
-  // State
+  /** Whether user has joined the channel */
   isJoined: boolean;
+  /** Whether local tracks are published */
   isPublished: boolean;
+  /** Local video track */
   localVideoTrack: ICameraVideoTrack | null;
+  /** Local audio track */
   localAudioTrack: IMicrophoneAudioTrack | null;
+  /** Array of remote users in the channel */
   remoteUsers: IAgoraRTCRemoteUser[];
+  /** Whether local video is enabled */
   isVideoEnabled: boolean;
+  /** Whether local audio is enabled */
   isAudioEnabled: boolean;
+  /** Current connection state */
   connectionState: string;
+  /** Error message if any */
   error: string | null;
-
-  // Actions
+  /** Join the Agora channel */
   joinChannel: () => Promise<void>;
+  /** Leave the Agora channel */
   leaveChannel: () => Promise<void>;
+  /** Toggle video on/off */
   toggleVideo: () => Promise<void>;
+  /** Toggle audio on/off */
   toggleAudio: () => Promise<void>;
+  /** Publish local tracks */
   publish: () => Promise<void>;
+  /** Unpublish local tracks */
   unpublish: () => Promise<void>;
 }
 
+/**
+ * Hook for managing Agora RTC connections and media tracks
+ * @param options - Configuration options
+ * @returns Agora state and control functions
+ */
 export function useAgora({
   channel,
   uid = 0,
@@ -64,34 +92,33 @@ export function useAgora({
         clientRef.current = client;
 
         // Event listeners
-        client.on("user-published", async (user, mediaType) => {
+        client.on("user-published", async (_user, _mediaType) => {
           try {
-            if (mediaType === "video" || mediaType === "audio") {
-              await agoraService.subscribeToUser(user, mediaType);
+            if (_mediaType === "video" || _mediaType === "audio") {
+              await agoraService.subscribeToUser(_user, _mediaType);
 
-              if (mediaType === "audio") {
-                user.audioTrack?.play();
+              if (_mediaType === "audio") {
+                _user.audioTrack?.play();
               }
 
               setRemoteUsers([...agoraService.getRemoteUsers()]);
             }
-          } catch (err) {
-          }
+          } catch (_err) {}
         });
 
-        client.on("user-unpublished", (user, mediaType) => {
+        client.on("user-unpublished", () => {
           setRemoteUsers([...agoraService.getRemoteUsers()]);
         });
 
-        client.on("user-joined", (user) => {
+        client.on("user-joined", () => {
           setRemoteUsers([...agoraService.getRemoteUsers()]);
         });
 
-        client.on("user-left", (user) => {
+        client.on("user-left", () => {
           setRemoteUsers([...agoraService.getRemoteUsers()]);
         });
 
-        client.on("connection-state-change", (curState, prevState, reason) => {
+        client.on("connection-state-change", (curState) => {
           setConnectionState(curState);
         });
 
@@ -99,10 +126,9 @@ export function useAgora({
           try {
             const token = await requestToken(channel, uid);
             await client.renewToken(token);
-          } catch (err) {
-          }
+          } catch (_err) {}
         });
-      } catch (err) {
+      } catch (_err) {
         setError("Failed to initialize video client");
       }
     };
@@ -132,8 +158,8 @@ export function useAgora({
       await agoraService.joinChannel(channel, token, uid);
       setIsJoined(true);
       setConnectionState(agoraService.getConnectionState());
-    } catch (err: any) {
-      setError(err.message || "Failed to join channel");
+    } catch (err: unknown) {
+      setError((err as Error).message || "Failed to join channel");
       throw err;
     }
   }, [channel, uid, enableVideo, enableAudio]);
@@ -149,8 +175,8 @@ export function useAgora({
       setLocalAudioTrack(null);
       setRemoteUsers([]);
       setConnectionState("DISCONNECTED");
-    } catch (err: any) {
-      setError(err.message || "Failed to leave channel");
+    } catch (err: unknown) {
+      setError((err as Error).message || "Failed to leave channel");
       throw err;
     }
   }, []);
@@ -161,8 +187,8 @@ export function useAgora({
       setError(null);
       await agoraService.publishTracks();
       setIsPublished(true);
-    } catch (err: any) {
-      setError(err.message || "Failed to publish");
+    } catch (err: unknown) {
+      setError((err as Error).message || "Failed to publish");
       throw err;
     }
   }, []);
@@ -173,8 +199,8 @@ export function useAgora({
       setError(null);
       await agoraService.unpublishTracks();
       setIsPublished(false);
-    } catch (err: any) {
-      setError(err.message || "Failed to unpublish");
+    } catch (err: unknown) {
+      setError((err as Error).message || "Failed to unpublish");
       throw err;
     }
   }, []);
@@ -186,8 +212,8 @@ export function useAgora({
       const newState = !isVideoEnabled;
       await agoraService.toggleVideo(newState);
       setIsVideoEnabled(newState);
-    } catch (err: any) {
-      setError(err.message || "Failed to toggle video");
+    } catch (err: unknown) {
+      setError((err as Error).message || "Failed to toggle video");
       throw err;
     }
   }, [isVideoEnabled]);
@@ -199,8 +225,8 @@ export function useAgora({
       const newState = !isAudioEnabled;
       await agoraService.toggleAudio(newState);
       setIsAudioEnabled(newState);
-    } catch (err: any) {
-      setError(err.message || "Failed to toggle audio");
+    } catch (err: unknown) {
+      setError((err as Error).message || "Failed to toggle audio");
       throw err;
     }
   }, [isAudioEnabled]);

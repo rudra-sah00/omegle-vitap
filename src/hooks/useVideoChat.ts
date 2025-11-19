@@ -1,22 +1,34 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { agoraService } from '@/services/agoraService';
-import { requestToken } from '@/services/agoraTokenService';
+import { useEffect, useRef, useState, useCallback } from "react";
+import { agoraService } from "@/services/agoraService";
+import { requestToken } from "@/services/agoraTokenService";
 import type {
   ICameraVideoTrack,
   IMicrophoneAudioTrack,
-  IAgoraRTCRemoteUser
-} from 'agora-rtc-sdk-ng';
+  IAgoraRTCRemoteUser,
+  IAgoraRTCClient,
+} from "agora-rtc-sdk-ng";
 
 // Dynamic import for AgoraRTC
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let AgoraRTC: any = null;
-if (typeof window !== 'undefined') {
-  import('agora-rtc-sdk-ng').then(module => {
+if (typeof window !== "undefined") {
+  import("agora-rtc-sdk-ng").then((module) => {
     AgoraRTC = module.default;
   });
 }
 
+/**
+ * Hook for managing video chat sessions with Agora RTC
+ * @param userId - Current user's ID
+ * @param channelName - Agora channel name
+ * @param enabled - Whether video chat is enabled
+ * @param shouldPublishVideo - Whether to publish video track
+ * @param shouldPublishAudio - Whether to publish audio track
+ * @param onError - Optional error callback
+ * @returns Video chat state and control functions
+ */
 export function useVideoChat(
   userId: string,
   channelName: string,
@@ -31,9 +43,11 @@ export function useVideoChat(
   const [isJoined, setIsJoined] = useState(false);
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCameraOn, setIsCameraOn] = useState(true);
-  const [networkQuality, setNetworkQuality] = useState<'excellent' | 'good' | 'poor' | 'bad'>('good');
+  const [networkQuality, setNetworkQuality] = useState<"excellent" | "good" | "poor" | "bad">(
+    "good"
+  );
 
-  const clientRef = useRef<any>(null);
+  const clientRef = useRef<IAgoraRTCClient | null>(null);
   const isJoiningRef = useRef(false);
 
   // Initialize and join channel
@@ -45,65 +59,73 @@ export function useVideoChat(
     try {
       // Create client if not exists
       if (!clientRef.current) {
-        clientRef.current = await agoraService.initClient('rtc');
+        clientRef.current = await agoraService.initClient("rtc");
 
         // Setup event listeners
-        clientRef.current.on('user-published', async (user: IAgoraRTCRemoteUser, mediaType: 'audio' | 'video') => {
-          await clientRef.current.subscribe(user, mediaType);
-          setRemoteUsers(prev => {
-            const exists = prev.find(u => u.uid === user.uid);
-            if (exists) return prev;
-            return [...prev, user];
-          });
+        clientRef.current.on(
+          "user-published",
+          async (user: IAgoraRTCRemoteUser, mediaType: "audio" | "video") => {
+            if (clientRef.current) {
+              await clientRef.current.subscribe(user, mediaType);
+              setRemoteUsers((prev) => {
+                const exists = prev.find((u) => u.uid === user.uid);
+                if (exists) return prev;
+                return [...prev, user];
+              });
+            }
+          }
+        );
+
+        clientRef.current.on("user-unpublished", (user: IAgoraRTCRemoteUser) => {
+          setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
         });
 
-        clientRef.current.on('user-unpublished', (user: IAgoraRTCRemoteUser) => {
-          setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
-        });
-
-        clientRef.current.on('user-left', (user: IAgoraRTCRemoteUser) => {
-          setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
+        clientRef.current.on("user-left", (user: IAgoraRTCRemoteUser) => {
+          setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
         });
 
         // Network quality monitoring
-        clientRef.current.on('network-quality', (quality: any) => {
-          // quality.uplinkNetworkQuality: 0-6 (0=unknown, 1=excellent, 2=good, 3=poor, 4=bad, 5=vbad, 6=down)
-          if (quality.uplinkNetworkQuality <= 1) {
-            setNetworkQuality('excellent');
-          } else if (quality.uplinkNetworkQuality === 2) {
-            setNetworkQuality('good');
-          } else if (quality.uplinkNetworkQuality === 3) {
-            setNetworkQuality('poor');
-          } else {
-            setNetworkQuality('bad');
+        clientRef.current.on(
+          "network-quality",
+          (quality: { uplinkNetworkQuality: number; downlinkNetworkQuality: number }) => {
+            // quality.uplinkNetworkQuality: 0-6 (0=unknown, 1=excellent, 2=good, 3=poor, 4=bad, 5=vbad, 6=down)
+            if (quality.uplinkNetworkQuality <= 1) {
+              setNetworkQuality("excellent");
+            } else if (quality.uplinkNetworkQuality === 2) {
+              setNetworkQuality("good");
+            } else if (quality.uplinkNetworkQuality === 3) {
+              setNetworkQuality("poor");
+            } else {
+              setNetworkQuality("bad");
+            }
           }
-        });
+        );
       }
 
       // Get RTC token
       const uid = Math.floor(Math.random() * 100000) + 1; // Range: 1-100000 (never 0)
       let token: string;
-      
+
       try {
         token = await requestToken(channelName, uid);
-      } catch (tokenError) {
+      } catch (_tokenError) {
         isJoiningRef.current = false;
         // Rethrow with clear error message
-        throw new Error('Unable to connect to video service. Please try again.');
+        throw new Error("Unable to connect to video service. Please try again.");
       }
 
       // Validate token before joining
-      if (!token || token.trim() === '') {
+      if (!token || token.trim() === "") {
         isJoiningRef.current = false;
-        throw new Error('Unable to connect to video service. Please try again.');
+        throw new Error("Unable to connect to video service. Please try again.");
       }
 
       // Join channel
       try {
         await agoraService.joinChannel(channelName, token, uid);
-      } catch (joinError) {
+      } catch (_joinError) {
         isJoiningRef.current = false;
-        throw new Error('Unable to join video call. Please try again.');
+        throw new Error("Unable to join video call. Please try again.");
       }
 
       // Create and publish local tracks based on preview state
@@ -131,7 +153,7 @@ export function useVideoChat(
       }
 
       setIsJoined(true);
-    } catch (error) {
+    } catch (_error) {
       isJoiningRef.current = false;
       // Cleanup any created tracks on error
       if (localVideoTrack) {
@@ -143,15 +165,25 @@ export function useVideoChat(
         setLocalAudioTrack(null);
       }
       // Call error callback if provided
-      if (onError && error instanceof Error) {
-        onError(error.message);
+      if (onError && _error instanceof Error) {
+        onError(_error.message);
       }
       // Rethrow error to be handled by caller
-      throw error;
+      throw _error;
     } finally {
       isJoiningRef.current = false;
     }
-  }, [userId, channelName, enabled, isJoined, shouldPublishVideo, shouldPublishAudio, onError]);
+  }, [
+    userId,
+    channelName,
+    enabled,
+    isJoined,
+    shouldPublishVideo,
+    shouldPublishAudio,
+    onError,
+    localVideoTrack,
+    localAudioTrack,
+  ]);
 
   // Leave channel
   const leaveChannel = useCallback(async () => {
@@ -184,7 +216,7 @@ export function useVideoChat(
       if (clientRef.current) {
         await agoraService.leaveChannel();
       }
-    } catch (error) {
+    } catch (_error) {
       // Ensure state is reset even on error
       setIsJoined(false);
       isJoiningRef.current = false;
@@ -204,8 +236,8 @@ export function useVideoChat(
         if (isJoined && clientRef.current) {
           await clientRef.current.publish([audioTrack]);
         }
-      } catch (error) {
-        throw error;
+      } catch (_error) {
+        throw _error;
       }
     } else {
       // Toggle existing track
@@ -227,8 +259,8 @@ export function useVideoChat(
         if (isJoined && clientRef.current) {
           await clientRef.current.publish([videoTrack]);
         }
-      } catch (error) {
-        throw error;
+      } catch (_error) {
+        throw _error;
       }
     } else {
       // Toggle existing track
@@ -244,7 +276,7 @@ export function useVideoChat(
       joinChannel();
     } else if (!enabled && isJoined && clientRef.current) {
       // Only leave if client exists
-      leaveChannel().catch(err => { });
+      leaveChannel().catch((_err) => {});
     }
   }, [enabled, channelName, isJoined, joinChannel, leaveChannel]);
 
@@ -253,10 +285,10 @@ export function useVideoChat(
     return () => {
       // Only cleanup if client exists
       if (clientRef.current && isJoined) {
-        leaveChannel().catch(err => { });
+        leaveChannel().catch((_err) => {});
       }
     };
-  }, []);
+  }, [isJoined, leaveChannel]);
 
   return {
     localVideoTrack,

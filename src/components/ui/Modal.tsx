@@ -3,12 +3,23 @@
 import { ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
 
+/**
+ * Props for Modal component
+ */
 interface ModalProps {
+  /** Whether modal is open */
   isOpen: boolean;
+  /** Callback when modal should close */
   onClose: () => void;
+  /** Modal content */
   children: ReactNode;
 }
 
+/**
+ * Modal dialog component with overlay and keyboard support
+ * @param props - Modal component props
+ * @returns Modal portal element
+ */
 export default function Modal({ isOpen, onClose, children }: ModalProps) {
   useEffect(() => {
     if (isOpen) {
@@ -34,16 +45,16 @@ export default function Modal({ isOpen, onClose, children }: ModalProps) {
   if (!isOpen) return null;
 
   return createPortal(
-    <div 
+    <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fadeIn"
       style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-scaleIn relative"
         onClick={(e) => e.stopPropagation()}
         style={{
-          animation: "scaleIn 0.2s ease-out"
+          animation: "scaleIn 0.2s ease-out",
         }}
       >
         {children}

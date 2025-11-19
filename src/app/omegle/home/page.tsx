@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import type { ICameraVideoTrack, IMicrophoneAudioTrack } from "agora-rtc-sdk-ng";
 import ChatWindow from "./_components/ChatWindow";
 import VideoPanel from "./_components/VideoPanel";
 import VideoControls from "./_components/VideoControls";
@@ -29,11 +30,11 @@ export default function HomePage() {
   const [showControls, setShowControls] = useState(false);
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [showPreCallControls, setShowPreCallControls] = useState(true);
-  
+
   // Preview tracks (before connecting)
-  const [previewVideoTrack, setPreviewVideoTrack] = useState<any>(null);
-  const [previewAudioTrack, setPreviewAudioTrack] = useState<any>(null);
-  
+  const [previewVideoTrack, setPreviewVideoTrack] = useState<ICameraVideoTrack | null>(null);
+  const [previewAudioTrack, setPreviewAudioTrack] = useState<IMicrophoneAudioTrack | null>(null);
+
   // Refs
   const localVideoRef = useRef<HTMLDivElement | null>(null);
   const remoteVideoRef = useRef<HTMLDivElement | null>(null);
@@ -44,7 +45,7 @@ export default function HomePage() {
 
   // Matching hook with chat callbacks (initialize first to get userId and channelName)
   const matching = useMatching(
-    (msg: string) => {}, // Temporary, will be replaced
+    (_msg: string) => {}, // Temporary, will be replaced
     () => {}, // Temporary, will be replaced
     (errorMsg: string) => {
       // Only show error toast for video connection failures
@@ -63,14 +64,7 @@ export default function HomePage() {
 
   // Chat hook with actual userId and channelName from matching
   const chat = useChat(userId, channelName);
-  const {
-    messages,
-    partnerTyping,
-    sendMessage,
-    sendSystemMessage,
-    setTypingIndicator,
-    clearMessages,
-  } = chat;
+  const { messages, partnerTyping, sendMessage, setTypingIndicator } = chat;
 
   // Video chat hook (pass preview state for track publishing)
   const {
@@ -82,22 +76,14 @@ export default function HomePage() {
     isCameraOn: connectedCameraOn,
     toggleMic,
     toggleCamera,
-    leaveChannel,
-  } = useVideoChat(
-    userId, 
-    channelName, 
-    isConnected, 
-    isCameraOn, 
-    isMicOn,
-    (errorMsg: string) => {
-      // Show error toast only for video connection failures
-      showError(errorMsg);
-      // Optionally disconnect the match if video fails
-      if (isConnected) {
-        handleStop();
-      }
+  } = useVideoChat(userId, channelName, isConnected, isCameraOn, isMicOn, (errorMsg: string) => {
+    // Show error toast only for video connection failures
+    showError(errorMsg);
+    // Optionally disconnect the match if video fails
+    if (isConnected) {
+      handleStop();
     }
-  );
+  });
 
   // Sync preview state with connected state when connected
   useEffect(() => {
@@ -127,10 +113,10 @@ export default function HomePage() {
       }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [userId]);
 
@@ -156,7 +142,7 @@ export default function HomePage() {
 
   // Render remote video
   useVideoRenderer(
-    remoteVideoRef, 
+    remoteVideoRef,
     remoteUsers.length > 0 && remoteUsers[0].videoTrack ? remoteUsers[0].videoTrack : null,
     true
   );
@@ -184,7 +170,7 @@ export default function HomePage() {
       if (hideControlsTimerRef.current) {
         clearTimeout(hideControlsTimerRef.current);
       }
-      
+
       // Set new timer to hide controls after 3 seconds
       hideControlsTimerRef.current = setTimeout(() => {
         setShowPreCallControls(false);
@@ -210,7 +196,7 @@ export default function HomePage() {
         previewAudioTrack.stop();
         previewAudioTrack.close();
       }
-      
+
       // Cleanup timers
       if (hideControlsTimerRef.current) {
         clearTimeout(hideControlsTimerRef.current);
@@ -222,9 +208,9 @@ export default function HomePage() {
   const handleLocalVideoClick = () => {
     if (!isSearching) {
       if (!isConnected) {
-        setShowPreCallControls(prev => !prev);
+        setShowPreCallControls((prev) => !prev);
       } else {
-        setShowControls(prev => !prev);
+        setShowControls((prev) => !prev);
       }
     }
   };
@@ -256,9 +242,10 @@ export default function HomePage() {
         }
         setIsMicOn(false);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       const message = getErrorMessage(error);
-      if (error?.code === 'PERMISSION_DENIED' || error?.name === 'NotAllowedError') {
+      const err = error as Record<string, unknown>;
+      if (err?.code === "PERMISSION_DENIED" || err?.name === "NotAllowedError") {
         warning(message);
       } else {
         showError(message);
@@ -289,9 +276,10 @@ export default function HomePage() {
         }
         setIsCameraOn(false);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       const message = getErrorMessage(error);
-      if (error?.code === 'PERMISSION_DENIED' || error?.name === 'NotAllowedError') {
+      const err = error as Record<string, unknown>;
+      if (err?.code === "PERMISSION_DENIED" || err?.name === "NotAllowedError") {
         warning(message);
       } else {
         showError(message);
@@ -304,8 +292,8 @@ export default function HomePage() {
     try {
       await toggleMic();
       // State is automatically updated in useVideoChat hook
-    } catch (error) {
-      showError('Unable to toggle microphone');
+    } catch (_error) {
+      showError("Unable to toggle microphone");
     }
   }, [toggleMic, showError]);
 
@@ -313,8 +301,8 @@ export default function HomePage() {
     try {
       await toggleCamera();
       // State is automatically updated in useVideoChat hook
-    } catch (error) {
-      showError('Unable to toggle camera');
+    } catch (_error) {
+      showError("Unable to toggle camera");
     }
   }, [toggleCamera, showError]);
 
@@ -336,19 +324,22 @@ export default function HomePage() {
           setPreviewVideoTrack(videoTracks.videoTrack);
         }
       }
-      
+
       if (isMicOn && !previewAudioTrack) {
         const audioTracks = await agoraService.createLocalTracks(false, true);
         if (audioTracks.audioTrack) {
           setPreviewAudioTrack(audioTracks.audioTrack);
         }
       }
-      
+
       // Now start searching with current state
       searchForPartner();
-    } catch (error: any) {
+    } catch (error: unknown) {
       const message = getErrorMessage(error);
-      if (error?.code === 'PERMISSION_DENIED' || error?.name === 'NotAllowedError') {
+      if (
+        (error as Error & { code?: string })?.code === "PERMISSION_DENIED" ||
+        (error as Error)?.name === "NotAllowedError"
+      ) {
         warning(message);
       } else {
         showError(message);
@@ -368,7 +359,7 @@ export default function HomePage() {
           isSearching={isSearching}
           remoteUsers={remoteUsers}
         />
-        
+
         {/* Your video */}
         <VideoPanel
           videoRef={localVideoRef}
@@ -425,7 +416,7 @@ export default function HomePage() {
 
       {/* Desktop Chat - Hidden on mobile, 35% width on desktop */}
       <div className="hidden md:block w-[35%] border-l border-gray-200 h-full">
-        <ChatWindow 
+        <ChatWindow
           messages={messages}
           partnerTyping={partnerTyping}
           partnerOnline={isConnected}
@@ -437,10 +428,7 @@ export default function HomePage() {
       </div>
 
       {/* Mobile Chat Button */}
-      <MobileChatButton
-        messageCount={messages.length}
-        onClick={() => setShowMobileChat(true)}
-      />
+      <MobileChatButton messageCount={messages.length} onClick={() => setShowMobileChat(true)} />
 
       {/* Mobile Chat Popup */}
       <MobileChat

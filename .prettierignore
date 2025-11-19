@@ -1,0 +1,18 @@
+# Ignore build outputs
+dist
+build
+.next
+out
+coverage
+
+# Ignore dependencies
+node_modules
+
+# Ignore config files
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Ignore generated files
+*.min.js
+*.min.css

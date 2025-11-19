@@ -39,7 +39,7 @@ export default function MobileChat({
           </button>
         </div>
         <div className="h-[calc(100%-64px)]">
-          <ChatWindow 
+          <ChatWindow
             messages={messages}
             partnerTyping={partnerTyping}
             partnerOnline={isConnected}

@@ -4,10 +4,16 @@
  */
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_AGORA_TOKEN_ENDPOINT || "http://localhost:8080";
-const API_KEY = process.env.NEXT_PUBLIC_AGORA_API_KEY || "KrlsUCAAGH4xD+1U26BmUd8THBeepaB9aHv/Bww1t4Q=";
+const API_KEY =
+  process.env.NEXT_PUBLIC_AGORA_API_KEY || "KrlsUCAAGH4xD+1U26BmUd8THBeepaB9aHv/Bww1t4Q=";
 
+/**
+ * Response structure from RTC token endpoint
+ */
 export interface RTCTokenResponse {
+  /** Generated RTC token */
   token: string;
+  /** Token expiration timestamp */
   expiresAt: number;
 }
 
@@ -36,16 +42,16 @@ export async function requestToken(
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      await response.json().catch(() => ({}));
       throw new Error("Unable to connect to video service. Please try again.");
     }
 
     const data: RTCTokenResponse = await response.json();
-    
+
     if (!data.token) {
       throw new Error("Unable to connect to video service. Please try again.");
     }
-    
+
     return data.token;
   } catch (error) {
     if (error instanceof Error) {
