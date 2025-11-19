@@ -191,4 +191,8 @@ class ChatService {
   }
 }
 
+/**
+ * Singleton instance of ChatService
+ * Handles real-time chat messaging and message synchronization
+ */
 export const chatService = new ChatService();

@@ -868,5 +868,8 @@ export class AgoraService {
   }
 }
 
-// Export singleton instance
+/**
+ * Singleton instance of AgoraService
+ * Manages WebRTC video/audio connections and media streaming
+ */
 export const agoraService = new AgoraService();

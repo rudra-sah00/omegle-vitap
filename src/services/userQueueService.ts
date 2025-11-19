@@ -454,4 +454,8 @@ class UserQueueService {
   }
 }
 
+/**
+ * Singleton instance of UserQueueService
+ * Manages the global user matching queue and partner connections
+ */
 export const userQueueService = new UserQueueService();

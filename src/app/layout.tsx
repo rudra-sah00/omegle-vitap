@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { AnalyticsInitializer } from "@/components/AnalyticsInitializer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,6 +13,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+/**
+ * Root metadata configuration for the entire application
+ * Includes SEO, Open Graph, and social media metadata
+ */
 export const metadata: Metadata = {
   title: "Omegle VITAP - Chat with Random Strangers",
   description:
@@ -80,7 +85,10 @@ export default function RootLayout({
         <meta name="twitter:image" content="https://vitap.in/public_brand.png" />
         <link rel="canonical" href="https://vitap.in" />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>{children}</body>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <AnalyticsInitializer />
+        {children}
+      </body>
     </html>
   );
 }

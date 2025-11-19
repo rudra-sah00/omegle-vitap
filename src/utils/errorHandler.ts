@@ -3,6 +3,13 @@
  * Provides user-friendly error messages without exposing technical details
  */
 
+/**
+ * Converts various error types into user-friendly messages
+ * Handles permission, device, network, Firebase, and Agora errors
+ *
+ * @param error - The error object to convert (unknown type for flexibility)
+ * @returns A user-friendly error message string
+ */
 export function getErrorMessage(error: unknown): string {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const err = error as any;
@@ -45,6 +52,13 @@ export function getErrorMessage(error: unknown): string {
   return "Something went wrong. Please try again.";
 }
 
+/**
+ * Centralized error handler for logging and processing errors
+ * In development, errors can be logged; in production, handled silently
+ *
+ * @param _error - The error object to handle
+ * @param _context - Optional context string describing where the error occurred
+ */
 export function handleError(_error: unknown, _context?: string): void {
   // In development, you might want to log errors
   if (process.env.NODE_ENV === "development") {

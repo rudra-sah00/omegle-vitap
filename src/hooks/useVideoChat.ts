@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { agoraService } from "@/services/agoraService";
 import { requestToken } from "@/services/agoraTokenService";
+import { analyticsService } from "@/services/analyticsService";
 import type {
   ICameraVideoTrack,
   IMicrophoneAudioTrack,
@@ -89,15 +90,18 @@ export function useVideoChat(
           "network-quality",
           (quality: { uplinkNetworkQuality: number; downlinkNetworkQuality: number }) => {
             // quality.uplinkNetworkQuality: 0-6 (0=unknown, 1=excellent, 2=good, 3=poor, 4=bad, 5=vbad, 6=down)
+            let networkQualityValue: "excellent" | "good" | "poor" | "bad";
             if (quality.uplinkNetworkQuality <= 1) {
-              setNetworkQuality("excellent");
+              networkQualityValue = "excellent";
             } else if (quality.uplinkNetworkQuality === 2) {
-              setNetworkQuality("good");
+              networkQualityValue = "good";
             } else if (quality.uplinkNetworkQuality === 3) {
-              setNetworkQuality("poor");
+              networkQualityValue = "poor";
             } else {
-              setNetworkQuality("bad");
+              networkQualityValue = "bad";
             }
+            setNetworkQuality(networkQualityValue);
+            analyticsService.trackNetworkQuality(networkQualityValue);
           }
         );
       }
@@ -155,6 +159,16 @@ export function useVideoChat(
       setIsJoined(true);
     } catch (_error) {
       isJoiningRef.current = false;
+
+      // Track connection error
+      if (_error instanceof Error) {
+        analyticsService.trackConnectionError(
+          "video_chat_join",
+          _error.message,
+          (_error as Error & { code?: string })?.code
+        );
+      }
+
       // Cleanup any created tracks on error
       if (localVideoTrack) {
         localVideoTrack.close();

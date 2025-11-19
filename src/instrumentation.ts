@@ -10,4 +10,8 @@ export async function register() {
   }
 }
 
+/**
+ * Sentry integration for server-side error capture
+ * Automatically captures and reports request errors to Sentry
+ */
 export const onRequestError = Sentry.captureRequestError;

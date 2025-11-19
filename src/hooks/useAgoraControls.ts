@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { agoraService } from "@/services/agoraService";
+import { analyticsService } from "@/services/analyticsService";
 
 /**
  * Video quality settings for Agora streams
@@ -81,6 +82,7 @@ export function useAgoraControls() {
   const switchCamera = useCallback(async (deviceId: string) => {
     try {
       await agoraService.switchCamera(deviceId);
+      analyticsService.trackDeviceSwitched("camera");
     } catch (error) {
       throw error;
     }
@@ -92,6 +94,7 @@ export function useAgoraControls() {
   const switchMicrophone = useCallback(async (deviceId: string) => {
     try {
       await agoraService.switchMicrophone(deviceId);
+      analyticsService.trackDeviceSwitched("microphone");
     } catch (error) {
       throw error;
     }
@@ -104,6 +107,7 @@ export function useAgoraControls() {
     try {
       await agoraService.setAudioVolume(vol);
       setVolume(vol);
+      analyticsService.trackAudioVolumeChange(vol);
     } catch (error) {
       throw error;
     }
@@ -136,6 +140,7 @@ export function useAgoraControls() {
         height,
         frameRate: quality.frameRate,
       });
+      analyticsService.trackVideoQualityChange(quality.resolution, quality.frameRate);
     } catch (error) {
       throw error;
     }
@@ -149,6 +154,7 @@ export function useAgoraControls() {
       try {
         await agoraService.setBeautyEffect(enabled, options);
         setIsBeautyEnabled(enabled);
+        analyticsService.trackBeautyEffect(enabled);
       } catch (error) {
         throw error;
       }
@@ -163,6 +169,7 @@ export function useAgoraControls() {
     try {
       await agoraService.enableDualStream();
       setIsDualStreamEnabled(true);
+      analyticsService.trackDualStream();
     } catch (error) {
       throw error;
     }

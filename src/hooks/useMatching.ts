@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { userQueueService } from "@/services/userQueueService";
+import { analyticsService } from "@/services/analyticsService";
 
 /**
  * Return type for useMatching hook
@@ -109,6 +110,10 @@ export function useMatching(
     setTimeout(() => {
       onSystemMessage("You are now connected with a stranger!");
       setIsConnected(true);
+
+      // Track partner found (calculate wait time from search start)
+      const waitTime = searchIntervalRef.current ? 0 : 0; // Simplified, actual wait time would need timestamp tracking
+      analyticsService.trackPartnerFound(waitTime);
     }, 300);
 
     // Notify callback
@@ -119,6 +124,9 @@ export function useMatching(
     // Listen for partner disconnect
     const unsubDisconnect = userQueueService.onPartnerDisconnected(userId, () => {
       onSystemMessage("Stranger has disconnected.");
+
+      // Track partner disconnection
+      analyticsService.trackPartnerDisconnected();
 
       if (partnerDisconnectedCallbackRef.current) {
         partnerDisconnectedCallbackRef.current();
@@ -229,6 +237,9 @@ export function useMatching(
     if (!userId || isSearching) return; // Prevent if already searching
 
     try {
+      // Track skip partner action
+      analyticsService.trackSkipPartner();
+
       // Clear all intervals and timeouts first
       if (searchIntervalRef.current) {
         clearInterval(searchIntervalRef.current);

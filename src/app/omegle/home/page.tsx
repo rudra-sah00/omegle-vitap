@@ -16,6 +16,7 @@ import { useKeyboardShortcuts, useVideoRenderer } from "@/hooks/useUIHelpers";
 import { useMediaDevices } from "@/hooks/useMediaDevices";
 import { agoraService } from "@/services/agoraService";
 import { userQueueService } from "@/services/userQueueService";
+import { analyticsService } from "@/services/analyticsService";
 import { Toast } from "@/components/ui";
 import { useToast } from "@/hooks/useToast";
 import { getErrorMessage } from "@/utils/errorHandler";
@@ -229,6 +230,7 @@ export default function HomePage() {
           if (tracks.audioTrack) {
             setPreviewAudioTrack(tracks.audioTrack);
             setIsMicOn(true);
+            analyticsService.trackPermissionGranted("microphone");
           }
         } else {
           // Re-enable existing track
@@ -242,10 +244,13 @@ export default function HomePage() {
         }
         setIsMicOn(false);
       }
+      // Track audio toggle
+      analyticsService.trackAudioToggle(!isMicOn);
     } catch (error: unknown) {
       const message = getErrorMessage(error);
       const err = error as Record<string, unknown>;
       if (err?.code === "PERMISSION_DENIED" || err?.name === "NotAllowedError") {
+        analyticsService.trackPermissionDenied("microphone");
         warning(message);
       } else {
         showError(message);
@@ -263,6 +268,7 @@ export default function HomePage() {
           if (tracks.videoTrack) {
             setPreviewVideoTrack(tracks.videoTrack);
             setIsCameraOn(true);
+            analyticsService.trackPermissionGranted("camera");
           }
         } else {
           // Re-enable existing track
@@ -276,10 +282,13 @@ export default function HomePage() {
         }
         setIsCameraOn(false);
       }
+      // Track video toggle
+      analyticsService.trackVideoToggle(!isCameraOn);
     } catch (error: unknown) {
       const message = getErrorMessage(error);
       const err = error as Record<string, unknown>;
       if (err?.code === "PERMISSION_DENIED" || err?.name === "NotAllowedError") {
+        analyticsService.trackPermissionDenied("camera");
         warning(message);
       } else {
         showError(message);
@@ -291,23 +300,28 @@ export default function HomePage() {
   const handleConnectedMicToggle = useCallback(async () => {
     try {
       await toggleMic();
+      // Track audio toggle
+      analyticsService.trackAudioToggle(!connectedMicOn);
       // State is automatically updated in useVideoChat hook
     } catch (_error) {
       showError("Unable to toggle microphone");
     }
-  }, [toggleMic, showError]);
+  }, [toggleMic, showError, connectedMicOn]);
 
   const handleConnectedCameraToggle = useCallback(async () => {
     try {
       await toggleCamera();
+      // Track video toggle
+      analyticsService.trackVideoToggle(!connectedCameraOn);
       // State is automatically updated in useVideoChat hook
     } catch (_error) {
       showError("Unable to toggle camera");
     }
-  }, [toggleCamera, showError]);
+  }, [toggleCamera, showError, connectedCameraOn]);
 
   const handleSendMessage = (message: string) => {
     sendMessage(message);
+    analyticsService.trackMessageSent();
   };
 
   const handleTyping = () => {
@@ -331,6 +345,9 @@ export default function HomePage() {
           setPreviewAudioTrack(audioTracks.audioTrack);
         }
       }
+
+      // Track analytics - chat started
+      analyticsService.trackChatStarted(isCameraOn, isMicOn);
 
       // Now start searching with current state
       searchForPartner();

@@ -18,7 +18,10 @@
     "test:coverage": "jest --coverage",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
-    "validate": "npm run format:check && npm run type-check && npm run lint:strict && npm run test:ci",
+    "check:console": "bash scripts/check-console-logs.sh",
+    "check:tsdoc": "bash scripts/check-tsdoc.sh",
+    "check:production": "npm run check:console && npm run check:tsdoc",
+    "validate": "npm run format:check && npm run type-check && npm run lint:strict && npm run check:production && npm run test:ci",
     "analyze": "ANALYZE=true npm run build",
     "prepare": "husky"
   },

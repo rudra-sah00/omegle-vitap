@@ -28,4 +28,8 @@ Sentry.init({
   sendDefaultPii: true,
 });
 
+/**
+ * Sentry integration for Next.js router transition tracking
+ * Captures router navigation events for performance monitoring
+ */
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

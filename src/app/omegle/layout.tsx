@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 
+/**
+ * Metadata configuration for the Omegle chat pages
+ * Optimized for SEO and social media sharing
+ */
 export const metadata: Metadata = {
   title: "Start Chatting - Omegle VITAP",
   description:

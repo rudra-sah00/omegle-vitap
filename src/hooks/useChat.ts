@@ -131,4 +131,8 @@ export function useChat(userId: string, channelName: string) {
   };
 }
 
+/**
+ * Chat message type definition
+ * Represents a single message in the chat conversation
+ */
 export type { ChatMessage };
