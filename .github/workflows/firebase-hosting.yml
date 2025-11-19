@@ -37,9 +37,6 @@ jobs:
           NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
           NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID }}
 
-      - name: Export static files
-        run: npm run export || npx next export
-
       - name: Deploy to Firebase Hosting
         run: |
           npm install -g firebase-tools
