@@ -23,7 +23,7 @@ export default function HomePage() {
     const userInfo = localStorage.getItem("userInfo");
     if (!userInfo) {
       // Redirect to landing page if no user info
-      router.push("/");
+      router.push("/omegle");
       return;
     }
   }, [router]);
