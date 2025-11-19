@@ -9,6 +9,14 @@ import type {
   IAgoraRTCRemoteUser
 } from 'agora-rtc-sdk-ng';
 
+// Dynamic import for AgoraRTC
+let AgoraRTC: any = null;
+if (typeof window !== 'undefined') {
+  import('agora-rtc-sdk-ng').then(module => {
+    AgoraRTC = module.default;
+  });
+}
+
 export function useVideoChat(
   userId: string,
   channelName: string,
@@ -147,40 +155,54 @@ export function useVideoChat(
 
   // Leave channel
   const leaveChannel = useCallback(async () => {
+    // Prevent multiple simultaneous leave calls
+    if (!isJoined && !isJoiningRef.current) {
+      return;
+    }
+
     try {
+      // Immediately mark as not joined to prevent race conditions
+      setIsJoined(false);
+      isJoiningRef.current = false;
+
+      // Stop and close local tracks
       if (localVideoTrack) {
+        localVideoTrack.stop();
         localVideoTrack.close();
         setLocalVideoTrack(null);
       }
       if (localAudioTrack) {
+        localAudioTrack.stop();
         localAudioTrack.close();
         setLocalAudioTrack(null);
       }
 
-      await agoraService.leaveChannel();
+      // Clear remote users immediately
       setRemoteUsers([]);
-      setIsJoined(false);
-      isJoiningRef.current = false;
+
+      // Leave Agora channel
+      if (clientRef.current) {
+        await agoraService.leaveChannel();
+      }
     } catch (error) {
-      // Reset flags even on error
-      isJoiningRef.current = false;
+      // Ensure state is reset even on error
       setIsJoined(false);
+      isJoiningRef.current = false;
+      setRemoteUsers([]);
     }
-  }, [localVideoTrack, localAudioTrack]);
+  }, [localVideoTrack, localAudioTrack, isJoined]);
 
   // Toggle microphone
   const toggleMic = useCallback(async () => {
     if (!localAudioTrack) {
       // Create audio track if it doesn't exist
       try {
-        const tracks = await agoraService.createLocalTracks(false, true);
-        if (tracks.audioTrack) {
-          setLocalAudioTrack(tracks.audioTrack);
-          setIsMicOn(true);
-          // Publish the new track
-          if (isJoined && clientRef.current) {
-            await clientRef.current.publish([tracks.audioTrack]);
-          }
+        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        setLocalAudioTrack(audioTrack);
+        setIsMicOn(true);
+        // Publish the new track
+        if (isJoined && clientRef.current) {
+          await clientRef.current.publish([audioTrack]);
         }
       } catch (error) {
         throw error;
@@ -198,14 +220,12 @@ export function useVideoChat(
     if (!localVideoTrack) {
       // Create video track if it doesn't exist
       try {
-        const tracks = await agoraService.createLocalTracks(true, false);
-        if (tracks.videoTrack) {
-          setLocalVideoTrack(tracks.videoTrack);
-          setIsCameraOn(true);
-          // Publish the new track
-          if (isJoined && clientRef.current) {
-            await clientRef.current.publish([tracks.videoTrack]);
-          }
+        const videoTrack = await AgoraRTC.createCameraVideoTrack();
+        setLocalVideoTrack(videoTrack);
+        setIsCameraOn(true);
+        // Publish the new track
+        if (isJoined && clientRef.current) {
+          await clientRef.current.publish([videoTrack]);
         }
       } catch (error) {
         throw error;

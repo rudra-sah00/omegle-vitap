@@ -205,25 +205,48 @@ export function useMatching(
 
   // Handle next
   const handleNext = async () => {
-    if (!userId) return;
+    if (!userId || isSearching) return; // Prevent if already searching
 
-    // Show system message first
-    onSystemMessage('Looking for a new stranger...');
+    try {
+      // Clear all intervals and timeouts first
+      if (searchIntervalRef.current) {
+        clearInterval(searchIntervalRef.current);
+        searchIntervalRef.current = null;
+      }
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
 
-    // Disconnect from current partner and queue FIRST
-    await disconnectFromPartner();
-    
-    // Clear messages and states
-    onClearMessages();
-    setIsConnected(false);
-    setPartnerId("");
-    setChannelName("");
+      // Clear listeners
+      if (unsubscribePartnerRef.current) {
+        unsubscribePartnerRef.current();
+        unsubscribePartnerRef.current = null;
+      }
 
-    // Wait a bit longer to ensure cleanup is complete
-    setTimeout(() => {
+      // Disconnect from queue (this triggers partner disconnect on backend)
+      if (userId) {
+        await userQueueService.removeFromQueue(userId);
+      }
+
+      // Clear UI state
+      onClearMessages();
+      setIsConnected(false);
+      setPartnerId("");
+      setChannelName("");
+
+      // Show searching message
+      onSystemMessage('Looking for a new stranger...');
+
+      // Wait for cleanup to complete before searching
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Start new search
       setIsSearching(true);
       searchForPartner();
-    }, 300);
+    } catch (error) {
+      setIsSearching(false);
+    }
   };
 
   // Handle stop
