@@ -1,4 +1,4 @@
-import { renderHook } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 import { useAgoraControls } from "../useAgoraControls";
 import { agoraService } from "@/services/agoraService";
 
@@ -58,11 +58,14 @@ describe("useAgoraControls", () => {
   it("refreshes devices", async () => {
     const { result } = renderHook(() => useAgoraControls());
 
-    const devices = await result.current.refreshDevices();
+    let devices: Awaited<ReturnType<typeof result.current.refreshDevices>>;
+    await act(async () => {
+      devices = await result.current.refreshDevices();
+    });
 
-    expect(devices.cameras).toEqual(mockCameras);
-    expect(devices.microphones).toEqual(mockMicrophones);
-    expect(devices.speakers).toEqual(mockSpeakers);
+    expect(devices!.cameras).toEqual(mockCameras);
+    expect(devices!.microphones).toEqual(mockMicrophones);
+    expect(devices!.speakers).toEqual(mockSpeakers);
   });
 
   it("switches camera", async () => {
@@ -84,7 +87,9 @@ describe("useAgoraControls", () => {
   it("sets audio volume", async () => {
     const { result } = renderHook(() => useAgoraControls());
 
-    await result.current.setAudioVolume(75);
+    await act(async () => {
+      await result.current.setAudioVolume(75);
+    });
 
     expect(agoraService.setAudioVolume).toHaveBeenCalledWith(75);
   });
@@ -114,7 +119,9 @@ describe("useAgoraControls", () => {
   it("toggles beauty effect", async () => {
     const { result } = renderHook(() => useAgoraControls());
 
-    await result.current.toggleBeautyEffect(true, { lighteningLevel: 0.7 });
+    await act(async () => {
+      await result.current.toggleBeautyEffect(true, { lighteningLevel: 0.7 });
+    });
 
     expect(agoraService.setBeautyEffect).toHaveBeenCalledWith(true, {
       lighteningLevel: 0.7,
@@ -124,7 +131,9 @@ describe("useAgoraControls", () => {
   it("enables dual stream", async () => {
     const { result } = renderHook(() => useAgoraControls());
 
-    await result.current.enableDualStream();
+    await act(async () => {
+      await result.current.enableDualStream();
+    });
 
     expect(agoraService.enableDualStream).toHaveBeenCalled();
   });

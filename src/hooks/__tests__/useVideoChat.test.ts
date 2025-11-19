@@ -123,27 +123,49 @@ describe("useVideoChat", () => {
     expect(agoraService.initClient).toHaveBeenCalled();
   });
 
-  it.skip("handles join failures gracefully", async () => {
-    // Skipped: causes memory issues in test environment
+  it("handles join failures gracefully", async () => {
     (agoraService.joinChannel as jest.Mock).mockRejectedValue(new Error("Join failed"));
 
-    const { result } = renderHook(() =>
-      useVideoChat(mockUserId, mockChannelName, true, true, true, mockOnError)
+    // Suppress console errors for this test
+    const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    renderHook(() => useVideoChat(mockUserId, mockChannelName, true, true, true, mockOnError));
+
+    // Wait for the error to propagate
+    await waitFor(
+      () => {
+        expect(mockOnError).toHaveBeenCalled();
+      },
+      { timeout: 3000 }
     );
 
-    // Hook should not crash
-    expect(result.current).toBeDefined();
+    // Verify error message contains expected text
+    expect(mockOnError).toHaveBeenCalledWith(expect.stringContaining("Unable to join video call"));
+
+    consoleError.mockRestore();
   });
 
-  it.skip("handles token failures gracefully", async () => {
-    // Skipped: causes memory issues in test environment
+  it("handles token failures gracefully", async () => {
     (requestToken as jest.Mock).mockRejectedValue(new Error("Token request failed"));
 
-    const { result } = renderHook(() =>
-      useVideoChat(mockUserId, mockChannelName, true, true, true, mockOnError)
+    // Suppress console errors for this test
+    const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    renderHook(() => useVideoChat(mockUserId, mockChannelName, true, true, true, mockOnError));
+
+    // Wait for the error to propagate
+    await waitFor(
+      () => {
+        expect(mockOnError).toHaveBeenCalled();
+      },
+      { timeout: 3000 }
     );
 
-    // Hook should not crash
-    expect(result.current).toBeDefined();
+    // Verify error message contains expected text
+    expect(mockOnError).toHaveBeenCalledWith(
+      expect.stringContaining("Unable to connect to video service")
+    );
+
+    consoleError.mockRestore();
   });
 });

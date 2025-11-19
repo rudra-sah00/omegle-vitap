@@ -59,11 +59,11 @@ describe("useChat", () => {
     expect(chatService.setTypingStatus).toHaveBeenCalledWith(mockChannelName, mockUserId, true);
   });
 
-  it("clears all messages", () => {
+  it("clears all messages", async () => {
     const { result } = renderHook(() => useChat(mockChannelName, mockUserId));
 
-    act(() => {
-      result.current.clearMessages();
+    await act(async () => {
+      await result.current.clearMessages();
     });
 
     expect(result.current.messages).toEqual([]);

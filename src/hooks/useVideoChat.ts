@@ -273,7 +273,9 @@ export function useVideoChat(
   // Auto join when enabled
   useEffect(() => {
     if (enabled && channelName && !isJoined) {
-      joinChannel();
+      joinChannel().catch((_err) => {
+        // Error already handled in joinChannel, just prevent unhandled rejection
+      });
     } else if (!enabled && isJoined && clientRef.current) {
       // Only leave if client exists
       leaveChannel().catch((_err) => {});
