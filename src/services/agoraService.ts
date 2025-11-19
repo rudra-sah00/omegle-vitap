@@ -90,10 +90,8 @@ export class AgoraService {
     try {
       const assignedUid = await this.client.join(APP_ID, channel, token, uid);
       this.isJoined = true;
-      console.log("Joined channel:", channel, "with UID:", assignedUid);
       return assignedUid;
     } catch (error) {
-      console.error("Failed to join channel:", error);
       throw error;
     }
   }
@@ -106,6 +104,18 @@ export class AgoraService {
     enableAudio: boolean = true
   ): Promise<MediaTracks> {
     try {
+      // Only close tracks we're about to replace
+      if (enableVideo && this.localTracks.videoTrack) {
+        this.localTracks.videoTrack.stop();
+        this.localTracks.videoTrack.close();
+        this.localTracks.videoTrack = null;
+      }
+      if (enableAudio && this.localTracks.audioTrack) {
+        this.localTracks.audioTrack.stop();
+        this.localTracks.audioTrack.close();
+        this.localTracks.audioTrack = null;
+      }
+
       if (enableVideo && enableAudio) {
         const tracks = await AgoraRTC.createMicrophoneAndCameraTracks();
         this.localTracks.audioTrack = tracks[0];
@@ -117,10 +127,8 @@ export class AgoraService {
           await AgoraRTC.createMicrophoneAudioTrack();
       }
 
-      console.log("Local tracks created:", this.localTracks);
       return this.localTracks;
     } catch (error) {
-      console.error("Failed to create local tracks:", error);
       throw error;
     }
   }
@@ -130,11 +138,11 @@ export class AgoraService {
    */
   public async publishTracks(): Promise<void> {
     if (!this.client) {
-      throw new Error("Client not initialized.");
+      throw new Error("Connection not ready");
     }
 
     if (!this.isJoined) {
-      throw new Error("Not joined to any channel.");
+      throw new Error("Not connected to session");
     }
 
     try {
@@ -148,10 +156,8 @@ export class AgoraService {
 
       if (tracksToPublish.length > 0) {
         await this.client.publish(tracksToPublish);
-        console.log("Published local tracks");
       }
     } catch (error) {
-      console.error("Failed to publish tracks:", error);
       throw error;
     }
   }
@@ -161,7 +167,7 @@ export class AgoraService {
    */
   public async unpublishTracks(): Promise<void> {
     if (!this.client) {
-      throw new Error("Client not initialized.");
+      throw new Error("Connection not ready");
     }
 
     try {
@@ -175,10 +181,8 @@ export class AgoraService {
 
       if (tracksToUnpublish.length > 0) {
         await this.client.unpublish(tracksToUnpublish);
-        console.log("Unpublished local tracks");
       }
     } catch (error) {
-      console.error("Failed to unpublish tracks:", error);
       throw error;
     }
   }
@@ -188,8 +192,7 @@ export class AgoraService {
    */
   public async leaveChannel(): Promise<void> {
     if (!this.client) {
-      console.warn("Client not initialized, nothing to leave.");
-      return; // Don't throw, just return
+      return; // Already disconnected
     }
 
     try {
@@ -199,9 +202,7 @@ export class AgoraService {
       // Leave the channel
       await this.client.leave();
       this.isJoined = false;
-      console.log("Left the channel");
     } catch (error) {
-      console.error("Failed to leave channel:", error);
       throw error;
     }
   }
@@ -222,10 +223,7 @@ export class AgoraService {
         this.localTracks.audioTrack.close();
         this.localTracks.audioTrack = null;
       }
-
-      console.log("Local tracks closed");
     } catch (error) {
-      console.error("Failed to close local tracks:", error);
       throw error;
     }
   }
@@ -235,14 +233,12 @@ export class AgoraService {
    */
   public async toggleVideo(enabled: boolean): Promise<void> {
     if (!this.localTracks.videoTrack) {
-      throw new Error("Video track not available");
+      throw new Error("Camera not available");
     }
 
     try {
       await this.localTracks.videoTrack.setEnabled(enabled);
-      console.log("Video", enabled ? "enabled" : "disabled");
     } catch (error) {
-      console.error("Failed to toggle video:", error);
       throw error;
     }
   }
@@ -252,14 +248,12 @@ export class AgoraService {
    */
   public async toggleAudio(enabled: boolean): Promise<void> {
     if (!this.localTracks.audioTrack) {
-      throw new Error("Audio track not available");
+      throw new Error("Microphone not available");
     }
 
     try {
       await this.localTracks.audioTrack.setEnabled(enabled);
-      console.log("Audio", enabled ? "enabled" : "disabled");
     } catch (error) {
-      console.error("Failed to toggle audio:", error);
       throw error;
     }
   }
@@ -296,14 +290,12 @@ export class AgoraService {
     mediaType: "audio" | "video"
   ): Promise<void> {
     if (!this.client) {
-      throw new Error("Client not initialized.");
+      throw new Error("Connection not ready");
     }
 
     try {
       await this.client.subscribe(user, mediaType);
-      console.log("Subscribed to user:", user.uid, "mediaType:", mediaType);
     } catch (error) {
-      console.error("Failed to subscribe to user:", error);
       throw error;
     }
   }
@@ -316,14 +308,12 @@ export class AgoraService {
     mediaType: "audio" | "video"
   ): Promise<void> {
     if (!this.client) {
-      throw new Error("Client not initialized.");
+      throw new Error("Connection not ready");
     }
 
     try {
       await this.client.unsubscribe(user, mediaType);
-      console.log("Unsubscribed from user:", user.uid, "mediaType:", mediaType);
     } catch (error) {
-      console.error("Failed to unsubscribe from user:", error);
       throw error;
     }
   }
@@ -356,9 +346,7 @@ export class AgoraService {
       }
       this.client = null;
       this.isJoined = false;
-      console.log("Agora service destroyed");
     } catch (error) {
-      console.error("Failed to destroy Agora service:", error);
       throw error;
     }
   }
@@ -385,7 +373,6 @@ export class AgoraService {
       const devices = await AgoraRTC.getCameras();
       return devices;
     } catch (error) {
-      console.error("Failed to get cameras:", error);
       throw error;
     }
   }
@@ -398,7 +385,6 @@ export class AgoraService {
       const devices = await AgoraRTC.getMicrophones();
       return devices;
     } catch (error) {
-      console.error("Failed to get microphones:", error);
       throw error;
     }
   }
@@ -408,14 +394,12 @@ export class AgoraService {
    */
   public async switchCamera(deviceId: string): Promise<void> {
     if (!this.localTracks.videoTrack) {
-      throw new Error("Video track not available");
+      throw new Error("Camera not available");
     }
 
     try {
       await this.localTracks.videoTrack.setDevice(deviceId);
-      console.log("Switched to camera:", deviceId);
     } catch (error) {
-      console.error("Failed to switch camera:", error);
       throw error;
     }
   }
@@ -425,14 +409,12 @@ export class AgoraService {
    */
   public async switchMicrophone(deviceId: string): Promise<void> {
     if (!this.localTracks.audioTrack) {
-      throw new Error("Audio track not available");
+      throw new Error("Microphone not available");
     }
 
     try {
       await this.localTracks.audioTrack.setDevice(deviceId);
-      console.log("Switched to microphone:", deviceId);
     } catch (error) {
-      console.error("Failed to switch microphone:", error);
       throw error;
     }
   }
@@ -445,7 +427,6 @@ export class AgoraService {
       const devices = await AgoraRTC.getPlaybackDevices();
       return devices;
     } catch (error) {
-      console.error("Failed to get playback devices:", error);
       throw error;
     }
   }
@@ -455,14 +436,12 @@ export class AgoraService {
    */
   public async setAudioVolume(volume: number): Promise<void> {
     if (!this.localTracks.audioTrack) {
-      throw new Error("Audio track not available");
+      throw new Error("Microphone not available");
     }
 
     try {
       await this.localTracks.audioTrack.setVolume(volume);
-      console.log("Audio volume set to:", volume);
     } catch (error) {
-      console.error("Failed to set audio volume:", error);
       throw error;
     }
   }
@@ -488,7 +467,7 @@ export class AgoraService {
     bitrateMax?: number;
   }): Promise<void> {
     if (!this.localTracks.videoTrack) {
-      throw new Error("Video track not available");
+      throw new Error("Camera not available");
     }
 
     try {
@@ -499,9 +478,7 @@ export class AgoraService {
         bitrateMin: config.bitrateMin,
         bitrateMax: config.bitrateMax,
       });
-      console.log("Video encoder configuration updated:", config);
     } catch (error) {
-      console.error("Failed to set video encoder configuration:", error);
       throw error;
     }
   }
@@ -517,14 +494,12 @@ export class AgoraService {
     sharpnessLevel?: number;
   }): Promise<void> {
     if (!this.localTracks.videoTrack) {
-      throw new Error("Video track not available");
+      throw new Error("Camera not available");
     }
 
     try {
       await this.localTracks.videoTrack.setBeautyEffect(enabled, options);
-      console.log("Beauty effect", enabled ? "enabled" : "disabled");
     } catch (error) {
-      console.error("Failed to set beauty effect:", error);
       throw error;
     }
   }
@@ -554,7 +529,7 @@ export class AgoraService {
    */
   public async getRTCStats(): Promise<any> {
     if (!this.client) {
-      throw new Error("Client not initialized");
+      throw new Error("Connection not ready");
     }
     return this.client.getRTCStats();
   }
@@ -584,14 +559,12 @@ export class AgoraService {
    */
   public async enableDualStream(): Promise<void> {
     if (!this.client) {
-      throw new Error("Client not initialized");
+      throw new Error("Connection not ready");
     }
 
     try {
       await this.client.enableDualStream();
-      console.log("Dual stream enabled");
     } catch (error) {
-      console.error("Failed to enable dual stream:", error);
       throw error;
     }
   }
@@ -601,14 +574,12 @@ export class AgoraService {
    */
   public async disableDualStream(): Promise<void> {
     if (!this.client) {
-      throw new Error("Client not initialized");
+      throw new Error("Connection not ready");
     }
 
     try {
       await this.client.disableDualStream();
-      console.log("Dual stream disabled");
     } catch (error) {
-      console.error("Failed to disable dual stream:", error);
       throw error;
     }
   }
@@ -621,14 +592,12 @@ export class AgoraService {
     streamType: 0 | 1 // 0 = high, 1 = low
   ): Promise<void> {
     if (!this.client) {
-      throw new Error("Client not initialized");
+      throw new Error("Connection not ready");
     }
 
     try {
       await this.client.setRemoteVideoStreamType(uid, streamType);
-      console.log("Remote video stream type set to:", streamType === 0 ? "high" : "low");
     } catch (error) {
-      console.error("Failed to set remote video stream type:", error);
       throw error;
     }
   }
@@ -643,7 +612,7 @@ export class AgoraService {
     bitrate: number;
   }): Promise<void> {
     if (!this.client) {
-      throw new Error("Client not initialized");
+      throw new Error("Connection not ready");
     }
 
     try {
@@ -653,9 +622,7 @@ export class AgoraService {
         framerate: config.frameRate,
         bitrate: config.bitrate,
       });
-      console.log("Low stream parameter updated:", config);
     } catch (error) {
-      console.error("Failed to set low stream parameter:", error);
       throw error;
     }
   }
@@ -667,15 +634,13 @@ export class AgoraService {
     profile: "music_standard" | "speech_standard" | "speech_low_quality" | "music_high_quality" | "music_high_quality_stereo"
   ): Promise<void> {
     if (!this.localTracks.audioTrack) {
-      throw new Error("Audio track not available");
+      throw new Error("Microphone not available");
     }
 
     try {
       // Note: Audio processing is configured during track creation
       // This is a placeholder for profile management
-      console.log("Audio profile set to:", profile);
     } catch (error) {
-      console.error("Failed to set audio profile:", error);
       throw error;
     }
   }
@@ -687,12 +652,11 @@ export class AgoraService {
     if (!this.client) {
       return null;
     }
-    
+
     try {
       const stats = await this.client.getRTCStats();
       return stats;
     } catch (error) {
-      console.error("Failed to get network quality:", error);
       return null;
     }
   }
@@ -709,7 +673,7 @@ export class AgoraService {
       const imageData = this.localTracks.videoTrack.getCurrentFrameData();
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-      
+
       if (!ctx || !imageData) {
         return null;
       }
@@ -717,10 +681,9 @@ export class AgoraService {
       canvas.width = imageData.width;
       canvas.height = imageData.height;
       ctx.putImageData(imageData, 0, 0);
-      
+
       return canvas.toDataURL("image/png");
     } catch (error) {
-      console.error("Failed to take snapshot:", error);
       throw error;
     }
   }
@@ -730,7 +693,7 @@ export class AgoraService {
    */
   public async setVideoContentHint(hint: "motion" | "detail" | "text"): Promise<void> {
     if (!this.localTracks.videoTrack) {
-      throw new Error("Video track not available");
+      throw new Error("Camera not available");
     }
 
     try {
@@ -754,9 +717,7 @@ export class AgoraService {
           bitrateMax: 1000,
         });
       }
-      console.log("Video content hint set to:", hint);
     } catch (error) {
-      console.error("Failed to set video content hint:", error);
       throw error;
     }
   }
@@ -767,7 +728,6 @@ export class AgoraService {
   public async setEchoCancellation(enabled: boolean): Promise<void> {
     // Echo cancellation is set during track creation
     // This is for reference
-    console.log("Echo cancellation:", enabled ? "enabled" : "disabled");
   }
 
   /**
@@ -776,7 +736,6 @@ export class AgoraService {
   public async setNoiseSuppression(enabled: boolean): Promise<void> {
     // Noise suppression is set during track creation
     // This is for reference
-    console.log("Noise suppression:", enabled ? "enabled" : "disabled");
   }
 
   /**
@@ -785,7 +744,6 @@ export class AgoraService {
   public async setAutoGainControl(enabled: boolean): Promise<void> {
     // Auto gain control is set during track creation
     // This is for reference
-    console.log("Auto gain control:", enabled ? "enabled" : "disabled");
   }
 
   /**
@@ -808,10 +766,8 @@ export class AgoraService {
         },
         withAudio ? "enable" : "disable"
       );
-      console.log("Screen share track created");
       return screenTrack;
     } catch (error) {
-      console.error("Failed to create screen share track:", error);
       throw error;
     }
   }

@@ -3,15 +3,15 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { agoraService } from '@/services/agoraService';
 import { requestToken } from '@/services/agoraTokenService';
-import type { 
-  ICameraVideoTrack, 
-  IMicrophoneAudioTrack, 
-  IAgoraRTCRemoteUser 
+import type {
+  ICameraVideoTrack,
+  IMicrophoneAudioTrack,
+  IAgoraRTCRemoteUser
 } from 'agora-rtc-sdk-ng';
 
 export function useVideoChat(
-  userId: string, 
-  channelName: string, 
+  userId: string,
+  channelName: string,
   enabled: boolean,
   shouldPublishVideo: boolean = true,
   shouldPublishAudio: boolean = true
@@ -37,7 +37,7 @@ export function useVideoChat(
       // Create client if not exists
       if (!clientRef.current) {
         clientRef.current = await agoraService.initClient('rtc');
-        
+
         // Setup event listeners
         clientRef.current.on('user-published', async (user: IAgoraRTCRemoteUser, mediaType: 'audio' | 'video') => {
           await clientRef.current.subscribe(user, mediaType);
@@ -72,7 +72,7 @@ export function useVideoChat(
       }
 
       // Get RTC token
-      const uid = Math.floor(Math.random() * 100000);
+      const uid = Math.floor(Math.random() * 100000) + 1; // Range: 1-100000 (never 0)
       const token = await requestToken(channelName, uid);
 
       // Join channel
@@ -80,14 +80,14 @@ export function useVideoChat(
 
       // Create and publish local tracks based on preview state
       const tracks = await agoraService.createLocalTracks(shouldPublishVideo, shouldPublishAudio);
-      
+
       if (shouldPublishVideo && tracks.videoTrack) {
         setLocalVideoTrack(tracks.videoTrack);
         setIsCameraOn(true);
       } else {
         setIsCameraOn(false);
       }
-      
+
       if (shouldPublishAudio && tracks.audioTrack) {
         setLocalAudioTrack(tracks.audioTrack);
         setIsMicOn(true);
@@ -103,9 +103,7 @@ export function useVideoChat(
       }
 
       setIsJoined(true);
-      console.log('Joined video channel:', channelName, 'Video:', shouldPublishVideo, 'Audio:', shouldPublishAudio);
     } catch (error) {
-      console.error('Failed to join video channel:', error);
       isJoiningRef.current = false; // Reset on error
     } finally {
       isJoiningRef.current = false;
@@ -127,10 +125,8 @@ export function useVideoChat(
       await agoraService.leaveChannel();
       setRemoteUsers([]);
       setIsJoined(false);
-      isJoiningRef.current = false; // Reset joining flag
-      console.log('Left video channel');
+      isJoiningRef.current = false;
     } catch (error) {
-      console.error('Failed to leave video channel:', error);
       // Reset flags even on error
       isJoiningRef.current = false;
       setIsJoined(false);
@@ -139,19 +135,53 @@ export function useVideoChat(
 
   // Toggle microphone
   const toggleMic = useCallback(async () => {
-    if (localAudioTrack) {
-      await localAudioTrack.setEnabled(!isMicOn);
-      setIsMicOn(!isMicOn);
+    if (!localAudioTrack) {
+      // Create audio track if it doesn't exist
+      try {
+        const tracks = await agoraService.createLocalTracks(false, true);
+        if (tracks.audioTrack) {
+          setLocalAudioTrack(tracks.audioTrack);
+          setIsMicOn(true);
+          // Publish the new track
+          if (isJoined && clientRef.current) {
+            await clientRef.current.publish([tracks.audioTrack]);
+          }
+        }
+      } catch (error) {
+        throw error;
+      }
+    } else {
+      // Toggle existing track
+      const newState = !isMicOn;
+      await localAudioTrack.setEnabled(newState);
+      setIsMicOn(newState);
     }
-  }, [localAudioTrack, isMicOn]);
+  }, [localAudioTrack, isMicOn, isJoined]);
 
   // Toggle camera
   const toggleCamera = useCallback(async () => {
-    if (localVideoTrack) {
-      await localVideoTrack.setEnabled(!isCameraOn);
-      setIsCameraOn(!isCameraOn);
+    if (!localVideoTrack) {
+      // Create video track if it doesn't exist
+      try {
+        const tracks = await agoraService.createLocalTracks(true, false);
+        if (tracks.videoTrack) {
+          setLocalVideoTrack(tracks.videoTrack);
+          setIsCameraOn(true);
+          // Publish the new track
+          if (isJoined && clientRef.current) {
+            await clientRef.current.publish([tracks.videoTrack]);
+          }
+        }
+      } catch (error) {
+        throw error;
+      }
+    } else {
+      // Toggle existing track
+      const newState = !isCameraOn;
+      await localVideoTrack.setEnabled(newState);
+      setIsCameraOn(newState);
     }
-  }, [localVideoTrack, isCameraOn]);
+  }, [localVideoTrack, isCameraOn, isJoined]);
 
   // Auto join when enabled
   useEffect(() => {
@@ -159,7 +189,7 @@ export function useVideoChat(
       joinChannel();
     } else if (!enabled && isJoined && clientRef.current) {
       // Only leave if client exists
-      leaveChannel().catch(err => console.error('Error leaving channel:', err));
+      leaveChannel().catch(err => { });
     }
   }, [enabled, channelName, isJoined, joinChannel, leaveChannel]);
 
@@ -168,7 +198,7 @@ export function useVideoChat(
     return () => {
       // Only cleanup if client exists
       if (clientRef.current && isJoined) {
-        leaveChannel().catch(err => console.error('Cleanup error:', err));
+        leaveChannel().catch(err => { });
       }
     };
   }, []);

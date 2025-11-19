@@ -36,14 +36,12 @@ export function useMatching(
   useEffect(() => {
     const newUserId = userQueueService.generateUserId();
     setUserId(newUserId);
-    console.log('Generated user ID:', newUserId);
   }, []);
 
   // Connect to partner
   const connectToPartner = (newPartnerId: string) => {
     // Prevent duplicate connections
     if (isConnected || partnerId) {
-      console.log('Already connected, ignoring duplicate connection attempt');
       return;
     }
 
@@ -52,22 +50,23 @@ export function useMatching(
       clearInterval(searchIntervalRef.current);
       searchIntervalRef.current = null;
     }
-    
+
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
       searchTimeoutRef.current = null;
     }
 
     setPartnerId(newPartnerId);
-    
+
     const channel = [userId, newPartnerId].sort().join('_');
     setChannelName(channel);
-    
+
     setIsSearching(false);
-    setIsConnected(true);
-    
+
+    // Show "You're now chatting" message immediately
     setTimeout(() => {
       onSystemMessage('You are now connected with a stranger!');
+      setIsConnected(true);
     }, 300);
 
     // Notify callback
@@ -77,16 +76,20 @@ export function useMatching(
 
     // Listen for partner disconnect
     const unsubDisconnect = userQueueService.onPartnerDisconnected(userId, () => {
-      console.log('Partner disconnected!');
       onSystemMessage('Stranger has disconnected.');
-      
+
       if (partnerDisconnectedCallbackRef.current) {
         partnerDisconnectedCallbackRef.current();
       }
-      
+
+      // Reset state and start searching again
       setTimeout(() => {
         handlePartnerLeft();
-      }, 2000);
+        // Auto-search for next partner after disconnect with timeout
+        setTimeout(() => {
+          searchForPartner();
+        }, 500);
+      }, 1500);
     });
 
     if (unsubscribePartnerRef.current) {
@@ -101,7 +104,7 @@ export function useMatching(
     setPartnerId("");
     setChannelName("");
     onClearMessages();
-    
+
     if (unsubscribePartnerRef.current) {
       unsubscribePartnerRef.current();
       unsubscribePartnerRef.current = null;
@@ -111,26 +114,25 @@ export function useMatching(
   // Search for partner
   const searchForPartner = async () => {
     if (!userId || isConnected || isSearching) {
-      console.log('Cannot search: already searching or connected');
       return;
     }
 
     setIsSearching(true);
-    
+
     try {
       // Get user info from localStorage
       const userInfoStr = localStorage.getItem('userInfo');
       const userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
       const gender = userInfo?.gender || 'other';
       const name = userInfo?.name || 'Anonymous';
+      const year = userInfo?.year || '';
+      const interests = userInfo?.interests || '';
 
-      await userQueueService.addToQueue(userId, gender, name);
-      console.log(`Added to queue as ${gender}, searching for partner...`);
+      await userQueueService.addToQueue(userId, gender, name, year, interests);
 
       const partner = await userQueueService.tryInstantMatch(userId);
-      
+
       if (partner) {
-        console.log('Instant match found:', partner);
         connectToPartner(partner);
         return;
       }
@@ -143,18 +145,16 @@ export function useMatching(
 
       const unsubscribe = userQueueService.onPartnerConnected(userId, (partnerId) => {
         if (partnerId) {
-          console.log('Partner connected:', partnerId);
           connectToPartner(partnerId);
         }
       });
-      
+
       unsubscribePartnerRef.current = unsubscribe;
 
       searchIntervalRef.current = setInterval(async () => {
         const partner = await userQueueService.tryInstantMatch(userId);
         if (partner) {
-          console.log('Found partner in polling:', partner);
-          
+
           if (searchIntervalRef.current) {
             clearInterval(searchIntervalRef.current);
             searchIntervalRef.current = null;
@@ -170,17 +170,16 @@ export function useMatching(
 
       // Auto-cancel search after 15 seconds
       searchTimeoutRef.current = setTimeout(async () => {
-        console.log('Search timeout after 15 seconds');
         if (searchIntervalRef.current) {
           clearInterval(searchIntervalRef.current);
           searchIntervalRef.current = null;
         }
         await disconnectFromPartner();
         setIsSearching(false);
+        onSystemMessage('No match found. Click "Start" to search again.');
       }, 15000);
 
     } catch (error) {
-      console.error('Failed to search for partner:', error);
       setIsSearching(false);
     }
   };
@@ -197,7 +196,7 @@ export function useMatching(
 
     // Disconnect from current partner and queue
     await disconnectFromPartner();
-    
+
     // Small delay before starting new search to ensure cleanup
     setTimeout(() => {
       setIsSearching(true);
@@ -207,8 +206,24 @@ export function useMatching(
 
   // Handle stop
   const handleStop = async () => {
-    setIsSearching(false);
-    await disconnectFromPartner();
+    if (!userId) return;
+
+    // Clear messages regardless of state
+    onClearMessages();
+
+    // If connected, disconnect from partner
+    if (isConnected) {
+      onSystemMessage('You have disconnected.');
+      setIsConnected(false);
+      setPartnerId("");
+      setChannelName("");
+      await disconnectFromPartner();
+    }
+    // If searching, just stop searching
+    else if (isSearching) {
+      setIsSearching(false);
+      await disconnectFromPartner();
+    }
   };
 
   // Disconnect from partner
@@ -233,7 +248,6 @@ export function useMatching(
         await userQueueService.removeFromQueue(userId);
       }
     } catch (error) {
-      console.error('Disconnect error:', error);
     }
 
     setPartnerId("");
@@ -253,13 +267,14 @@ export function useMatching(
       if (unsubscribePartnerRef.current) {
         unsubscribePartnerRef.current();
       }
-      
-      // Remove from queue
+
+      // Remove from queue and cleanup
       if (userId) {
-        userQueueService.removeFromQueue(userId).catch(err => 
-          console.error('Cleanup error:', err)
-        );
-        userQueueService.cleanup(userId);
+        // Use Promise.allSettled to ensure both cleanups attempt to run
+        Promise.allSettled([
+          userQueueService.removeFromQueue(userId),
+          userQueueService.cleanup(userId)
+        ]);
       }
     };
   }, [userId]);

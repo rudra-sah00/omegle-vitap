@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import ChatWindow from "./_components/ChatWindow";
 import VideoPanel from "./_components/VideoPanel";
@@ -14,19 +14,14 @@ import { useMatching } from "@/hooks/useMatching";
 import { useKeyboardShortcuts, useVideoRenderer } from "@/hooks/useUIHelpers";
 import { useMediaDevices } from "@/hooks/useMediaDevices";
 import { agoraService } from "@/services/agoraService";
+import { userQueueService } from "@/services/userQueueService";
+import { Toast } from "@/components/ui";
+import { useToast } from "@/hooks/useToast";
+import { getErrorMessage } from "@/utils/errorHandler";
 
 export default function HomePage() {
   const router = useRouter();
-
-  // Check if user has submitted their info
-  useEffect(() => {
-    const userInfo = localStorage.getItem("userInfo");
-    if (!userInfo) {
-      // Redirect to landing page if no user info
-      router.push("/omegle");
-      return;
-    }
-  }, [router]);
+  const { toasts, removeToast, error: showError, warning } = useToast();
 
   // UI State
   const [isMicOn, setIsMicOn] = useState(false); // Start disabled
@@ -79,21 +74,65 @@ export default function HomePage() {
     remoteUsers,
     isJoined,
     networkQuality,
+    isMicOn: connectedMicOn,
+    isCameraOn: connectedCameraOn,
     toggleMic,
     toggleCamera,
     leaveChannel,
   } = useVideoChat(userId, channelName, isConnected, isCameraOn, isMicOn);
 
+  // Sync preview state with connected state when connected
+  useEffect(() => {
+    if (isConnected && isJoined) {
+      setIsMicOn(connectedMicOn);
+      setIsCameraOn(connectedCameraOn);
+    }
+  }, [isConnected, isJoined, connectedMicOn, connectedCameraOn]);
+
+  // Check if user has submitted their info
+  useEffect(() => {
+    const userInfo = localStorage.getItem("userInfo");
+    if (!userInfo) {
+      // Redirect to landing page if no user info
+      router.push("/omegle");
+      return;
+    }
+  }, [router]);
+
+  // Cleanup on tab close or page unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (userId) {
+        // Use navigator.sendBeacon for reliable cleanup on page unload
+        userQueueService.removeFromQueue(userId).catch(() => {});
+        userQueueService.cleanup(userId).catch(() => {});
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [userId]);
+
   // Render local video (either preview or connected)
   useEffect(() => {
-    if (!isConnected && previewVideoTrack && localVideoRef.current) {
+    const videoElement = localVideoRef.current;
+    if (!videoElement) return;
+
+    if (!isConnected && previewVideoTrack) {
       // Show preview before connecting
-      previewVideoTrack.play(localVideoRef.current);
-      console.log('Playing preview video');
-    } else if (isConnected && localVideoTrack && localVideoRef.current) {
+      previewVideoTrack.play(videoElement);
+      return () => {
+        previewVideoTrack.stop();
+      };
+    } else if (isConnected && localVideoTrack) {
       // Show connected video
-      localVideoTrack.play(localVideoRef.current);
-      console.log('Playing connected video');
+      localVideoTrack.play(videoElement);
+      return () => {
+        localVideoTrack.stop();
+      };
     }
   }, [previewVideoTrack, localVideoTrack, isConnected]);
 
@@ -107,12 +146,13 @@ export default function HomePage() {
   // Cleanup preview tracks when connecting
   useEffect(() => {
     if (isConnected && (previewVideoTrack || previewAudioTrack)) {
-      console.log('Cleaning up preview tracks...');
       if (previewVideoTrack) {
+        previewVideoTrack.stop();
         previewVideoTrack.close();
         setPreviewVideoTrack(null);
       }
       if (previewAudioTrack) {
+        previewAudioTrack.stop();
         previewAudioTrack.close();
         setPreviewAudioTrack(null);
       }
@@ -140,12 +180,34 @@ export default function HomePage() {
     }
   }, [isConnected, isSearching, showPreCallControls]);
 
-  // Show controls on video click
+  // Comprehensive cleanup on unmount or route change
+  useEffect(() => {
+    return () => {
+      // Cleanup preview tracks
+      if (previewVideoTrack) {
+        previewVideoTrack.stop();
+        previewVideoTrack.close();
+      }
+      if (previewAudioTrack) {
+        previewAudioTrack.stop();
+        previewAudioTrack.close();
+      }
+      
+      // Cleanup timers
+      if (hideControlsTimerRef.current) {
+        clearTimeout(hideControlsTimerRef.current);
+      }
+    };
+  }, [previewVideoTrack, previewAudioTrack]);
+
+  // Show controls on video click - TOGGLE functionality
   const handleLocalVideoClick = () => {
-    if (!isConnected && !isSearching) {
-      setShowPreCallControls(true);
-    } else if (isConnected) {
-      setShowControls(!showControls);
+    if (!isSearching) {
+      if (!isConnected) {
+        setShowPreCallControls(prev => !prev);
+      } else {
+        setShowControls(prev => !prev);
+      }
     }
   };
 
@@ -153,84 +215,90 @@ export default function HomePage() {
   useKeyboardShortcuts(isConnected, handleNext);
 
   // Handlers for preview (before connecting)
-  const handlePreviewMicToggle = async () => {
-    if (!isMicOn) {
-      // Turn ON microphone
-      try {
+  const handlePreviewMicToggle = useCallback(async () => {
+    try {
+      if (!isMicOn) {
+        // Turn ON microphone
         if (!previewAudioTrack) {
           // Create new audio track
           const tracks = await agoraService.createLocalTracks(false, true);
           if (tracks.audioTrack) {
             setPreviewAudioTrack(tracks.audioTrack);
-            console.log('Microphone enabled');
+            setIsMicOn(true);
           }
         } else {
           // Re-enable existing track
           await previewAudioTrack.setEnabled(true);
-          console.log('Microphone re-enabled');
+          setIsMicOn(true);
         }
-        setIsMicOn(true);
-      } catch (error: any) {
-        console.error('Failed to enable microphone:', error);
-        if (error?.code === 'PERMISSION_DENIED' || error?.name === 'NotAllowedError') {
-          alert('Please allow microphone access');
+      } else {
+        // Turn OFF microphone
+        if (previewAudioTrack) {
+          await previewAudioTrack.setEnabled(false);
         }
+        setIsMicOn(false);
       }
-    } else {
-      // Turn OFF microphone
-      if (previewAudioTrack) {
-        await previewAudioTrack.setEnabled(false);
-        console.log('Microphone disabled');
+    } catch (error: any) {
+      const message = getErrorMessage(error);
+      if (error?.code === 'PERMISSION_DENIED' || error?.name === 'NotAllowedError') {
+        warning(message);
+      } else {
+        showError(message);
       }
-      setIsMicOn(false);
     }
-  };
+  }, [isMicOn, previewAudioTrack, warning, showError]);
 
-  const handlePreviewCameraToggle = async () => {
-    if (!isCameraOn) {
-      // Turn ON camera
-      try {
+  const handlePreviewCameraToggle = useCallback(async () => {
+    try {
+      if (!isCameraOn) {
+        // Turn ON camera
         if (!previewVideoTrack) {
           // Create new video track
           const tracks = await agoraService.createLocalTracks(true, false);
           if (tracks.videoTrack) {
             setPreviewVideoTrack(tracks.videoTrack);
-            console.log('Camera enabled');
+            setIsCameraOn(true);
           }
         } else {
           // Re-enable existing track
           await previewVideoTrack.setEnabled(true);
-          console.log('Camera re-enabled');
+          setIsCameraOn(true);
         }
-        setIsCameraOn(true);
-      } catch (error: any) {
-        console.error('Failed to enable camera:', error);
-        if (error?.code === 'PERMISSION_DENIED' || error?.name === 'NotAllowedError') {
-          alert('Please allow camera access');
+      } else {
+        // Turn OFF camera
+        if (previewVideoTrack) {
+          await previewVideoTrack.setEnabled(false);
         }
+        setIsCameraOn(false);
       }
-    } else {
-      // Turn OFF camera
-      if (previewVideoTrack) {
-        await previewVideoTrack.setEnabled(false);
-        console.log('Camera disabled');
+    } catch (error: any) {
+      const message = getErrorMessage(error);
+      if (error?.code === 'PERMISSION_DENIED' || error?.name === 'NotAllowedError') {
+        warning(message);
+      } else {
+        showError(message);
       }
-      setIsCameraOn(false);
     }
-  };
+  }, [isCameraOn, previewVideoTrack, warning, showError]);
 
-  // Handlers for connected state (use videoChat toggles and sync state)
-  const handleConnectedMicToggle = async () => {
-    await toggleMic();
-    // Sync state from useVideoChat
-    setIsMicOn(prev => !prev);
-  };
+  // Handlers for connected state (use videoChat toggles)
+  const handleConnectedMicToggle = useCallback(async () => {
+    try {
+      await toggleMic();
+      // State is automatically updated in useVideoChat hook
+    } catch (error) {
+      showError('Unable to toggle microphone');
+    }
+  }, [toggleMic, showError]);
 
-  const handleConnectedCameraToggle = async () => {
-    await toggleCamera();
-    // Sync state from useVideoChat
-    setIsCameraOn(prev => !prev);
-  };
+  const handleConnectedCameraToggle = useCallback(async () => {
+    try {
+      await toggleCamera();
+      // State is automatically updated in useVideoChat hook
+    } catch (error) {
+      showError('Unable to toggle camera');
+    }
+  }, [toggleCamera, showError]);
 
   const handleSendMessage = (message: string) => {
     sendMessage(message);
@@ -261,11 +329,11 @@ export default function HomePage() {
       // Now start searching with current state
       searchForPartner();
     } catch (error: any) {
-      console.error('Failed to get permissions:', error);
+      const message = getErrorMessage(error);
       if (error?.code === 'PERMISSION_DENIED' || error?.name === 'NotAllowedError') {
-        alert('Please allow camera and microphone access to start chatting.');
+        warning(message);
       } else {
-        alert('Failed to access camera/microphone. Please check your devices.');
+        showError(message);
       }
     }
   };
@@ -293,8 +361,8 @@ export default function HomePage() {
           hasVideoTrack={!!(previewVideoTrack || localVideoTrack)}
           onToggleControls={handleLocalVideoClick}
         >
-          {/* Pre-call controls (camera/mic above Start button) */}
-          {!isConnected && showPreCallControls && (
+          {/* Pre-call controls - show before connecting */}
+          {!isConnected && !isSearching && (
             <PreCallControls
               isMicOn={isMicOn}
               isCameraOn={isCameraOn}
@@ -302,37 +370,26 @@ export default function HomePage() {
               onCameraToggle={handlePreviewCameraToggle}
               onStart={handleStartWithPermissions}
               onStop={handleStop}
-              isSearching={isSearching}
+              isSearching={false}
+              showControls={showPreCallControls}
             />
           )}
 
-          {/* Start button - always visible when not connected/searching */}
-          {!isConnected && !isSearching && !showPreCallControls && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleStartWithPermissions();
-              }}
-              className="absolute bottom-6 left-1/2 transform -translate-x-1/2 px-12 py-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg text-lg z-10"
-            >
-              Start
-            </button>
+          {/* Searching controls */}
+          {isSearching && (
+            <PreCallControls
+              isMicOn={isMicOn}
+              isCameraOn={isCameraOn}
+              onMicToggle={handlePreviewMicToggle}
+              onCameraToggle={handlePreviewCameraToggle}
+              onStart={handleStartWithPermissions}
+              onStop={handleStop}
+              isSearching={true}
+              showControls={showPreCallControls}
+            />
           )}
 
-          {/* Stop searching button */}
-          {isSearching && !showPreCallControls && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleStop();
-              }}
-              className="absolute bottom-6 left-1/2 transform -translate-x-1/2 px-8 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors shadow-lg z-10"
-            >
-              Stop Searching
-            </button>
-          )}
-
-          {/* In-call controls - always visible during connection */}
+          {/* In-call controls - show during connection */}
           {isConnected && (
             <VideoControls
               isMicOn={isMicOn}
@@ -342,6 +399,7 @@ export default function HomePage() {
               onCameraToggle={handleConnectedCameraToggle}
               onNext={handleNext}
               onStop={handleStop}
+              showControls={showControls}
             />
           )}
         </VideoPanel>
@@ -377,6 +435,16 @@ export default function HomePage() {
         onTyping={handleTyping}
         userId={userId}
       />
+
+      {/* Toast Notifications */}
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => removeToast(toast.id)}
+        />
+      ))}
     </div>
   );
 }

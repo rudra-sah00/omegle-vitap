@@ -52,7 +52,6 @@ export function useChat(userId: string, channelName: string) {
       // Stop typing indicator
       await chatService.setTypingStatus(channelName, userId, false);
     } catch (error) {
-      console.error('Failed to send message:', error);
     }
   }, [channelName, userId]);
 
@@ -63,7 +62,6 @@ export function useChat(userId: string, channelName: string) {
     try {
       await chatService.sendSystemMessage(channelName, message);
     } catch (error) {
-      console.error('Failed to send system message:', error);
     }
   }, [channelName]);
 
@@ -84,7 +82,6 @@ export function useChat(userId: string, channelName: string) {
         await chatService.setTypingStatus(channelName, userId, false);
       }, 3000);
     } catch (error) {
-      console.error('Failed to set typing indicator:', error);
     }
   }, [channelName, userId]);
 
@@ -96,7 +93,6 @@ export function useChat(userId: string, channelName: string) {
       await chatService.clearChannel(channelName);
       setMessages([]);
     } catch (error) {
-      console.error('Failed to clear messages:', error);
     }
   }, [channelName]);
 

@@ -1,4 +1,4 @@
-import { getDatabase, ref, set, get, remove, onValue, push, update, serverTimestamp, onDisconnect } from 'firebase/database';
+import { getDatabase, ref, set, get, remove, onValue, push, update, serverTimestamp, onDisconnect, runTransaction } from 'firebase/database';
 import app from '@/lib/firebase';
 import { chatService } from './chatService';
 
@@ -9,6 +9,8 @@ export interface QueueUser {
   timestamp: number;
   gender?: 'male' | 'female' | 'other';
   name?: string;
+  year?: string;
+  interests?: string;
 }
 
 class UserQueueService {
@@ -27,9 +29,8 @@ class UserQueueService {
   }
 
   // Add user to waiting queue with auto-cleanup on disconnect
-  async addToQueue(userId: string, gender?: string, name?: string): Promise<void> {
+  async addToQueue(userId: string, gender?: string, name?: string, year?: string, interests?: string): Promise<void> {
     if (!userId) {
-      console.error('Cannot add to queue: userId is undefined');
       return;
     }
 
@@ -40,12 +41,13 @@ class UserQueueService {
       timestamp: serverTimestamp(),
       gender: gender || 'other',
       name: name || 'Anonymous',
+      year: year || '',
+      interests: interests || '',
     });
 
     // Setup auto-cleanup if user disconnects unexpectedly
     const disconnectRef = onDisconnect(userRef);
     await disconnectRef.remove();
-    console.log(`Auto-cleanup enabled for ${userId} (${gender})`);
   }
 
   // Find a random waiting partner with gender preference (excluding current user)
@@ -56,8 +58,12 @@ class UserQueueService {
     if (!snapshot.exists()) return null;
 
     const users = snapshot.val();
+    // CRITICAL: Only match with users who are waiting AND have no partner
     const waitingUsers = Object.values(users).filter(
-      (user: any) => user.status === 'waiting' && user.userId !== currentUserId
+      (user: any) => 
+        user.status === 'waiting' && 
+        user.userId !== currentUserId &&
+        !user.partnerId // Ensure they're not already matched
     ) as QueueUser[];
 
     if (waitingUsers.length === 0) return null;
@@ -67,14 +73,12 @@ class UserQueueService {
       const oppositeGenderUsers = this.filterByOppositeGender(waitingUsers, currentUserGender);
       if (oppositeGenderUsers.length > 0) {
         const randomIndex = Math.floor(Math.random() * oppositeGenderUsers.length);
-        console.log(`Matched with opposite gender: ${oppositeGenderUsers[randomIndex].gender}`);
         return oppositeGenderUsers[randomIndex].userId;
       }
     }
 
     // Priority 2: If no opposite gender found, match with any available user
     const randomIndex = Math.floor(Math.random() * waitingUsers.length);
-    console.log(`Matched with available user: ${waitingUsers[randomIndex].gender}`);
     return waitingUsers[randomIndex].userId;
   }
 
@@ -95,7 +99,6 @@ class UserQueueService {
     const MAX_RETRIES = 3;
     
     if (retryCount >= MAX_RETRIES) {
-      console.log('Max retries reached for instant match');
       return null;
     }
 
@@ -110,8 +113,12 @@ class UserQueueService {
     const currentUser = users[currentUserId] as QueueUser;
     const currentUserGender = currentUser?.gender;
 
+    // CRITICAL: Only match with users who are waiting AND have no partner
     const waitingUsers = Object.values(users).filter(
-      (user: any) => user.status === 'waiting' && user.userId !== currentUserId
+      (user: any) => 
+        user.status === 'waiting' && 
+        user.userId !== currentUserId &&
+        !user.partnerId // Ensure they're not already matched
     ) as QueueUser[];
 
     if (waitingUsers.length === 0) return null;
@@ -123,7 +130,6 @@ class UserQueueService {
       if (oppositeGenderUsers.length > 0) {
         const randomIndex = Math.floor(Math.random() * oppositeGenderUsers.length);
         partner = oppositeGenderUsers[randomIndex];
-        console.log(`Trying to match ${currentUserGender} with opposite gender: ${partner.gender}`);
       }
     }
 
@@ -131,11 +137,9 @@ class UserQueueService {
     if (!partner) {
       const randomIndex = Math.floor(Math.random() * waitingUsers.length);
       partner = waitingUsers[randomIndex];
-      console.log(`No opposite gender found, matching with: ${partner.gender}`);
     }
 
     if (!partner || !partner.userId) {
-      console.error('Invalid partner data');
       return null;
     }
 
@@ -143,61 +147,66 @@ class UserQueueService {
     const partnerRef = ref(this.db, `queue/${partner.userId}`);
     const partnerSnapshot = await get(partnerRef);
     
-    if (!partnerSnapshot.exists() || partnerSnapshot.val()?.status !== 'waiting') {
-      console.log('Partner no longer available, retrying...');
+    const partnerData = partnerSnapshot.val();
+    if (!partnerSnapshot.exists() || 
+        partnerData?.status !== 'waiting' || 
+        partnerData?.partnerId) { // Check if already has partner
       return this.tryInstantMatch(currentUserId, retryCount + 1); // Retry with another partner
     }
 
-    // Immediately mark both as connected
+    // Immediately mark both as connected using atomic transaction
     try {
       await this.markAsConnected(currentUserId, partner.userId);
       return partner.userId;
     } catch (error) {
-      console.error('Failed to mark as connected, retrying...', error);
       return this.tryInstantMatch(currentUserId, retryCount + 1);
     }
   }
 
-  // Mark two users as connected
+  // Mark two users as connected (atomic transaction to prevent race conditions)
   async markAsConnected(userId1: string, userId2: string): Promise<void> {
     if (!userId1 || !userId2) {
-      console.error('Cannot mark as connected: userId is undefined');
       return;
     }
 
-    // Double-check both users still exist and are waiting
-    const user1Ref = ref(this.db, `queue/${userId1}`);
-    const user2Ref = ref(this.db, `queue/${userId2}`);
+    const queueRef = ref(this.db, 'queue');
     
-    const [user1Snap, user2Snap] = await Promise.all([
-      get(user1Ref),
-      get(user2Ref)
-    ]);
-
-    if (!user1Snap.exists() || !user2Snap.exists()) {
-      console.error('One or both users no longer in queue');
-      throw new Error('Users not found in queue');
-    }
-
-    const user1Data = user1Snap.val();
-    const user2Data = user2Snap.val();
-
-    if (user1Data.status !== 'waiting' || user2Data.status !== 'waiting') {
-      console.error('One or both users already connected');
-      throw new Error('Users already connected');
-    }
-
-    const updates: Record<string, any> = {};
-    updates[`queue/${userId1}/status`] = 'connected';
-    updates[`queue/${userId1}/partnerId`] = userId2;
-    updates[`queue/${userId2}/status`] = 'connected';
-    updates[`queue/${userId2}/partnerId`] = userId1;
-
     try {
-      await update(ref(this.db), updates);
-      console.log(`Marked ${userId1} and ${userId2} as connected`);
+      // Use transaction to atomically check and update both users
+      await runTransaction(queueRef, (currentData) => {
+        if (!currentData) {
+          return currentData; // Abort if queue doesn't exist
+        }
+
+        const user1 = currentData[userId1];
+        const user2 = currentData[userId2];
+
+        // Check if both users exist and are waiting
+        if (!user1 || !user2) {
+          throw new Error('Unable to connect');
+        }
+
+        if (user1.status !== 'waiting' || user2.status !== 'waiting') {
+          throw new Error('Unable to connect');
+        }
+
+        // Check if either user already has a partner
+        if (user1.partnerId || user2.partnerId) {
+          throw new Error('Unable to connect');
+        }
+
+        // Atomically update both users to connected
+        currentData[userId1].status = 'connected';
+        currentData[userId1].partnerId = userId2;
+        currentData[userId1].connectedAt = Date.now();
+        
+        currentData[userId2].status = 'connected';
+        currentData[userId2].partnerId = userId1;
+        currentData[userId2].connectedAt = Date.now();
+
+        return currentData;
+      });
     } catch (error) {
-      console.error('Failed to mark users as connected:', error);
       throw error;
     }
   }
@@ -205,7 +214,6 @@ class UserQueueService {
   // Remove user from queue (on disconnect/next)
   async removeFromQueue(userId: string): Promise<void> {
     if (!userId) {
-      console.error('Cannot remove from queue: userId is undefined');
       return;
     }
 
@@ -224,25 +232,24 @@ class UserQueueService {
           // Delete chat room immediately
           try {
             await chatService.clearChannel(channelName);
-            console.log(`Chat channel ${channelName} deleted immediately`);
           } catch (chatError) {
-            console.error('Failed to clear chat channel:', chatError);
+            // Ignore errors during cleanup
           }
 
-          // Set partner back to waiting (don't block on this)
+          // Important: Remove the partner completely from queue to trigger disconnect
+          // This ensures the partner sees the disconnect and can search again
           const partnerRef = ref(this.db, `queue/${partnerId}`);
-          update(partnerRef, {
-            status: 'waiting',
-            partnerId: null,
-          }).catch(err => console.error('Failed to update partner status:', err));
+          try {
+            await remove(partnerRef);
+          } catch (err) {
+            // Ignore errors during cleanup
+          }
         }
 
         // Remove current user from queue
         await remove(userRef);
-        console.log(`User ${userId} removed from queue`);
       }
     } catch (error) {
-      console.error('Failed to remove user from queue:', error);
       throw error;
     }
   }
@@ -297,21 +304,29 @@ class UserQueueService {
 
   // Cleanup - remove user on page leave
   async cleanup(userId: string): Promise<void> {
-    const userRef = ref(this.db, `queue/${userId}`);
-    const snapshot = await get(userRef);
-    
-    // Delete chat if connected to partner
-    if (snapshot.exists()) {
-      const userData = snapshot.val();
-      if (userData.partnerId) {
-        const channelName = [userId, userData.partnerId].sort().join('_');
-        await chatService.clearChannel(channelName);
-        console.log(`Cleanup: Chat channel ${channelName} deleted`);
+    try {
+      const userRef = ref(this.db, `queue/${userId}`);
+      const snapshot = await get(userRef);
+      
+      // Delete chat if connected to partner
+      if (snapshot.exists()) {
+        const userData = snapshot.val();
+        if (userData.partnerId) {
+          const channelName = [userId, userData.partnerId].sort().join('_');
+          try {
+            await chatService.clearChannel(channelName);
+          } catch (chatError) {
+            // Ignore chat cleanup errors
+          }
+        }
       }
+      
+      await this.removeFromQueue(userId);
+      this.userId = null;
+    } catch (error) {
+      // Ensure cleanup always completes even if there are errors
+      this.userId = null;
     }
-    
-    await this.removeFromQueue(userId);
-    this.userId = null;
   }
 }
 

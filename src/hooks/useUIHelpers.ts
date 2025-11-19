@@ -25,13 +25,18 @@ export function useVideoRenderer(
   enabled: boolean = true
 ) {
   useEffect(() => {
-    if (videoTrack && videoRef.current && enabled) {
+    if (!videoTrack || !videoRef.current || !enabled) return;
+
+    try {
       videoTrack.play(videoRef.current);
+    } catch (error) {
     }
+
     return () => {
-      if (videoTrack && enabled) {
+      try {
         videoTrack.stop();
+      } catch (error) {
       }
     };
-  }, [videoTrack, enabled]);
+  }, [videoTrack, videoRef, enabled]);
 }

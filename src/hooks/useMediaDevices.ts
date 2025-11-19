@@ -14,9 +14,7 @@ export function useMediaDevices() {
       try {
         // Only initialize client, tracks will be created by useVideoChat
         await agoraService.initClient('rtc');
-        console.log('Agora client initialized');
       } catch (error: any) {
-        console.error('Failed to initialize Agora client:', error);
       }
     };
 

@@ -3,7 +3,7 @@
  * Connects to backend API for RTC token generation
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_AGORA_TOKEN_ENDPOINT || "https://hmvhd4dzxfhp2sagcoamakwn7y0fswvj.lambda-url.us-east-1.on.aws";
+const API_BASE_URL = process.env.NEXT_PUBLIC_AGORA_TOKEN_ENDPOINT || "http://localhost:8080";
 const API_KEY = process.env.NEXT_PUBLIC_AGORA_API_KEY || "KrlsUCAAGH4xD+1U26BmUd8THBeepaB9aHv/Bww1t4Q=";
 
 export interface RTCTokenResponse {
@@ -37,13 +37,12 @@ export async function requestToken(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Failed to get RTC token: ${response.statusText}. ${errorData.message || ""}`);
+      throw new Error("Connection failed. Please check your internet and try again.");
     }
 
     const data: RTCTokenResponse = await response.json();
     return data.token;
   } catch (error) {
-    console.error("Error requesting RTC token:", error);
     throw error;
   }
 }

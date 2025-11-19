@@ -45,7 +45,6 @@ export function useAgoraControls() {
       setDevices({ cameras, microphones, speakers });
       return { cameras, microphones, speakers };
     } catch (error) {
-      console.error("Failed to get devices:", error);
       throw error;
     }
   }, []);
@@ -57,7 +56,6 @@ export function useAgoraControls() {
     try {
       await agoraService.switchCamera(deviceId);
     } catch (error) {
-      console.error("Failed to switch camera:", error);
       throw error;
     }
   }, []);
@@ -69,7 +67,6 @@ export function useAgoraControls() {
     try {
       await agoraService.switchMicrophone(deviceId);
     } catch (error) {
-      console.error("Failed to switch microphone:", error);
       throw error;
     }
   }, []);
@@ -82,7 +79,6 @@ export function useAgoraControls() {
       await agoraService.setAudioVolume(vol);
       setVolume(vol);
     } catch (error) {
-      console.error("Failed to set volume:", error);
       throw error;
     }
   }, []);
@@ -115,7 +111,6 @@ export function useAgoraControls() {
         frameRate: quality.frameRate,
       });
     } catch (error) {
-      console.error("Failed to set video quality:", error);
       throw error;
     }
   }, []);
@@ -128,7 +123,6 @@ export function useAgoraControls() {
       await agoraService.setBeautyEffect(enabled, options);
       setIsBeautyEnabled(enabled);
     } catch (error) {
-      console.error("Failed to toggle beauty effect:", error);
       throw error;
     }
   }, []);
@@ -141,7 +135,6 @@ export function useAgoraControls() {
       await agoraService.enableDualStream();
       setIsDualStreamEnabled(true);
     } catch (error) {
-      console.error("Failed to enable dual stream:", error);
       throw error;
     }
   }, []);
@@ -154,7 +147,6 @@ export function useAgoraControls() {
       await agoraService.disableDualStream();
       setIsDualStreamEnabled(false);
     } catch (error) {
-      console.error("Failed to disable dual stream:", error);
       throw error;
     }
   }, []);
@@ -166,7 +158,6 @@ export function useAgoraControls() {
     try {
       await agoraService.setRemoteVideoStreamType(uid, highQuality ? 0 : 1);
     } catch (error) {
-      console.error("Failed to set remote stream quality:", error);
       throw error;
     }
   }, []);
@@ -178,7 +169,6 @@ export function useAgoraControls() {
     try {
       return await agoraService.takeSnapshot();
     } catch (error) {
-      console.error("Failed to take snapshot:", error);
       throw error;
     }
   }, []);
@@ -190,7 +180,6 @@ export function useAgoraControls() {
     try {
       await agoraService.setVideoContentHint(hint);
     } catch (error) {
-      console.error("Failed to set content hint:", error);
       throw error;
     }
   }, []);
@@ -233,7 +222,6 @@ export function useAgoraControls() {
         withAudio
       );
     } catch (error) {
-      console.error("Failed to create screen share:", error);
       throw error;
     }
   }, []);

@@ -68,53 +68,41 @@ export function useAgora({
           try {
             if (mediaType === "video" || mediaType === "audio") {
               await agoraService.subscribeToUser(user, mediaType);
-              
-              if (mediaType === "video") {
-                console.log("Remote user video published:", user.uid);
-              }
+
               if (mediaType === "audio") {
-                console.log("Remote user audio published:", user.uid);
                 user.audioTrack?.play();
               }
-              
+
               setRemoteUsers([...agoraService.getRemoteUsers()]);
             }
           } catch (err) {
-            console.error("Error subscribing to user:", err);
           }
         });
 
         client.on("user-unpublished", (user, mediaType) => {
-          console.log("User unpublished:", user.uid, mediaType);
           setRemoteUsers([...agoraService.getRemoteUsers()]);
         });
 
         client.on("user-joined", (user) => {
-          console.log("User joined:", user.uid);
           setRemoteUsers([...agoraService.getRemoteUsers()]);
         });
 
         client.on("user-left", (user) => {
-          console.log("User left:", user.uid);
           setRemoteUsers([...agoraService.getRemoteUsers()]);
         });
 
         client.on("connection-state-change", (curState, prevState, reason) => {
-          console.log("Connection state changed:", curState, "from:", prevState, "reason:", reason);
           setConnectionState(curState);
         });
 
         client.on("token-privilege-will-expire", async () => {
           try {
-            console.log("Token expiring, renewing...");
             const token = await requestToken(channel, uid);
             await client.renewToken(token);
           } catch (err) {
-            console.error("Error renewing token:", err);
           }
         });
       } catch (err) {
-        console.error("Failed to initialize Agora client:", err);
         setError("Failed to initialize video client");
       }
     };
@@ -144,10 +132,7 @@ export function useAgora({
       await agoraService.joinChannel(channel, token, uid);
       setIsJoined(true);
       setConnectionState(agoraService.getConnectionState());
-
-      console.log("Successfully joined channel:", channel);
     } catch (err: any) {
-      console.error("Failed to join channel:", err);
       setError(err.message || "Failed to join channel");
       throw err;
     }
@@ -164,9 +149,7 @@ export function useAgora({
       setLocalAudioTrack(null);
       setRemoteUsers([]);
       setConnectionState("DISCONNECTED");
-      console.log("Left channel");
     } catch (err: any) {
-      console.error("Failed to leave channel:", err);
       setError(err.message || "Failed to leave channel");
       throw err;
     }
@@ -178,9 +161,7 @@ export function useAgora({
       setError(null);
       await agoraService.publishTracks();
       setIsPublished(true);
-      console.log("Published tracks");
     } catch (err: any) {
-      console.error("Failed to publish:", err);
       setError(err.message || "Failed to publish");
       throw err;
     }
@@ -192,9 +173,7 @@ export function useAgora({
       setError(null);
       await agoraService.unpublishTracks();
       setIsPublished(false);
-      console.log("Unpublished tracks");
     } catch (err: any) {
-      console.error("Failed to unpublish:", err);
       setError(err.message || "Failed to unpublish");
       throw err;
     }
@@ -208,7 +187,6 @@ export function useAgora({
       await agoraService.toggleVideo(newState);
       setIsVideoEnabled(newState);
     } catch (err: any) {
-      console.error("Failed to toggle video:", err);
       setError(err.message || "Failed to toggle video");
       throw err;
     }
@@ -222,7 +200,6 @@ export function useAgora({
       await agoraService.toggleAudio(newState);
       setIsAudioEnabled(newState);
     } catch (err: any) {
-      console.error("Failed to toggle audio:", err);
       setError(err.message || "Failed to toggle audio");
       throw err;
     }

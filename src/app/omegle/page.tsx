@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { database, ref, set, push } from "@/lib/firebase";
+import { Toast } from "@/components/ui";
+import { useToast } from "@/hooks/useToast";
 
 export default function OmegleLanding() {
   const [selectedYear, setSelectedYear] = useState("");
@@ -13,6 +15,7 @@ export default function OmegleLanding() {
   const nameRef = useRef<HTMLInputElement>(null);
   const interestsRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
+  const { toasts, removeToast, error: showError, warning } = useToast();
 
   const years = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
   const genders = ["Male", "Female", "Other"];
@@ -32,7 +35,7 @@ export default function OmegleLanding() {
     const interests = interestsRef.current?.value?.trim() || "";
     
     if (!name || !selectedYear || !selectedGender) {
-      alert("Please fill in all required fields (Name, Year, and Gender)");
+      warning("Please fill in all required fields (Name, Year, and Gender)");
       return;
     }
     
@@ -45,21 +48,12 @@ export default function OmegleLanding() {
     };
     
     try {
-      // Save to Firebase Realtime Database
-      const usersRef = ref(database, 'users');
-      const newUserRef = push(usersRef);
-      await set(newUserRef, userInfo);
-      
-      // Store user info in localStorage with Firebase ID
-      localStorage.setItem("userInfo", JSON.stringify({ 
-        ...userInfo,
-        firebaseId: newUserRef.key
-      }));
+      // Only store in localStorage - don't add to Firebase until user starts searching
+      localStorage.setItem("userInfo", JSON.stringify(userInfo));
       
       router.push("/omegle/home");
     } catch (error) {
-      console.error("Error saving user info:", error);
-      alert("Failed to save user information. Please try again.");
+      showError("Unable to save your information. Please try again.");
     }
   };
 
@@ -189,6 +183,16 @@ export default function OmegleLanding() {
           </div>
         </div>
       </main>
+
+      {/* Toast Notifications */}
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => removeToast(toast.id)}
+        />
+      ))}
     </div>
   );
 }

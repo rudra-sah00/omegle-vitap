@@ -100,16 +100,13 @@ class ChatService {
   // Clear all messages in a channel
   async clearChannel(channelName: string): Promise<void> {
     if (!channelName) {
-      console.error('Cannot clear channel: channelName is undefined');
       return;
     }
 
     try {
       const channelRef = ref(this.db, `chats/${channelName}`);
       await remove(channelRef);
-      console.log(`Channel ${channelName} cleared successfully`);
     } catch (error) {
-      console.error(`Failed to clear channel ${channelName}:`, error);
       throw error;
     }
   }
