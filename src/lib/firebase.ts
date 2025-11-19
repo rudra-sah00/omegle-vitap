@@ -1,7 +1,5 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getDatabase } from "firebase/database";
-import { getFirestore } from "firebase/firestore";
+import { getDatabase, ref, set, push, onValue, remove } from "firebase/database";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -17,9 +15,10 @@ const firebaseConfig = {
 // Initialize Firebase only if it hasn't been initialized already
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-// Initialize Firebase services
-export const auth = getAuth(app);
-export const database = getDatabase(app); // Realtime Database
-export const firestore = getFirestore(app); // Firestore
+// Initialize Realtime Database only
+export const database = getDatabase(app);
+
+// Export database functions for easy use
+export { ref, set, push, onValue, remove };
 
 export default app;
