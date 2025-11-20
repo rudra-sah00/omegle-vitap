@@ -26,25 +26,9 @@ export default function HomePage() {
   const { theme, toggleTheme } = useTheme();
   const { toasts, removeToast, error: showError, warning: _warning } = useToast();
 
-  // Validate user info on mount - redirect to form if incomplete
+  // Always redirect to /omegle on page load/reload - user must go through form every time
   useEffect(() => {
-    try {
-      const userInfoStr = localStorage.getItem("userInfo");
-      if (!userInfoStr) {
-        router.push("/omegle");
-        return;
-      }
-      const userInfo = JSON.parse(userInfoStr);
-      if (!userInfo.name || userInfo.name.trim() === "" || !userInfo.year || !userInfo.gender) {
-        // Invalid userInfo, redirect to form
-        localStorage.removeItem("userInfo");
-        router.push("/omegle");
-      }
-    } catch (_error) {
-      // Invalid JSON, redirect to form
-      localStorage.removeItem("userInfo");
-      router.push("/omegle");
-    }
+    router.push("/omegle");
   }, [router]);
 
   // UI State
