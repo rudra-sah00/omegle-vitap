@@ -236,6 +236,16 @@ export class AgoraService {
     }
 
     try {
+      // CRITICAL: Disable dual stream BEFORE unpublishing to prevent black screen
+      // This ensures both high and low quality streams are properly cleaned up
+      if (this.isJoined) {
+        try {
+          await this.client.disableDualStream();
+        } catch (_dualStreamError) {
+          // Continue even if disableDualStream fails
+        }
+      }
+
       // DON'T close local tracks - they should remain for preview mode
       // Only unpublish them (which should be done before calling leaveChannel)
 

@@ -43,6 +43,7 @@ interface UseMediaTracksReturn {
 
   // Error handling
   lastError: string | null;
+  clearError: () => void;
 }
 
 /**
@@ -61,6 +62,11 @@ export function useMediaTracks(): UseMediaTracksReturn {
   });
 
   const [lastError, setLastError] = useState<string | null>(null);
+
+  // Clear error function
+  const clearError = useCallback(() => {
+    setLastError(null);
+  }, []);
   const isMountedRef = useRef(true);
   const stateRef = useRef<MediaTracksState>(state);
 
@@ -387,5 +393,6 @@ export function useMediaTracks(): UseMediaTracksReturn {
     switchCamera,
     switchMicrophone,
     lastError,
+    clearError,
   };
 }

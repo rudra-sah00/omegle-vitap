@@ -71,6 +71,7 @@ export default function HomePage() {
     switchCamera,
     switchMicrophone,
     lastError: mediaError,
+    clearError: clearMediaError,
   } = useMediaTracks();
 
   // Refs
@@ -150,12 +151,8 @@ export default function HomePage() {
     isCameraOn,
     isMicOn,
     (errorMsg: string) => {
-      // Show error toast only for video connection failures
+      // Show error but don't disconnect - allow text-only chat
       showError(errorMsg);
-      // Optionally disconnect the match if video fails
-      if (isConnected) {
-        handleStop();
-      }
     },
     () => {
       // Partner left the Agora channel (browser closed/reloaded)
@@ -166,12 +163,22 @@ export default function HomePage() {
     }
   );
 
-  // Show media errors
+  // Show media errors (only once per error)
+  const lastShownErrorRef = useRef<string | null>(null);
   useEffect(() => {
-    if (mediaError) {
+    if (mediaError && mediaError !== lastShownErrorRef.current) {
       showError(mediaError);
+      lastShownErrorRef.current = mediaError;
+
+      // Clear the error after showing it to prevent loops
+      // Use a timeout to ensure the toast is created first
+      const clearTimer = setTimeout(() => {
+        clearMediaError();
+      }, 100);
+
+      return () => clearTimeout(clearTimer);
     }
-  }, [mediaError, showError]);
+  }, [mediaError, showError, clearMediaError]);
 
   // Show controls when connection is established, then auto-hide
   useEffect(() => {
@@ -199,7 +206,11 @@ export default function HomePage() {
 
           // If camera should be on and track exists, ensure it's playing in preview
           if (isCameraOn && currentTracks.videoTrack) {
+            // CRITICAL: Stop and restart the track to clear dual-stream mode
+            await currentTracks.videoTrack.setEnabled(false);
+            await new Promise((resolve) => setTimeout(resolve, 100));
             await currentTracks.videoTrack.setEnabled(true);
+
             // CRITICAL FIX: Force replay in the video element to fix blank screen
             if (localVideoRef.current) {
               localVideoRef.current.innerHTML = "";
@@ -224,7 +235,7 @@ export default function HomePage() {
       // Delay restoration to ensure cleanup is complete
       setTimeout(() => {
         restorePreviewTracks();
-      }, 300);
+      }, 400);
     }
   }, [isConnected, isCameraOn, isMicOn, messages.length, clearMessages]);
 
