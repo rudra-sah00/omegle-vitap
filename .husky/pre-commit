@@ -13,3 +13,16 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "✅ Pre-commit checks passed!"
+
+echo "🧪 Running tests..."
+
+# Run tests
+npm run test:ci
+
+# Check if tests passed
+if [ $? -ne 0 ]; then
+  echo "❌ Tests failed. Please fix failing tests before committing."
+  exit 1
+fi
+
+echo "✅ All tests passed!"
