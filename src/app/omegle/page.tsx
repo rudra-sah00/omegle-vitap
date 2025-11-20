@@ -20,25 +20,31 @@ export default function OmegleLanding() {
   const years = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
   const genders = ["Male", "Female", "Other"];
 
-  // Check if user already has complete info and redirect to home
+  // Pre-fill form if user info exists (but don't auto-redirect)
   useEffect(() => {
     try {
       const userInfoStr = localStorage.getItem("userInfo");
       if (userInfoStr) {
         const userInfo = JSON.parse(userInfoStr);
-        // Validate all required fields are present and not empty
-        if (userInfo.name && userInfo.name.trim() !== "" && userInfo.year && userInfo.gender) {
-          router.push("/omegle/home");
-        } else {
-          // Invalid userInfo, clear it
-          localStorage.removeItem("userInfo");
+        // Pre-fill form fields if valid data exists
+        if (userInfo.name && userInfo.name.trim() !== "") {
+          if (nameRef.current) nameRef.current.value = userInfo.name;
+        }
+        if (userInfo.year) {
+          setSelectedYear(userInfo.year);
+        }
+        if (userInfo.gender) {
+          setSelectedGender(userInfo.gender);
+        }
+        if (userInfo.interests && interestsRef.current) {
+          interestsRef.current.value = userInfo.interests;
         }
       }
     } catch (_error) {
       // Invalid JSON, clear it
       localStorage.removeItem("userInfo");
     }
-  }, [router]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

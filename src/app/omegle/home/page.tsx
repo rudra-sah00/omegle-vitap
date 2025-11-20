@@ -111,6 +111,28 @@ export default function HomePage() {
     return () => clearTimeout(timer);
   }, [selectedCameraId, selectedMicrophoneId]);
 
+  // Re-enumerate devices when media permissions change
+  useEffect(() => {
+    const reloadDevices = async () => {
+      try {
+        const { agoraService } = await import("@/services/agoraService");
+        const [cams, mics] = await Promise.all([
+          agoraService.getCameras(),
+          agoraService.getMicrophones(),
+        ]);
+        setCameras(cams);
+        setMicrophones(mics);
+      } catch (_error) {
+        // Ignore errors during reload
+      }
+    };
+
+    // Reload devices when mic or camera is turned on
+    if (isCameraOn || isMicOn) {
+      reloadDevices();
+    }
+  }, [isCameraOn, isMicOn]);
+
   // Matching hook with chat callbacks (initialize first to get userId and channelName)
   const matching = useMatching(
     (_msg: string) => {}, // Temporary system message callback
