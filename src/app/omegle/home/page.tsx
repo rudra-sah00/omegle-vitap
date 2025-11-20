@@ -61,7 +61,7 @@ export default function HomePage() {
   // Centralized media tracks management
   const {
     videoTrack: previewVideoTrack,
-    audioTrack: previewAudioTrack,
+    audioTrack: _previewAudioTrack,
     isCameraOn,
     isMicOn,
     toggleCamera,
@@ -189,47 +189,34 @@ export default function HomePage() {
         clearMessages();
       }
 
-      // When disconnected, ensure preview tracks are enabled and playing
+      // When disconnected, ensure preview tracks are restored for preview mode
+      // This runs after leaveChannel has been called which re-enables tracks
       const restorePreviewTracks = async () => {
         try {
-          // If camera should be on, ensure we have a track
-          if (isCameraOn) {
-            if (!previewVideoTrack) {
-              // No track exists, create it
-              await toggleCamera();
-            } else {
-              // Track exists, ensure it's enabled and playing
-              await previewVideoTrack.setEnabled(true);
-            }
+          // Get the latest tracks from agoraService (they were restored by leaveChannel)
+          const { agoraService: agora } = await import("@/services/agoraService");
+          const currentTracks = agora.getLocalTracks();
+
+          // If camera should be on and track exists, ensure it's playing in preview
+          if (isCameraOn && currentTracks.videoTrack) {
+            await currentTracks.videoTrack.setEnabled(true);
           }
 
-          // If mic should be on, ensure we have a track
-          if (isMicOn) {
-            if (!previewAudioTrack) {
-              // No track exists, create it
-              await toggleMic();
-            } else {
-              // Track exists, ensure it's enabled
-              await previewAudioTrack.setEnabled(true);
-            }
+          // If mic should be on and track exists, ensure it's enabled
+          if (isMicOn && currentTracks.audioTrack) {
+            await currentTracks.audioTrack.setEnabled(true);
           }
         } catch (_error) {
-          // Error restoring preview tracks
+          // Error restoring preview tracks - safe to ignore
         }
       };
-      restorePreviewTracks();
+
+      // Delay restoration slightly to ensure cleanup is complete
+      setTimeout(() => {
+        restorePreviewTracks();
+      }, 200);
     }
-  }, [
-    isConnected,
-    isCameraOn,
-    isMicOn,
-    previewVideoTrack,
-    previewAudioTrack,
-    toggleCamera,
-    toggleMic,
-    messages.length,
-    clearMessages,
-  ]);
+  }, [isConnected, isCameraOn, isMicOn, messages.length, clearMessages]);
 
   // Check if user has submitted their info
   useEffect(() => {
@@ -425,13 +412,10 @@ export default function HomePage() {
     [switchMicrophone, showError]
   );
 
-  // Handlers for connected state (use videoChat toggles)
+  // Handlers for connected state (use videoChat toggles which manage agoraService tracks)
   const handleConnectedMicToggle = useCallback(async () => {
     try {
-      // Toggle the preview mic state (useMediaTracks) which manages the actual track
-      await toggleMic();
-
-      // Also toggle in useVideoChat to publish/unpublish
+      // Only use the videoChat toggle - it manages the centralized track
       await toggleConnectedMic();
 
       // Show controls and reset auto-hide timer
@@ -445,14 +429,11 @@ export default function HomePage() {
     } catch (_error) {
       showError("Unable to toggle microphone");
     }
-  }, [toggleMic, toggleConnectedMic, showError]);
+  }, [toggleConnectedMic, showError]);
 
   const handleConnectedCameraToggle = useCallback(async () => {
     try {
-      // Toggle the preview camera state (useMediaTracks) which manages the actual track
-      await toggleCamera();
-
-      // Also toggle in useVideoChat to publish/unpublish
+      // Only use the videoChat toggle - it manages the centralized track
       await toggleConnectedCamera();
 
       // Show controls and reset auto-hide timer
@@ -466,7 +447,7 @@ export default function HomePage() {
     } catch (_error) {
       showError("Unable to toggle camera");
     }
-  }, [toggleCamera, toggleConnectedCamera, showError]);
+  }, [toggleConnectedCamera, showError]);
 
   const handleSendMessage = (message: string) => {
     sendMessage(message);

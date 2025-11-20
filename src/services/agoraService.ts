@@ -236,8 +236,8 @@ export class AgoraService {
     }
 
     try {
-      // Close local tracks
-      await this.closeLocalTracks();
+      // DON'T close local tracks - they should remain for preview mode
+      // Only unpublish them (which should be done before calling leaveChannel)
 
       // Leave the channel
       await this.client.leave();
@@ -377,13 +377,27 @@ export class AgoraService {
 
   /**
    * Destroy the client and cleanup
+   * This should only be called on page unload/unmount
    */
   public async destroy(): Promise<void> {
     try {
+      // Unpublish first if joined
+      if (this.isJoined && this.client) {
+        try {
+          await this.unpublishTracks();
+        } catch (_unpubError) {
+          // Continue cleanup even if unpublish fails
+        }
+      }
+
+      // Close local tracks on destroy
       await this.closeLocalTracks();
+
+      // Leave channel if joined
       if (this.isJoined && this.client) {
         await this.client.leave();
       }
+
       this.client = null;
       this.isJoined = false;
     } catch (error) {
@@ -835,6 +849,23 @@ export class AgoraService {
       video: this.localTracks.videoTrack?.getTrackLabel() || "",
       audio: this.localTracks.audioTrack?.getTrackLabel() || "",
     };
+  }
+
+  /**
+   * Re-enable tracks after leaving a call (for preview mode)
+   * This ensures tracks are in the correct state for preview
+   */
+  public async restoreTracksForPreview(): Promise<void> {
+    try {
+      if (this.localTracks.videoTrack) {
+        await this.localTracks.videoTrack.setEnabled(true);
+      }
+      if (this.localTracks.audioTrack) {
+        await this.localTracks.audioTrack.setEnabled(true);
+      }
+    } catch (_error) {
+      // Ignore errors during restore
+    }
   }
 
   /**

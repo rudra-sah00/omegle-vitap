@@ -13,10 +13,10 @@ import type {
 
 // Dynamic import for AgoraRTC
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-let AgoraRTC: any = null;
+let _AgoraRTC: any = null;
 if (typeof window !== "undefined") {
   import("agora-rtc-sdk-ng").then((module) => {
-    AgoraRTC = module.default;
+    _AgoraRTC = module.default;
   });
 }
 
@@ -44,8 +44,9 @@ export function useVideoChat(
   const [localAudioTrack, setLocalAudioTrack] = useState<IMicrophoneAudioTrack | null>(null);
   const [remoteUsers, setRemoteUsers] = useState<IAgoraRTCRemoteUser[]>([]);
   const [isJoined, setIsJoined] = useState(false);
-  const [isMicOn, setIsMicOn] = useState(true);
-  const [isCameraOn, setIsCameraOn] = useState(true);
+  // Initialize states based on shouldPublish props to reflect actual preview state
+  const [isMicOn, setIsMicOn] = useState(shouldPublishAudio);
+  const [isCameraOn, setIsCameraOn] = useState(shouldPublishVideo);
   const [networkQuality, setNetworkQuality] = useState<"excellent" | "good" | "poor" | "bad">(
     "good"
   );
@@ -54,6 +55,14 @@ export function useVideoChat(
   const isJoiningRef = useRef(false);
   const isCameraTogglingRef = useRef(false);
   const isMicTogglingRef = useRef(false);
+
+  // Sync state with shouldPublish props when they change (before joining)
+  useEffect(() => {
+    if (!isJoined) {
+      setIsMicOn(shouldPublishAudio);
+      setIsCameraOn(shouldPublishVideo);
+    }
+  }, [shouldPublishAudio, shouldPublishVideo, isJoined]);
 
   // Initialize and join channel
   const joinChannel = useCallback(async () => {
@@ -170,10 +179,10 @@ export function useVideoChat(
       setIsCameraOn(shouldPublishVideo);
       setIsMicOn(shouldPublishAudio);
 
-      // Get existing tracks from agoraService (they were created in preview)
+      // Get existing tracks from agoraService (they were created in preview by useMediaTracks)
       const existingTracks = agoraService.getLocalTracks();
 
-      // Create or use existing tracks
+      // Prepare tracks for publishing based on desired state
       if (shouldPublishVideo || shouldPublishAudio) {
         let videoToPublish = shouldPublishVideo ? existingTracks.videoTrack : null;
         let audioToPublish = shouldPublishAudio ? existingTracks.audioTrack : null;
@@ -188,11 +197,13 @@ export function useVideoChat(
           audioToPublish = tracks.audioTrack;
         }
 
-        // Set local track state
+        // Ensure tracks are enabled before publishing
         if (videoToPublish) {
+          await videoToPublish.setEnabled(true);
           setLocalVideoTrack(videoToPublish);
         }
         if (audioToPublish) {
+          await audioToPublish.setEnabled(true);
           setLocalAudioTrack(audioToPublish);
         }
 
@@ -266,20 +277,31 @@ export function useVideoChat(
       setIsJoined(false);
       isJoiningRef.current = false;
 
-      // Leave Agora channel first (unpublishes tracks)
+      // Unpublish tracks first before leaving channel
+      if (clientRef.current) {
+        try {
+          await agoraService.unpublishTracks();
+        } catch (_unpubError) {
+          // Continue even if unpublish fails
+        }
+      }
+
+      // Leave Agora channel
       if (clientRef.current) {
         await agoraService.leaveChannel();
       }
 
-      // DON'T close the tracks - keep them alive in agoraService for preview mode
-      // The tracks remain in agoraService.localTracks and will be picked up by useMediaTracks
+      // Restore tracks for preview mode (re-enable them)
+      await agoraService.restoreTracksForPreview();
 
-      // Just clear the local references in this hook
+      // Clear the local references in this hook
       setLocalVideoTrack(null);
       setLocalAudioTrack(null);
 
-      // DON'T reset camera/mic states - they should maintain their state for preview
-      // setIsCameraOn and setIsMicOn are internal to this hook and don't affect useMediaTracks
+      // Restore states from shouldPublish props (user's preview preference)
+      // This ensures UI reflects the actual preview state
+      setIsCameraOn(shouldPublishVideo);
+      setIsMicOn(shouldPublishAudio);
 
       // Clear remote users immediately
       setRemoteUsers([]);
@@ -290,10 +312,11 @@ export function useVideoChat(
       setRemoteUsers([]);
       setLocalVideoTrack(null);
       setLocalAudioTrack(null);
-      setIsCameraOn(false);
-      setIsMicOn(false);
+      // Preserve user's preview preference
+      setIsCameraOn(shouldPublishVideo);
+      setIsMicOn(shouldPublishAudio);
     }
-  }, [isJoined]);
+  }, [isJoined, shouldPublishVideo, shouldPublishAudio]);
 
   // Toggle microphone
   const toggleMic = useCallback(async () => {
@@ -303,44 +326,49 @@ export function useVideoChat(
     }
     isMicTogglingRef.current = true;
 
+    // Capture current state before any changes
+    const originalState = isMicOn;
+
     try {
-      // If track is null but state says mic is on, fix the state mismatch
-      if (!localAudioTrack && isMicOn) {
-        setIsMicOn(false);
-      }
+      // Get the centralized audio track from agoraService
+      const currentTrack = agoraService.getLocalAudioTrack();
 
-      if (!localAudioTrack) {
-        // Create audio track if it doesn't exist
-        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-        setLocalAudioTrack(audioTrack);
-
-        await audioTrack.setEnabled(true);
-
-        // Publish the new track if in a call
-        if (isJoined && clientRef.current) {
-          try {
-            await clientRef.current.publish([audioTrack]);
-          } catch (_publishError) {
-            audioTrack.close();
-            setLocalAudioTrack(null);
-            setIsMicOn(false);
-            isMicTogglingRef.current = false;
-            return;
-          }
+      if (!currentTrack) {
+        // No track exists - this can happen if user hasn't granted permissions
+        // Don't change state, just show error
+        if (onError) {
+          onError("Microphone track not available. Please enable microphone before joining.");
         }
-
-        setIsMicOn(true);
-      } else {
-        // Toggle existing track
-        const newState = !isMicOn;
-
-        // Just use setEnabled - keep track published so remote users stay connected
-        await localAudioTrack.setEnabled(newState);
-
-        setIsMicOn(newState);
+        isMicTogglingRef.current = false;
+        return;
       }
+
+      // Toggle the enabled state of the existing track
+      const newState = !originalState;
+      await currentTrack.setEnabled(newState);
+
+      // If turning on and in a call, ensure track is published
+      // Note: setEnabled(true) should make the track audible to remote users if already published
+      // But we'll explicitly publish to be safe
+      if (newState && isJoined && clientRef.current) {
+        try {
+          // Publish will be skipped by Agora if track is already published
+          await clientRef.current.publish([currentTrack]);
+        } catch (_publishError) {
+          // If publish fails (might already be published), just continue
+          // The track is enabled so it should work if already published
+        }
+      }
+
+      // Update local state
+      setLocalAudioTrack(currentTrack);
+      setIsMicOn(newState);
+
+      // Track analytics
+      analyticsService.trackAudioToggle(newState);
     } catch (_error) {
-      setIsMicOn(false);
+      // Revert to original state on error
+      setIsMicOn(originalState);
       if (onError) {
         onError("Failed to toggle microphone. Please try again.");
       }
@@ -349,7 +377,7 @@ export function useVideoChat(
         isMicTogglingRef.current = false;
       }, 300);
     }
-  }, [localAudioTrack, isMicOn, isJoined, onError]);
+  }, [isMicOn, isJoined, onError]);
 
   // Toggle camera
   const toggleCamera = useCallback(async () => {
@@ -359,56 +387,51 @@ export function useVideoChat(
     }
     isCameraTogglingRef.current = true;
 
+    // Capture current state before any changes
+    const originalState = isCameraOn;
+
     try {
-      // If track is null but state says camera is on, fix the state mismatch
-      if (!localVideoTrack && isCameraOn) {
-        setIsCameraOn(false);
+      // Get the centralized video track from agoraService
+      const currentTrack = agoraService.getLocalVideoTrack();
+
+      if (!currentTrack) {
+        // No track exists - this can happen if user hasn't granted permissions
+        // Don't change state, just show error
+        if (onError) {
+          onError("Camera track not available. Please enable camera before joining.");
+        }
+        isCameraTogglingRef.current = false;
+        return;
       }
 
-      if (!localVideoTrack) {
-        // Create video track if it doesn't exist
-        let videoTrack: ICameraVideoTrack;
+      // Toggle the enabled state of the existing track
+      const newState = !originalState;
+      await currentTrack.setEnabled(newState);
 
+      // If turning on and in a call, ensure track is published
+      // Note: setEnabled(true) should make the track visible to remote users if already published
+      // But we'll explicitly publish to be safe
+      if (newState && isJoined && clientRef.current) {
         try {
-          videoTrack = await AgoraRTC.createCameraVideoTrack({
-            optimizationMode: "detail",
-            encoderConfig: "480p_1",
-          });
-        } catch (_createError) {
-          if (onError) {
-            onError("Failed to access camera. Please check permissions.");
-          }
-          return;
+          // Publish will be skipped by Agora if track is already published
+          await clientRef.current.publish([currentTrack]);
+        } catch (_publishError) {
+          // If publish fails (might already be published), just continue
+          // The track is enabled so it should work if already published
         }
+      }
 
-        // Set track and enable it
-        setLocalVideoTrack(videoTrack);
-        await videoTrack.setEnabled(true);
-        setIsCameraOn(true);
+      // Update local state
+      setLocalVideoTrack(currentTrack);
+      setIsCameraOn(newState);
 
-        // Publish the new track if in a call
-        if (isJoined && clientRef.current) {
-          try {
-            await clientRef.current.publish([videoTrack]);
-          } catch (_publishError) {
-            // Don't turn off camera, just log the error
-            // The track is still active locally even if publish failed
-          }
-        }
-      } else {
-        const newState = !isCameraOn;
-
-        try {
-          // Just use setEnabled - keep track published so remote users stay connected
-          await localVideoTrack.setEnabled(newState);
-
-          setIsCameraOn(newState);
-        } catch (_toggleError) {
-          // Don't change the state if toggle failed
-          if (onError) {
-            onError("Failed to toggle camera. Please try again.");
-          }
-        }
+      // Track analytics
+      analyticsService.trackVideoToggle(newState);
+    } catch (_error) {
+      // Revert to original state on error
+      setIsCameraOn(originalState);
+      if (onError) {
+        onError("Failed to toggle camera. Please try again.");
       }
     } finally {
       // Add small delay before allowing next toggle
@@ -416,7 +439,7 @@ export function useVideoChat(
         isCameraTogglingRef.current = false;
       }, 300);
     }
-  }, [localVideoTrack, isCameraOn, isJoined, onError]);
+  }, [isCameraOn, isJoined, onError]);
 
   // Auto join when enabled
   useEffect(() => {
@@ -438,12 +461,24 @@ export function useVideoChat(
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      // Only cleanup if client exists
-      if (clientRef.current && isJoined) {
-        leaveChannel().catch((_err) => {});
+      // Only cleanup if client exists and still joined
+      if (clientRef.current && isJoiningRef.current === false) {
+        // Call leaveChannel directly without depending on the callback
+        const cleanup = async () => {
+          try {
+            if (clientRef.current) {
+              await agoraService.unpublishTracks();
+              await agoraService.leaveChannel();
+            }
+          } catch (_err) {
+            // Ignore cleanup errors
+          }
+        };
+        cleanup();
       }
     };
-  }, [isJoined, leaveChannel]);
+    // Empty deps - only run on mount/unmount
+  }, []);
 
   return {
     localVideoTrack,
