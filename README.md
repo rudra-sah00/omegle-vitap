@@ -1,112 +1,120 @@
-# ChatConnect
+<div align="center">
+  <img src="public/public_brand.png" alt="Omegle VitaP" width="600"/>
+  
+  # Omegle VitaP
+  
+  **Anonymous Random Video Chat Platform**
+  
+  Connect with strangers through real-time video, audio, and text chat.
+  
+  [![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://vitap.in/omegle)
+  [![Firebase](https://img.shields.io/badge/Firebase-Deployed-orange)](https://firebase.google.com)
+  [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+  
+</div>
 
-A real-time anonymous chat application built with Next.js, Firebase, and TypeScript.
+---
 
-## Project Structure
+## 🎯 About
 
-```
-src/
-├── app/                    # Next.js app router pages
-├── components/
-│   ├── features/          # Feature-specific components
-│   ├── layout/            # Layout components (Header, Footer, etc.)
-│   └── ui/                # Reusable UI components (Button, Card, etc.)
-├── constants/             # App constants and configurations
-├── context/               # React context providers
-├── hooks/                 # Custom React hooks
-├── lib/                   # Third-party library configurations
-├── services/              # API and service layer
-├── types/                 # TypeScript type definitions
-└── utils/                 # Utility functions
-```
+Omegle VitaP is a modern take on anonymous video chatting, built with cutting-edge web technologies. Connect with random people, share moments, and experience real-time communication at its finest.
 
-## Getting Started
+### ✨ Key Features
 
-1. **Install dependencies:**
+- 🎥 **HD Video Chat** - Crystal clear video calls with Agora RTC
+- 🎤 **High-Quality Audio** - Professional audio streaming
+- 💬 **Real-time Messaging** - Instant text chat alongside video
+- 🎲 **Smart Matching** - Intelligent user pairing system
+- 🔒 **Firebase App Check** - Protected against abuse and bots
+- 📱 **Fully Responsive** - Works seamlessly on all devices
+- 🎨 **Modern UI** - Beautiful, intuitive interface
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js 20.x or higher
+- npm or yarn
+- Firebase account
+- Agora RTC account
+- Google reCAPTCHA v3 credentials
+
+### Installation
+
+1. **Clone the repository:**
+
+   ```bash
+   git clone https://github.com/rudra-sah00/omeagle-vitap.git
+   cd omeagle-vitap
+   ```
+
+2. **Install dependencies:**
 
    ```bash
    npm install
    ```
 
-2. **Set up environment variables:**
+3. **Configure environment variables:**
 
    ```bash
    cp .env.local.example .env.local
    ```
 
-   Fill in your configuration in `.env.local`:
-   - Firebase configuration (from Firebase Console)
-   - Agora RTC credentials (from Agora Console)
-   - reCAPTCHA v3 Site Key (from [Google reCAPTCHA](https://www.google.com/recaptcha/admin/create))
+   Update `.env.local` with your credentials:
+   - Firebase configuration
+   - Agora RTC credentials
+   - reCAPTCHA v3 Site Key
 
-3. **Run the development server:**
+4. **Run development server:**
 
    ```bash
    npm run dev
    ```
 
-4. **Open [http://localhost:3000](http://localhost:3000)**
+5. **Open [http://localhost:3000](http://localhost:3000)**
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-- **Framework:** Next.js 15 (App Router)
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS
-- **Database:** Firebase Realtime Database
-- **Authentication:** Firebase Auth
-- **Deployment:** Vercel (recommended)
+- **Frontend:** Next.js 16, React 19, TypeScript
+- **Styling:** Tailwind CSS, Motion for animations
+- **Real-time Communication:** Agora RTC SDK 4.23
+- **Backend:** Firebase Realtime Database
+- **Security:** Firebase App Check with reCAPTCHA v3
+- **Deployment:** Firebase Hosting
+- **CI/CD:** GitHub Actions
 
-## Firebase App Check Setup
+## 📊 Project Status
 
-To enable Firebase App Check with reCAPTCHA v3:
+- ✅ Video/Audio Chat - Live
+- ✅ Text Messaging - Live
+- ✅ Random Matching - Live
+- ✅ Firebase App Check - Enabled
+- ✅ Mobile Responsive - Complete
+- ✅ Production Build - Optimized
+- 🔄 Interest-based Matching - Coming Soon
 
-1. **Get reCAPTCHA v3 credentials:**
-   - Visit [Google reCAPTCHA Admin Console](https://www.google.com/recaptcha/admin/create)
-   - Select **reCAPTCHA v3**
-   - Add domains: `localhost`, `omegle-vitap.web.app`, `omegle-vitap.firebaseapp.com`
-   - Copy the **Site Key**
+## 👨‍💻 Developers
 
-2. **Register with Firebase App Check:**
-   - Go to Firebase Console → Your Project
-   - Navigate to **Build** → **App Check**
-   - Click **Get Started** → Select **Web** → Choose **reCAPTCHA v3**
-   - Enter your Site Key and Save
+**Rudra Sahoo**
 
-3. **Add to environment variables:**
+- GitHub: [@rudra-sah00](https://github.com/rudra-sah00)
 
-   ```bash
-   NEXT_PUBLIC_RECAPTCHA_SITE_KEY=your_recaptcha_v3_site_key
-   ```
+**Kaizen**
 
-4. **Add to GitHub Secrets** (for CI/CD):
-   - Go to GitHub repo → Settings → Secrets and variables → Actions
-   - Add secret: `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`
+- GitHub: [@kaizen403](https://github.com/kaizen403)
 
-## Features
+**Project Repository:** [omeagle-vitap](https://github.com/rudra-sah00/omeagle-vitap)
 
-- Anonymous real-time chat with video/audio
-- Random user pairing with matching system
-- Real-time text messaging
-- Firebase App Check security
-- Responsive design
-- Type-safe codebase with strict TypeScript
+## 📝 License
 
-## Scripts
+This project is open source and available under the [MIT License](LICENSE).
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm start` - Start production server
-- `npm run lint` - Run ESLint
+## 🌐 Live Demo
 
-## Learn More
+Experience it live: **[https://vitap.in/omegle](https://vitap.in/omegle)**
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+<div align="center">
+  Made with ❤️ by Rudra Sahoo and Rishi
+</div>

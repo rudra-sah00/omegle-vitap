@@ -625,7 +625,9 @@ export default function HomePage() {
       </div>
 
       {/* Mobile Chat Button */}
-      <MobileChatButton messageCount={messages.length} onClick={() => setShowMobileChat(true)} />
+      {!showMobileChat && (
+        <MobileChatButton messageCount={messages.length} onClick={() => setShowMobileChat(true)} />
+      )}
 
       {/* Mobile Chat Popup */}
       <MobileChat
