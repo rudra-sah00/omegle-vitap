@@ -217,7 +217,7 @@ describe("UserQueueService", () => {
 
       await userQueueService.removeFromQueue(userId);
 
-      expect(mockRemove).toHaveBeenCalledTimes(2); // User and partner
+      expect(mockRemove).toHaveBeenCalledTimes(1); // Only user is removed, partner is updated to "waiting"
     });
 
     it("does not remove if userId is empty", async () => {

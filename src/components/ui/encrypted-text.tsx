@@ -42,6 +42,10 @@ function generateGibberishPreservingSpaces(original: string, charset: string): s
   return result;
 }
 
+/**
+ * Animated text component that reveals characters with encryption effect
+ * Characters flip through random characters before revealing the actual text
+ */
 export const EncryptedText: React.FC<EncryptedTextProps> = ({
   text,
   className,

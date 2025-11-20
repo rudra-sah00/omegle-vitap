@@ -21,10 +21,12 @@ export default function PreCallControls({
   onStart,
   onStop,
   isSearching = false,
-  showControls: _showControls,
+  showControls,
 }: PreCallControlsProps) {
-  // When not connected (isSearching or idle), always show controls
-  // Remove the early return check so controls are always visible before connection
+  // Don't render if showControls is false
+  if (!showControls) {
+    return null;
+  }
 
   return (
     <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-3 z-10">

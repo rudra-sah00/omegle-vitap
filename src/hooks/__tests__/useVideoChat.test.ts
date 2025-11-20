@@ -20,6 +20,10 @@ describe("useVideoChat", () => {
       join: jest.fn(),
     });
     (agoraService.joinChannel as jest.Mock).mockResolvedValue(123);
+    (agoraService.getLocalTracks as jest.Mock).mockReturnValue({
+      videoTrack: null,
+      audioTrack: null,
+    });
     (agoraService.createLocalTracks as jest.Mock).mockResolvedValue({
       videoTrack: { close: jest.fn(), stop: jest.fn(), setEnabled: jest.fn() },
       audioTrack: { close: jest.fn(), stop: jest.fn(), setEnabled: jest.fn() },
@@ -60,7 +64,9 @@ describe("useVideoChat", () => {
     renderHook(() => useVideoChat(mockUserId, mockChannelName, true, true, true, mockOnError));
 
     await waitFor(() => {
-      expect(agoraService.createLocalTracks).toHaveBeenCalledWith(true, true);
+      // Now creates tracks separately for video and audio
+      expect(agoraService.createLocalTracks).toHaveBeenCalledWith(true, false);
+      expect(agoraService.createLocalTracks).toHaveBeenCalledWith(false, true);
     });
   });
 

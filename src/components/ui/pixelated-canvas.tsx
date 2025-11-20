@@ -50,6 +50,10 @@ type PixelatedCanvasProps = {
   fadeSpeed?: number;
 };
 
+/**
+ * Pixelated canvas background component with customizable effects
+ * Renders an image as pixelated dots with interactive hover effects
+ */
 export const PixelatedCanvas: React.FC<PixelatedCanvasProps> = ({
   src,
   width = 400,

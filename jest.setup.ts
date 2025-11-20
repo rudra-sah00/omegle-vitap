@@ -1,5 +1,16 @@
 import "@testing-library/jest-dom";
 
+// Mock IntersectionObserver for tests (used by framer-motion)
+global.IntersectionObserver = class IntersectionObserver {
+  constructor() {}
+  disconnect() {}
+  observe() {}
+  takeRecords(): IntersectionObserverEntry[] {
+    return [];
+  }
+  unobserve() {}
+} as unknown as typeof IntersectionObserver;
+
 // Mock Firebase environment variables for tests
 process.env.NEXT_PUBLIC_FIREBASE_API_KEY = "test-api-key";
 process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN = "test-app.firebaseapp.com";

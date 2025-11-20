@@ -11,6 +11,10 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+/**
+ * Provider component for theme context
+ * @param children - Child components to wrap
+ */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("light");
 
@@ -31,6 +35,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;
 }
 
+/**
+ * Hook to access theme context
+ * @returns Theme state and toggle function
+ * @throws Error if used outside ThemeProvider
+ */
 export function useTheme() {
   const context = useContext(ThemeContext);
   if (context === undefined) {
