@@ -83,21 +83,27 @@ class UserQueueService {
       return;
     }
 
-    const userRef = ref(this.db, `queue/${userId}`);
-    await set(userRef, {
-      userId,
-      status: "waiting",
-      timestamp: serverTimestamp(),
-      gender: gender || "other",
-      name: name || "Anonymous",
-      year: year || "",
-      interests: interests || "",
-      recentPartners: recentPartners || [], // Include recent partners list
-    });
+    try {
+      const userRef = ref(this.db, `queue/${userId}`);
+      await set(userRef, {
+        userId,
+        status: "waiting",
+        timestamp: serverTimestamp(),
+        gender: gender || "other",
+        name: name || "Anonymous",
+        year: year || "",
+        interests: interests || "",
+        recentPartners: recentPartners || [], // Include recent partners list
+      });
 
-    // Setup auto-cleanup if user disconnects unexpectedly
-    const disconnectRef = onDisconnect(userRef);
-    await disconnectRef.remove();
+      // Setup auto-cleanup if user disconnects unexpectedly
+      const disconnectRef = onDisconnect(userRef);
+      await disconnectRef.remove();
+    } catch (_error) {
+      throw new Error(
+        "Unable to connect to matching service. Please check your internet connection and try again."
+      );
+    }
   }
 
   /**
@@ -107,39 +113,45 @@ class UserQueueService {
    * @returns Partner ID if found, null otherwise
    */
   async findPartner(currentUserId: string, currentUserGender?: string): Promise<string | null> {
-    const queueRef = ref(this.db, "queue");
-    const snapshot = await get(queueRef);
+    try {
+      const queueRef = ref(this.db, "queue");
+      const snapshot = await get(queueRef);
 
-    if (!snapshot.exists()) return null;
+      if (!snapshot.exists()) return null;
 
-    const users = snapshot.val();
-    const currentUser = users[currentUserId] as QueueUser;
-    const recentPartnerIds = currentUser?.recentPartners || [];
+      const users = snapshot.val();
+      const currentUser = users[currentUserId] as QueueUser;
+      const recentPartnerIds = currentUser?.recentPartners || [];
 
-    // CRITICAL: Only match with users who are waiting AND have no partner AND not recently matched
-    const waitingUsers = Object.values(users).filter(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (user: any) =>
-        user.status === "waiting" &&
-        user.userId !== currentUserId &&
-        !user.partnerId && // Ensure they're not already matched
-        !recentPartnerIds.includes(user.userId) // Exclude recent partners
-    ) as QueueUser[];
+      // CRITICAL: Only match with users who are waiting AND have no partner AND not recently matched
+      const waitingUsers = Object.values(users).filter(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (user: any) =>
+          user.status === "waiting" &&
+          user.userId !== currentUserId &&
+          !user.partnerId && // Ensure they're not already matched
+          !recentPartnerIds.includes(user.userId) // Exclude recent partners
+      ) as QueueUser[];
 
-    if (waitingUsers.length === 0) return null;
+      if (waitingUsers.length === 0) return null;
 
-    // Priority 1: Try to match with opposite gender
-    if (currentUserGender) {
-      const oppositeGenderUsers = this.filterByOppositeGender(waitingUsers, currentUserGender);
-      if (oppositeGenderUsers.length > 0) {
-        const randomIndex = Math.floor(Math.random() * oppositeGenderUsers.length);
-        return oppositeGenderUsers[randomIndex].userId;
+      // Priority 1: Try to match with opposite gender
+      if (currentUserGender) {
+        const oppositeGenderUsers = this.filterByOppositeGender(waitingUsers, currentUserGender);
+        if (oppositeGenderUsers.length > 0) {
+          const randomIndex = Math.floor(Math.random() * oppositeGenderUsers.length);
+          return oppositeGenderUsers[randomIndex].userId;
+        }
       }
-    }
 
-    // Priority 2: If no opposite gender found, match with any available user
-    const randomIndex = Math.floor(Math.random() * waitingUsers.length);
-    return waitingUsers[randomIndex].userId;
+      // Priority 2: If no opposite gender found, match with any available user
+      const randomIndex = Math.floor(Math.random() * waitingUsers.length);
+      return waitingUsers[randomIndex].userId;
+    } catch (_error) {
+      throw new Error(
+        "Unable to connect to matching service. Please check your internet connection."
+      );
+    }
   }
 
   /**
@@ -353,17 +365,25 @@ class UserQueueService {
             // Ignore errors during cleanup
           }
 
-          // IMPORTANT: Reset partner back to "waiting" status instead of removing them
-          // This allows them to receive the disconnect notification and search again
+          // IMPORTANT: Clear partner's connection to trigger disconnect detection
+          // Set partnerId to null first, then update status
           const partnerRef = ref(this.db, `queue/${partnerId}`);
           try {
             const partnerSnapshot = await get(partnerRef);
             if (partnerSnapshot.exists()) {
+              // First clear the partnerId and status to trigger disconnect listener
               await update(partnerRef, {
-                status: "waiting",
                 partnerId: null,
+                status: "idle", // Set to idle temporarily
                 connectedAt: null,
               });
+
+              // Then immediately set back to waiting so they can search again
+              setTimeout(() => {
+                update(partnerRef, {
+                  status: "waiting",
+                }).catch(() => {});
+              }, 100);
             }
           } catch (_err) {
             // Ignore errors

@@ -123,15 +123,16 @@ export function useMatching(
       // Track partner disconnection
       analyticsService.trackPartnerDisconnected();
 
-      if (partnerDisconnectedCallbackRef.current) {
-        partnerDisconnectedCallbackRef.current();
-      }
-
-      // Reset state immediately
+      // Reset state immediately to trigger video chat disconnect
       isConnectingRef.current = false;
       setIsConnected(false);
       setPartnerId("");
       setChannelName("");
+
+      // Call disconnect callback to ensure video chat leaves channel
+      if (partnerDisconnectedCallbackRef.current) {
+        partnerDisconnectedCallbackRef.current();
+      }
 
       // Clear the disconnect listener to prevent loops
       if (unsubscribePartnerRef.current) {
@@ -148,13 +149,9 @@ export function useMatching(
         // Error removing from queue
       }
 
-      // Wait a bit then automatically start searching for new partner
-      setTimeout(() => {
-        onSystemMessage("Looking for a new stranger...");
-        onClearMessages();
-        // Start searching again
-        searchForPartner();
-      }, 1000);
+      // Don't auto-search - user must click Start button to search again
+      onSystemMessage("Stranger has disconnected. Click Start to find a new stranger.");
+      onClearMessages();
     });
 
     if (unsubscribePartnerRef.current) {

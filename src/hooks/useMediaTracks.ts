@@ -6,6 +6,17 @@ import { agoraService } from "@/services/agoraService";
 import { analyticsService } from "@/services/analyticsService";
 import { getErrorMessage } from "@/utils/errorHandler";
 
+/**
+ * Detect if the current browser is Safari or iOS
+ */
+const isSafariOrIOS = (): boolean => {
+  if (typeof window === "undefined") return false;
+  const ua = window.navigator.userAgent;
+  const iOS = /iPad|iPhone|iPod/.test(ua);
+  const safari = /^((?!chrome|android).)*safari/i.test(ua);
+  return iOS || safari;
+};
+
 interface MediaTracksState {
   videoTrack: ICameraVideoTrack | null;
   audioTrack: IMicrophoneAudioTrack | null;
@@ -27,6 +38,8 @@ interface UseMediaTracksReturn {
   toggleMic: () => Promise<void>;
   ensureTracksForCall: () => Promise<void>;
   cleanupTracks: () => void;
+  switchCamera: (deviceId: string) => Promise<void>;
+  switchMicrophone: (deviceId: string) => Promise<void>;
 
   // Error handling
   lastError: string | null;
@@ -99,6 +112,11 @@ export function useMediaTracks(): UseMediaTracksReturn {
                 const tracks = await agoraService.createLocalTracks(true, false);
                 if (tracks.videoTrack && isMountedRef.current) {
                   await tracks.videoTrack.setEnabled(true);
+                  // Sync with agoraService so it can be reused when joining channel
+                  agoraService.setLocalTracks({
+                    videoTrack: tracks.videoTrack,
+                    audioTrack: stateRef.current.audioTrack,
+                  });
                   setState((p) => ({
                     ...p,
                     videoTrack: tracks.videoTrack,
@@ -137,14 +155,22 @@ export function useMediaTracks(): UseMediaTracksReturn {
               resolve();
             }
           } catch (error: unknown) {
-            const message = getErrorMessage(error);
-            setLastError(message);
-            setState((p) => ({ ...p, isCreatingVideo: false }));
-
             const err = error as Record<string, unknown>;
+            let message = getErrorMessage(error);
+
+            // Safari-specific permission error handling
             if (err?.code === "PERMISSION_DENIED" || err?.name === "NotAllowedError") {
+              if (isSafariOrIOS()) {
+                message =
+                  "Camera access denied. Please enable camera in Safari Settings > Privacy & Security > Camera.";
+              } else {
+                message = "Camera access denied. Please allow camera access when prompted.";
+              }
               analyticsService.trackPermissionDenied("camera");
             }
+
+            setLastError(message);
+            setState((p) => ({ ...p, isCreatingVideo: false }));
             reject(error);
           }
         };
@@ -179,6 +205,11 @@ export function useMediaTracks(): UseMediaTracksReturn {
                 const tracks = await agoraService.createLocalTracks(false, true);
                 if (tracks.audioTrack && isMountedRef.current) {
                   await tracks.audioTrack.setEnabled(true);
+                  // Sync with agoraService so it can be reused when joining channel
+                  agoraService.setLocalTracks({
+                    videoTrack: stateRef.current.videoTrack,
+                    audioTrack: tracks.audioTrack,
+                  });
                   setState((p) => ({
                     ...p,
                     audioTrack: tracks.audioTrack,
@@ -217,14 +248,22 @@ export function useMediaTracks(): UseMediaTracksReturn {
               resolve();
             }
           } catch (error: unknown) {
-            const message = getErrorMessage(error);
-            setLastError(message);
-            setState((p) => ({ ...p, isCreatingAudio: false }));
-
             const err = error as Record<string, unknown>;
+            let message = getErrorMessage(error);
+
+            // Safari-specific permission error handling
             if (err?.code === "PERMISSION_DENIED" || err?.name === "NotAllowedError") {
+              if (isSafariOrIOS()) {
+                message =
+                  "Microphone access denied. Please enable microphone in Safari Settings > Privacy & Security > Microphone.";
+              } else {
+                message = "Microphone access denied. Please allow microphone access when prompted.";
+              }
               analyticsService.trackPermissionDenied("microphone");
             }
+
+            setLastError(message);
+            setState((p) => ({ ...p, isCreatingAudio: false }));
             reject(error);
           }
         };
@@ -267,6 +306,52 @@ export function useMediaTracks(): UseMediaTracksReturn {
   ]);
 
   /**
+   * Switch camera device
+   * Changes the active camera to the specified device
+   */
+  const switchCamera = useCallback(async (deviceId: string) => {
+    try {
+      setLastError(null);
+      const currentState = stateRef.current;
+
+      if (!currentState.videoTrack) {
+        throw new Error("Camera not available. Please turn on camera first.");
+      }
+
+      // Switch to the new device
+      await currentState.videoTrack.setDevice(deviceId);
+      analyticsService.trackEvent("device_changed", { type: "camera", deviceId });
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
+      setLastError(message);
+      throw error;
+    }
+  }, []);
+
+  /**
+   * Switch microphone device
+   * Changes the active microphone to the specified device
+   */
+  const switchMicrophone = useCallback(async (deviceId: string) => {
+    try {
+      setLastError(null);
+      const currentState = stateRef.current;
+
+      if (!currentState.audioTrack) {
+        throw new Error("Microphone not available. Please turn on microphone first.");
+      }
+
+      // Switch to the new device
+      await currentState.audioTrack.setDevice(deviceId);
+      analyticsService.trackEvent("device_changed", { type: "microphone", deviceId });
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
+      setLastError(message);
+      throw error;
+    }
+  }, []);
+
+  /**
    * Cleanup all tracks
    * Called when leaving a call or navigating away
    */
@@ -299,6 +384,8 @@ export function useMediaTracks(): UseMediaTracksReturn {
     toggleMic,
     ensureTracksForCall,
     cleanupTracks,
+    switchCamera,
+    switchMicrophone,
     lastError,
   };
 }

@@ -37,7 +37,7 @@ describe("errorHandler utility", () => {
 
     it("handles firebase errors", () => {
       expect(getErrorMessage({ code: "firebase/internal" })).toBe(
-        "Unable to connect. Please try again in a moment."
+        "Unable to connect to server. Please check your internet connection and try again."
       );
     });
 

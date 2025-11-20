@@ -20,11 +20,23 @@ export default function OmegleLanding() {
   const years = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
   const genders = ["Male", "Female", "Other"];
 
-  // Check if user already has info and redirect to home
+  // Check if user already has complete info and redirect to home
   useEffect(() => {
-    const userInfo = localStorage.getItem("userInfo");
-    if (userInfo) {
-      router.push("/omegle/home");
+    try {
+      const userInfoStr = localStorage.getItem("userInfo");
+      if (userInfoStr) {
+        const userInfo = JSON.parse(userInfoStr);
+        // Validate all required fields are present and not empty
+        if (userInfo.name && userInfo.name.trim() !== "" && userInfo.year && userInfo.gender) {
+          router.push("/omegle/home");
+        } else {
+          // Invalid userInfo, clear it
+          localStorage.removeItem("userInfo");
+        }
+      }
+    } catch (_error) {
+      // Invalid JSON, clear it
+      localStorage.removeItem("userInfo");
     }
   }, [router]);
 

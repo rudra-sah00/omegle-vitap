@@ -110,6 +110,13 @@ export class AgoraService {
   }
 
   /**
+   * Set local tracks (used by useMediaTracks hook)
+   */
+  public setLocalTracks(tracks: MediaTracks): void {
+    this.localTracks = tracks;
+  }
+
+  /**
    * Join a channel
    */
   public async joinChannel(channel: string, token: string | null, uid: UID): Promise<UID> {

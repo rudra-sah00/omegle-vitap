@@ -34,8 +34,14 @@ export function getErrorMessage(error: unknown): string {
   }
 
   // Firebase/Database errors
-  if (err?.code?.includes("firebase") || err?.code?.includes("database")) {
-    return "Unable to connect. Please try again in a moment.";
+  if (
+    err?.code?.includes("firebase") ||
+    err?.code?.includes("database") ||
+    err?.message?.includes("Unable to connect") ||
+    err?.message?.includes("WebSocket") ||
+    err?.message?.includes("matching service")
+  ) {
+    return "Unable to connect to server. Please check your internet connection and try again.";
   }
 
   // Agora-specific errors

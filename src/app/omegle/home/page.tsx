@@ -26,10 +26,37 @@ export default function HomePage() {
   const { theme, toggleTheme } = useTheme();
   const { toasts, removeToast, error: showError, warning: _warning } = useToast();
 
+  // Validate user info on mount - redirect to form if incomplete
+  useEffect(() => {
+    try {
+      const userInfoStr = localStorage.getItem("userInfo");
+      if (!userInfoStr) {
+        router.push("/omegle");
+        return;
+      }
+      const userInfo = JSON.parse(userInfoStr);
+      if (!userInfo.name || userInfo.name.trim() === "" || !userInfo.year || !userInfo.gender) {
+        // Invalid userInfo, redirect to form
+        localStorage.removeItem("userInfo");
+        router.push("/omegle");
+      }
+    } catch (_error) {
+      // Invalid JSON, redirect to form
+      localStorage.removeItem("userInfo");
+      router.push("/omegle");
+    }
+  }, [router]);
+
   // UI State
   const [showControls, setShowControls] = useState(false);
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [showPreCallControls, setShowPreCallControls] = useState(true); // Always true when not connected
+
+  // Device management state
+  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+  const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>("");
+  const [selectedMicrophoneId, setSelectedMicrophoneId] = useState<string>("");
 
   // Centralized media tracks management
   const {
@@ -41,6 +68,8 @@ export default function HomePage() {
     toggleMic,
     ensureTracksForCall,
     cleanupTracks,
+    switchCamera,
+    switchMicrophone,
     lastError: mediaError,
   } = useMediaTracks();
 
@@ -51,6 +80,35 @@ export default function HomePage() {
 
   // Initialize Agora client only
   useMediaDevices();
+
+  // Enumerate available devices
+  useEffect(() => {
+    const loadDevices = async () => {
+      try {
+        const { agoraService } = await import("@/services/agoraService");
+        const [cams, mics] = await Promise.all([
+          agoraService.getCameras(),
+          agoraService.getMicrophones(),
+        ]);
+        setCameras(cams);
+        setMicrophones(mics);
+
+        // Set default devices
+        if (cams.length > 0 && !selectedCameraId) {
+          setSelectedCameraId(cams[0].deviceId);
+        }
+        if (mics.length > 0 && !selectedMicrophoneId) {
+          setSelectedMicrophoneId(mics[0].deviceId);
+        }
+      } catch (_error) {
+        // Failed to enumerate devices
+      }
+    };
+
+    // Load devices after a short delay to ensure permissions might be granted
+    const timer = setTimeout(loadDevices, 500);
+    return () => clearTimeout(timer);
+  }, [selectedCameraId, selectedMicrophoneId]);
 
   // Matching hook with chat callbacks (initialize first to get userId and channelName)
   const matching = useMatching(
@@ -85,14 +143,28 @@ export default function HomePage() {
     isCameraOn: connectedCameraOn,
     toggleMic: toggleConnectedMic,
     toggleCamera: toggleConnectedCamera,
-  } = useVideoChat(userId, channelName, isConnected, isCameraOn, isMicOn, (errorMsg: string) => {
-    // Show error toast only for video connection failures
-    showError(errorMsg);
-    // Optionally disconnect the match if video fails
-    if (isConnected) {
-      handleStop();
+  } = useVideoChat(
+    userId,
+    channelName,
+    isConnected,
+    isCameraOn,
+    isMicOn,
+    (errorMsg: string) => {
+      // Show error toast only for video connection failures
+      showError(errorMsg);
+      // Optionally disconnect the match if video fails
+      if (isConnected) {
+        handleStop();
+      }
+    },
+    () => {
+      // Partner left the Agora channel (browser closed/reloaded)
+      // Trigger proper disconnect flow
+      if (isConnected) {
+        handleStop();
+      }
     }
-  });
+  );
 
   // Show media errors
   useEffect(() => {
@@ -117,14 +189,29 @@ export default function HomePage() {
         clearMessages();
       }
 
-      // When disconnected, restore preview tracks if camera/mic were on
+      // When disconnected, ensure preview tracks are enabled and playing
       const restorePreviewTracks = async () => {
         try {
-          if (isCameraOn && !previewVideoTrack) {
-            await toggleCamera();
+          // If camera should be on, ensure we have a track
+          if (isCameraOn) {
+            if (!previewVideoTrack) {
+              // No track exists, create it
+              await toggleCamera();
+            } else {
+              // Track exists, ensure it's enabled and playing
+              await previewVideoTrack.setEnabled(true);
+            }
           }
-          if (isMicOn && !previewAudioTrack) {
-            await toggleMic();
+
+          // If mic should be on, ensure we have a track
+          if (isMicOn) {
+            if (!previewAudioTrack) {
+              // No track exists, create it
+              await toggleMic();
+            } else {
+              // Track exists, ensure it's enabled
+              await previewAudioTrack.setEnabled(true);
+            }
           }
         } catch (_error) {
           // Error restoring preview tracks
@@ -181,26 +268,47 @@ export default function HomePage() {
       videoElement.innerHTML = "";
     };
 
-    // Only play when we have a track and camera is on
-    if (!isConnected && previewVideoTrack && isCameraOn) {
-      // Preview mode (idle OR searching) - play the preview track
-      clearVideo();
-      try {
-        previewVideoTrack.play(videoElement);
-      } catch {
-        // Ignore sync errors
-      }
-    } else if (isConnected && localVideoTrack && connectedCameraOn) {
-      // Connected mode - play the connected track when camera is ON
-      clearVideo();
-      try {
-        localVideoTrack.play(videoElement);
-      } catch {
-        // Ignore sync errors
-      }
+    // Determine which track to show
+    let trackToShow: typeof previewVideoTrack | typeof localVideoTrack = null;
+    let shouldShow = false;
+
+    if (!isConnected) {
+      // Preview mode - show preview track if camera is on
+      trackToShow = previewVideoTrack;
+      shouldShow = isCameraOn && !!previewVideoTrack;
     } else {
-      // Clear video element when camera is off or no tracks available
-      clearVideo();
+      // Connected mode - show connected track if camera is on
+      trackToShow = localVideoTrack;
+      shouldShow = connectedCameraOn && !!localVideoTrack;
+    }
+
+    if (shouldShow && trackToShow) {
+      // Only clear and replay if the track actually changed
+      const currentTrackId = videoElement.getAttribute("data-track-id");
+      const newTrackId = (trackToShow as { _ID?: string })._ID || "";
+
+      if (currentTrackId !== newTrackId) {
+        clearVideo();
+        videoElement.setAttribute("data-track-id", newTrackId);
+        try {
+          trackToShow.play(videoElement);
+        } catch {
+          // Ignore sync errors
+        }
+      } else if (currentTrackId === newTrackId && videoElement.innerHTML === "") {
+        // Track ID matches but video element is empty - replay it
+        try {
+          trackToShow.play(videoElement);
+        } catch {
+          // Ignore sync errors
+        }
+      }
+    } else if (!shouldShow) {
+      // Only clear if camera is explicitly off
+      if (!isCameraOn) {
+        clearVideo();
+        videoElement.removeAttribute("data-track-id");
+      }
     }
 
     // No cleanup - tracks are managed by useMediaTracks hook
@@ -216,26 +324,13 @@ export default function HomePage() {
   // Note: We don't cleanup preview tracks when connecting anymore
   // useVideoChat will publish the existing tracks from agoraService
 
-  // Auto-hide pre-call controls after 3 seconds
+  // Keep pre-call controls always visible when not connected
   useEffect(() => {
-    if (!isConnected && !isSearching && showPreCallControls) {
-      // Clear existing timer
-      if (hideControlsTimerRef.current) {
-        clearTimeout(hideControlsTimerRef.current);
-      }
-
-      // Set new timer to hide controls after 3 seconds
-      hideControlsTimerRef.current = setTimeout(() => {
-        setShowPreCallControls(false);
-      }, 3000);
-
-      return () => {
-        if (hideControlsTimerRef.current) {
-          clearTimeout(hideControlsTimerRef.current);
-        }
-      };
+    if (!isConnected && !isSearching) {
+      // Always show pre-call controls when not connected
+      setShowPreCallControls(true);
     }
-  }, [isConnected, isSearching, showPreCallControls]);
+  }, [isConnected, isSearching]);
 
   // Comprehensive cleanup on unmount or route change
   useEffect(() => {
@@ -254,10 +349,7 @@ export default function HomePage() {
   // Show controls on video click - TOGGLE functionality
   const handleLocalVideoClick = () => {
     if (!isSearching) {
-      if (!isConnected) {
-        // When not connected, controls always stay visible (don't toggle)
-        setShowPreCallControls(true);
-      } else {
+      if (isConnected) {
         // When connected, toggle with auto-hide
         const newShowControls = !showControls;
         setShowControls(newShowControls);
@@ -272,6 +364,7 @@ export default function HomePage() {
           }, 3000);
         }
       }
+      // When not connected, controls are always visible - no action needed
     }
   };
 
@@ -282,6 +375,10 @@ export default function HomePage() {
   const handlePreviewMicToggle = useCallback(async () => {
     try {
       await toggleMic();
+      // Reload devices after toggling
+      const { agoraService } = await import("@/services/agoraService");
+      const mics = await agoraService.getMicrophones();
+      setMicrophones(mics);
     } catch (error: unknown) {
       const message = getErrorMessage(error);
       showError(message);
@@ -291,16 +388,52 @@ export default function HomePage() {
   const handlePreviewCameraToggle = useCallback(async () => {
     try {
       await toggleCamera();
+      // Reload devices after toggling
+      const { agoraService } = await import("@/services/agoraService");
+      const cams = await agoraService.getCameras();
+      setCameras(cams);
     } catch (error: unknown) {
       const message = getErrorMessage(error);
       showError(message);
     }
   }, [toggleCamera, showError]);
 
+  // Device selection handlers
+  const handleSelectCamera = useCallback(
+    async (deviceId: string) => {
+      try {
+        await switchCamera(deviceId);
+        setSelectedCameraId(deviceId);
+      } catch (error: unknown) {
+        const message = getErrorMessage(error);
+        showError(message);
+      }
+    },
+    [switchCamera, showError]
+  );
+
+  const handleSelectMicrophone = useCallback(
+    async (deviceId: string) => {
+      try {
+        await switchMicrophone(deviceId);
+        setSelectedMicrophoneId(deviceId);
+      } catch (error: unknown) {
+        const message = getErrorMessage(error);
+        showError(message);
+      }
+    },
+    [switchMicrophone, showError]
+  );
+
   // Handlers for connected state (use videoChat toggles)
   const handleConnectedMicToggle = useCallback(async () => {
     try {
+      // Toggle the preview mic state (useMediaTracks) which manages the actual track
+      await toggleMic();
+
+      // Also toggle in useVideoChat to publish/unpublish
       await toggleConnectedMic();
+
       // Show controls and reset auto-hide timer
       setShowControls(true);
       if (hideControlsTimerRef.current) {
@@ -312,11 +445,16 @@ export default function HomePage() {
     } catch (_error) {
       showError("Unable to toggle microphone");
     }
-  }, [toggleConnectedMic, showError]);
+  }, [toggleMic, toggleConnectedMic, showError]);
 
   const handleConnectedCameraToggle = useCallback(async () => {
     try {
+      // Toggle the preview camera state (useMediaTracks) which manages the actual track
+      await toggleCamera();
+
+      // Also toggle in useVideoChat to publish/unpublish
       await toggleConnectedCamera();
+
       // Show controls and reset auto-hide timer
       setShowControls(true);
       if (hideControlsTimerRef.current) {
@@ -328,7 +466,7 @@ export default function HomePage() {
     } catch (_error) {
       showError("Unable to toggle camera");
     }
-  }, [toggleConnectedCamera, showError]);
+  }, [toggleCamera, toggleConnectedCamera, showError]);
 
   const handleSendMessage = (message: string) => {
     sendMessage(message);
@@ -400,6 +538,12 @@ export default function HomePage() {
               onStop={handleStop}
               isSearching={false}
               showControls={showPreCallControls}
+              cameras={cameras}
+              microphones={microphones}
+              selectedCameraId={selectedCameraId}
+              selectedMicrophoneId={selectedMicrophoneId}
+              onSelectCamera={handleSelectCamera}
+              onSelectMicrophone={handleSelectMicrophone}
             />
           )}
 
@@ -414,6 +558,12 @@ export default function HomePage() {
               onStop={handleStop}
               isSearching={true}
               showControls={showPreCallControls}
+              cameras={cameras}
+              microphones={microphones}
+              selectedCameraId={selectedCameraId}
+              selectedMicrophoneId={selectedMicrophoneId}
+              onSelectCamera={handleSelectCamera}
+              onSelectMicrophone={handleSelectMicrophone}
             />
           )}
 

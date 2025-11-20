@@ -28,6 +28,7 @@ if (typeof window !== "undefined") {
  * @param shouldPublishVideo - Whether to publish video track
  * @param shouldPublishAudio - Whether to publish audio track
  * @param onError - Optional error callback
+ * @param onPartnerLeft - Optional callback when partner leaves the Agora channel
  * @returns Video chat state and control functions
  */
 export function useVideoChat(
@@ -36,7 +37,8 @@ export function useVideoChat(
   enabled: boolean,
   shouldPublishVideo: boolean = true,
   shouldPublishAudio: boolean = true,
-  onError?: (message: string) => void
+  onError?: (message: string) => void,
+  onPartnerLeft?: () => void
 ) {
   const [localVideoTrack, setLocalVideoTrack] = useState<ICameraVideoTrack | null>(null);
   const [localAudioTrack, setLocalAudioTrack] = useState<IMicrophoneAudioTrack | null>(null);
@@ -110,6 +112,11 @@ export function useVideoChat(
 
         clientRef.current.on("user-left", (user: IAgoraRTCRemoteUser) => {
           setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
+
+          // Notify that partner left the video channel
+          if (onPartnerLeft) {
+            onPartnerLeft();
+          }
         });
 
         // Network quality monitoring
@@ -259,37 +266,23 @@ export function useVideoChat(
       setIsJoined(false);
       isJoiningRef.current = false;
 
-      // Stop and close tracks
-      if (localVideoTrack) {
-        try {
-          localVideoTrack.stop();
-          localVideoTrack.close();
-        } catch (_trackError) {
-          // Video track already closed
-        }
-        setLocalVideoTrack(null);
-      }
-      if (localAudioTrack) {
-        try {
-          localAudioTrack.stop();
-          localAudioTrack.close();
-        } catch (_trackError) {
-          // Audio track already closed
-        }
-        setLocalAudioTrack(null);
-      }
-
-      // Reset camera and mic states to match track state
-      setIsCameraOn(false);
-      setIsMicOn(false);
-
-      // Clear remote users immediately
-      setRemoteUsers([]);
-
-      // Leave Agora channel
+      // Leave Agora channel first (unpublishes tracks)
       if (clientRef.current) {
         await agoraService.leaveChannel();
       }
+
+      // DON'T close the tracks - keep them alive in agoraService for preview mode
+      // The tracks remain in agoraService.localTracks and will be picked up by useMediaTracks
+
+      // Just clear the local references in this hook
+      setLocalVideoTrack(null);
+      setLocalAudioTrack(null);
+
+      // DON'T reset camera/mic states - they should maintain their state for preview
+      // setIsCameraOn and setIsMicOn are internal to this hook and don't affect useMediaTracks
+
+      // Clear remote users immediately
+      setRemoteUsers([]);
     } catch (_error) {
       // Ensure state is reset even on error
       setIsJoined(false);
@@ -300,7 +293,7 @@ export function useVideoChat(
       setIsCameraOn(false);
       setIsMicOn(false);
     }
-  }, [localVideoTrack, localAudioTrack, isJoined]);
+  }, [isJoined]);
 
   // Toggle microphone
   const toggleMic = useCallback(async () => {

@@ -13,8 +13,26 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
+// Validate Firebase configuration
+if (typeof window !== "undefined") {
+  const requiredFields = ["apiKey", "authDomain", "databaseURL", "projectId", "appId"];
+  const missingFields = requiredFields.filter(
+    (field) => !firebaseConfig[field as keyof typeof firebaseConfig]
+  );
+
+  if (missingFields.length > 0) {
+    // Missing Firebase configuration fields
+  }
+}
+
 // Initialize Firebase only if it hasn't been initialized already
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+let app: ReturnType<typeof initializeApp>;
+try {
+  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+} catch (_error) {
+  // Re-throw to prevent app from running with broken Firebase
+  throw new Error("Failed to initialize Firebase. Please check your configuration.");
+}
 
 /**
  * Firebase Realtime Database instance
