@@ -2,167 +2,242 @@ import Link from "next/link";
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
       <div className="max-w-4xl mx-auto px-6 py-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-8">Terms of Service</h1>
+        <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Terms of Service</h1>
+          <p className="text-lg text-purple-600 mb-8">For VIT Campus Community</p>
 
-        <div className="space-y-8 text-gray-700">
-          <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Acceptance of Terms</h2>
-            <p className="leading-relaxed">
-              By accessing and using this service, you accept and agree to be bound by the terms and
-              provision of this agreement. If you do not agree to abide by the above, please do not
-              use this service.
-            </p>
-          </section>
+          <div className="space-y-8 text-gray-700">
+            <section className="bg-purple-50 rounded-lg p-6">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                📜 Your Agreement to These Terms
+              </h2>
+              <p className="leading-relaxed">
+                Welcome to the VIT student community platform! By using this service, you agree to
+                these terms. This is a student-created platform designed to foster respectful
+                connections among VIT campus students. Please read carefully.
+              </p>
+            </section>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">2. Use of Service</h2>
-            <p className="leading-relaxed mb-3">
-              This service allows you to communicate with random strangers through video and text
-              chat. By using this service, you agree to:
-            </p>
-            <ul className="list-disc list-inside space-y-2 pl-4">
-              <li>Be at least 18 years of age or have parental consent</li>
-              <li>Not engage in any illegal activities</li>
-              <li>Not transmit any harmful or malicious content</li>
-              <li>Not harass, abuse, or harm other users</li>
-              <li>
-                Not share personal information such as addresses, phone numbers, or financial
-                details
-              </li>
-              <li>Not impersonate any person or entity</li>
-            </ul>
-          </section>
+            <section>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Acceptance of Terms</h2>
+              <p className="leading-relaxed">
+                By accessing and using this anonymous video chat service, you accept and agree to be
+                bound by these terms. If you do not agree to these terms, please do not use this
+                service. Your continued use constitutes acceptance of any updates to these terms.
+              </p>
+            </section>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">3. Privacy</h2>
-            <p className="leading-relaxed mb-3">
-              We respect your privacy and are committed to protecting it. Please note:
-            </p>
-            <ul className="list-disc list-inside space-y-2 pl-4">
-              <li>Conversations are not recorded or monitored</li>
-              <li>We do not store chat logs or video recordings</li>
-              <li>Basic usage data may be collected for service improvement</li>
-              <li>You are solely responsible for the information you choose to share</li>
-            </ul>
-          </section>
+            <section>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">2. Service Description</h2>
+              <p className="leading-relaxed mb-3">This platform provides VIT students with:</p>
+              <ul className="list-disc list-inside space-y-2 pl-4">
+                <li>Anonymous video and text chat with random VIT students</li>
+                <li>No registration required - instant access</li>
+                <li>Peer-to-peer connections for privacy</li>
+                <li>Theme customization (light/dark mode)</li>
+                <li>Cross-campus connections (Vellore, Chennai, AP, Bhopal)</li>
+              </ul>
+            </section>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">4. Content and Conduct</h2>
-            <p className="leading-relaxed mb-3">
-              You are solely responsible for your conduct and any content that you submit, post, or
-              display on or via the service. We reserve the right to:
-            </p>
-            <ul className="list-disc list-inside space-y-2 pl-4">
-              <li>Remove or refuse to distribute any content on the service</li>
-              <li>Suspend or terminate users who violate these terms</li>
-              <li>Disclose any information as necessary to satisfy any law or regulation</li>
-            </ul>
-          </section>
+            <section>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                3. Eligibility & User Requirements
+              </h2>
+              <p className="leading-relaxed mb-3">To use this service, you must:</p>
+              <ul className="list-disc list-inside space-y-2 pl-4">
+                <li>Be at least 18 years of age</li>
+                <li>Be a current VIT student or have VIT campus affiliation</li>
+                <li>Have access to a device with camera and microphone</li>
+                <li>Agree to behave respectfully and follow community guidelines</li>
+                <li>Not be previously banned for violating these terms</li>
+              </ul>
+            </section>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">5. Prohibited Content</h2>
-            <p className="leading-relaxed mb-3">
-              The following types of content are strictly prohibited:
-            </p>
-            <ul className="list-disc list-inside space-y-2 pl-4">
-              <li>Nudity or sexually explicit content</li>
-              <li>Violence or threats of violence</li>
-              <li>Hate speech or discriminatory content</li>
-              <li>Content involving minors in any inappropriate context</li>
-              <li>Spam, advertising, or commercial content</li>
-              <li>Copyright or trademark infringement</li>
-            </ul>
-          </section>
+            <section>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">4. Acceptable Use</h2>
+              <p className="leading-relaxed mb-3">When using this platform, you agree to:</p>
+              <ul className="list-disc list-inside space-y-2 pl-4">
+                <li>✅ Treat other students with respect and kindness</li>
+                <li>✅ Use appropriate language and behavior</li>
+                <li>✅ Respect others' privacy and boundaries</li>
+                <li>✅ Disconnect politely if you're not interested in chatting</li>
+                <li>✅ Report inappropriate behavior to help keep the community safe</li>
+                <li>✅ Use the platform for its intended purpose - meeting fellow students</li>
+              </ul>
+            </section>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-              6. Disclaimer of Warranties
-            </h2>
-            <p className="leading-relaxed">
-              This service is provided "as is" without any warranties, expressed or implied. We do
-              not warrant that the service will be uninterrupted, secure, or error-free. You use the
-              service at your own risk.
-            </p>
-          </section>
+            <section>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">5. Prohibited Conduct</h2>
+              <p className="leading-relaxed mb-3">
+                The following behaviors are strictly prohibited and may result in immediate ban:
+              </p>
+              <ul className="list-disc list-inside space-y-2 pl-4">
+                <li>❌ Nudity or sexually explicit content of any kind</li>
+                <li>❌ Harassment, bullying, or abusive behavior</li>
+                <li>❌ Hate speech, discrimination, or offensive content</li>
+                <li>❌ Violence or threats of any nature</li>
+                <li>❌ Sharing or requesting personal information inappropriately</li>
+                <li>❌ Impersonation of others or false representation</li>
+                <li>❌ Spam, advertising, or commercial solicitation</li>
+                <li>❌ Recording or screenshotting without consent</li>
+                <li>❌ Illegal activities or content</li>
+                <li>❌ Attempting to bypass security measures</li>
+              </ul>
+            </section>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-              7. Limitation of Liability
-            </h2>
-            <p className="leading-relaxed">
-              We shall not be liable for any indirect, incidental, special, consequential, or
-              punitive damages resulting from your use or inability to use the service. You
-              acknowledge that you are solely responsible for any interactions with other users.
-            </p>
-          </section>
+            <section>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                6. VIT Campus-Specific Rules
+              </h2>
+              <p className="leading-relaxed mb-3">
+                As a platform for VIT students, please observe:
+              </p>
+              <ul className="list-disc list-inside space-y-2 pl-4">
+                <li>Maintain the reputation and dignity of VIT campuses</li>
+                <li>Do not share confidential academic information</li>
+                <li>Respect VIT's code of conduct even in anonymous settings</li>
+                <li>Do not use the platform to organize prohibited activities</li>
+                <li>Be mindful that you represent the VIT community</li>
+              </ul>
+            </section>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">8. User Safety</h2>
-            <p className="leading-relaxed mb-3">Your safety is important. Please remember:</p>
-            <ul className="list-disc list-inside space-y-2 pl-4">
-              <li>Never share personal information with strangers</li>
-              <li>Disconnect immediately if you feel uncomfortable</li>
-              <li>Report any inappropriate behavior or content</li>
-              <li>Do not meet in person with people you meet online</li>
-              <li>Be cautious of scams and fraudulent activities</li>
-            </ul>
-          </section>
+            <section>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">7. Privacy & Safety</h2>
+              <p className="leading-relaxed mb-3">For your own safety:</p>
+              <ul className="list-disc list-inside space-y-2 pl-4">
+                <li>Never share your full name, phone number, or hostel details</li>
+                <li>Don't share your student ID, registration number, or academic credentials</li>
+                <li>Avoid sharing social media profiles with strangers</li>
+                <li>Never share financial information or payment details</li>
+                <li>Do not arrange in-person meetings with strangers</li>
+                <li>Be cautious of scams or suspicious requests</li>
+              </ul>
+            </section>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">9. Termination</h2>
-            <p className="leading-relaxed">
-              We reserve the right to terminate or suspend access to the service immediately,
-              without prior notice or liability, for any reason whatsoever, including without
-              limitation if you breach the Terms of Service.
-            </p>
-          </section>
+            <section>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                8. Content & Intellectual Property
+              </h2>
+              <p className="leading-relaxed mb-3">Regarding content on the platform:</p>
+              <ul className="list-disc list-inside space-y-2 pl-4">
+                <li>You retain ownership of any content you share</li>
+                <li>You are solely responsible for your words and actions</li>
+                <li>Do not share copyrighted material without permission</li>
+                <li>The platform's code and design are protected by copyright</li>
+                <li>Remember: conversations are not recorded, but others may remember them</li>
+              </ul>
+            </section>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-              10. Modifications to Terms
-            </h2>
-            <p className="leading-relaxed">
-              We reserve the right to modify or replace these terms at any time. If a revision is
-              material, we will provide notice prior to any new terms taking effect. Your continued
-              use of the service after any changes constitutes acceptance of those changes.
-            </p>
-          </section>
+            <section>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                9. Disclaimer of Warranties
+              </h2>
+              <p className="leading-relaxed mb-3">Important disclaimers about the service:</p>
+              <ul className="list-disc list-inside space-y-2 pl-4">
+                <li>Service is provided "AS IS" without warranties of any kind</li>
+                <li>We do not guarantee uninterrupted or error-free service</li>
+                <li>Technical issues may occur with video/audio connections</li>
+                <li>We are not responsible for the behavior of other users</li>
+                <li>You use the service at your own risk</li>
+              </ul>
+            </section>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">11. Governing Law</h2>
-            <p className="leading-relaxed">
-              These terms shall be governed and construed in accordance with applicable laws,
-              without regard to its conflict of law provisions. Our failure to enforce any right or
-              provision of these terms will not be considered a waiver of those rights.
-            </p>
-          </section>
+            <section>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                10. Limitation of Liability
+              </h2>
+              <p className="leading-relaxed">
+                We shall not be liable for any damages arising from: your use of the service,
+                interactions with other users, technical malfunctions, loss of data, or any other
+                issues. You acknowledge that online interactions carry inherent risks and you
+                participate voluntarily.
+              </p>
+            </section>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">12. Contact Information</h2>
-            <p className="leading-relaxed">
-              If you have any questions about these Terms of Service, please contact us through the
-              appropriate channels provided on our platform.
-            </p>
-          </section>
+            <section>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                11. Reporting & Enforcement
+              </h2>
+              <p className="leading-relaxed mb-3">We take violations seriously:</p>
+              <ul className="list-disc list-inside space-y-2 pl-4">
+                <li>Report inappropriate behavior using the report button</li>
+                <li>Violations will be reviewed and may result in bans</li>
+                <li>Severe violations may be reported to VIT authorities</li>
+                <li>We reserve the right to terminate access without notice</li>
+                <li>Bans may be temporary or permanent based on severity</li>
+              </ul>
+            </section>
 
-          <div className="pt-8 mt-12 border-t border-gray-200">
-            <p className="text-sm text-gray-500">Last updated: November 19, 2025</p>
-            <p className="text-sm text-gray-500 mt-2">
-              By using this service, you acknowledge that you have read and understood these terms
-              and agree to be bound by them.
-            </p>
+            <section>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                12. Service Modifications
+              </h2>
+              <p className="leading-relaxed">
+                We reserve the right to modify, suspend, or discontinue any part of the service at
+                any time without notice. We may also update features, change matching algorithms, or
+                adjust the platform as needed to improve user experience.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">13. Changes to Terms</h2>
+              <p className="leading-relaxed">
+                These terms may be updated periodically. Material changes will be posted on this
+                page with an updated effective date. Your continued use after changes constitutes
+                acceptance of the new terms. We encourage you to review these terms regularly.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">14. Governing Law</h2>
+              <p className="leading-relaxed">
+                These terms are governed by the laws of India. Any disputes shall be subject to the
+                jurisdiction of courts in the location of the relevant VIT campus. We operate under
+                Indian IT laws and regulations.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">15. Contact</h2>
+              <p className="leading-relaxed">
+                Questions about these terms? Need to report a serious issue? Contact us through the
+                platform's support channels. For urgent safety concerns, please also reach out to
+                VIT campus security or authorities.
+              </p>
+            </section>
+
+            <div className="pt-8 mt-12 border-t-2 border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-6">
+              <p className="text-sm text-gray-600 font-semibold">Last updated: November 20, 2025</p>
+              <p className="text-sm text-gray-600 mt-2">
+                By using this service, you acknowledge that you have read, understood, and agree to
+                be bound by these Terms of Service. Be respectful, stay safe, and enjoy connecting
+                with fellow VIT students! 🎓
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div className="mt-12 text-center">
-          <Link
-            href="/"
-            className="inline-block px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded-lg transition-colors"
-          >
-            Back to Home
-          </Link>
+          <div className="mt-8 flex gap-4 justify-center flex-wrap">
+            <Link
+              href="/"
+              className="inline-block px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl"
+            >
+              Back to Home
+            </Link>
+            <Link
+              href="/privacy"
+              className="inline-block px-8 py-3 bg-white hover:bg-gray-50 text-gray-900 font-semibold rounded-lg transition-colors border-2 border-gray-300"
+            >
+              Privacy Policy
+            </Link>
+            <Link
+              href="/community"
+              className="inline-block px-8 py-3 bg-white hover:bg-gray-50 text-gray-900 font-semibold rounded-lg transition-colors border-2 border-gray-300"
+            >
+              Community Guidelines
+            </Link>
+          </div>
         </div>
       </div>
     </div>
