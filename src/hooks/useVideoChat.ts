@@ -89,6 +89,11 @@ export function useVideoChat(
             if (clientRef.current) {
               await clientRef.current.subscribe(user, mediaType);
 
+              // Play audio track immediately after subscribing
+              if (mediaType === "audio" && user.audioTrack) {
+                user.audioTrack.play();
+              }
+
               setRemoteUsers((prev) => {
                 const exists = prev.find((u) => u.uid === user.uid);
                 if (exists) {
