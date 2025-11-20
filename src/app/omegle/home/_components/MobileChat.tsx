@@ -12,6 +12,7 @@ interface MobileChatProps {
   onSendMessage: (message: string) => void;
   onTyping: () => void;
   userId: string;
+  onToggleTheme: () => void;
 }
 
 export default function MobileChat({
@@ -23,17 +24,18 @@ export default function MobileChat({
   onSendMessage,
   onTyping,
   userId,
+  onToggleTheme,
 }: MobileChatProps) {
   if (!showMobileChat) return null;
 
   return (
-    <div className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40 flex items-end">
-      <div className="bg-white w-full h-[85vh] rounded-t-2xl shadow-xl transition-transform duration-300 ease-out transform translate-y-0">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800">Chat</h3>
+    <div className="md:hidden fixed inset-0 bg-black bg-opacity-60 z-40 flex items-end backdrop-blur-sm">
+      <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 w-full h-[85vh] rounded-t-3xl shadow-2xl transition-transform duration-300 ease-out transform translate-y-0">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200/60 bg-gradient-to-r from-slate-100 to-blue-100 rounded-t-3xl">
+          <h3 className="text-lg font-bold text-slate-800">Chat</h3>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+            className="text-slate-500 hover:text-slate-700 text-2xl leading-none transition-colors"
           >
             ✕
           </button>
@@ -47,6 +49,7 @@ export default function MobileChat({
             onTyping={onTyping}
             isConnected={isConnected}
             userId={userId}
+            onToggleTheme={onToggleTheme}
           />
         </div>
       </div>

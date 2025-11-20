@@ -38,6 +38,10 @@ export function useChat(userId: string, channelName: string) {
     unsubscribeTypingRef.current = unsubTyping;
 
     return () => {
+      // Immediately clear messages when leaving channel
+      setMessages([]);
+      setPartnerTyping(false);
+
       if (unsubscribeMessagesRef.current) {
         unsubscribeMessagesRef.current();
       }

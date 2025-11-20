@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import type { ICameraVideoTrack, IMicrophoneAudioTrack } from "agora-rtc-sdk-ng";
+import { useTheme } from "@/contexts/ThemeContext";
 import ChatWindow from "./_components/ChatWindow";
 import VideoPanel from "./_components/VideoPanel";
 import VideoControls from "./_components/VideoControls";
@@ -14,27 +14,35 @@ import { useVideoChat } from "@/hooks/useVideoChat";
 import { useMatching } from "@/hooks/useMatching";
 import { useKeyboardShortcuts, useVideoRenderer } from "@/hooks/useUIHelpers";
 import { useMediaDevices } from "@/hooks/useMediaDevices";
-import { agoraService } from "@/services/agoraService";
+import { useMediaTracks } from "@/hooks/useMediaTracks";
 import { userQueueService } from "@/services/userQueueService";
 import { analyticsService } from "@/services/analyticsService";
+import { getErrorMessage } from "@/utils/errorHandler";
 import { Toast } from "@/components/ui";
 import { useToast } from "@/hooks/useToast";
-import { getErrorMessage } from "@/utils/errorHandler";
 
 export default function HomePage() {
   const router = useRouter();
-  const { toasts, removeToast, error: showError, warning } = useToast();
+  const { theme, toggleTheme } = useTheme();
+  const { toasts, removeToast, error: showError, warning: _warning } = useToast();
 
   // UI State
-  const [isMicOn, setIsMicOn] = useState(false); // Start disabled
-  const [isCameraOn, setIsCameraOn] = useState(false); // Start disabled
   const [showControls, setShowControls] = useState(false);
   const [showMobileChat, setShowMobileChat] = useState(false);
-  const [showPreCallControls, setShowPreCallControls] = useState(true);
+  const [showPreCallControls, setShowPreCallControls] = useState(true); // Always true when not connected
 
-  // Preview tracks (before connecting)
-  const [previewVideoTrack, setPreviewVideoTrack] = useState<ICameraVideoTrack | null>(null);
-  const [previewAudioTrack, setPreviewAudioTrack] = useState<IMicrophoneAudioTrack | null>(null);
+  // Centralized media tracks management
+  const {
+    videoTrack: previewVideoTrack,
+    audioTrack: previewAudioTrack,
+    isCameraOn,
+    isMicOn,
+    toggleCamera,
+    toggleMic,
+    ensureTracksForCall,
+    cleanupTracks,
+    lastError: mediaError,
+  } = useMediaTracks();
 
   // Refs
   const localVideoRef = useRef<HTMLDivElement | null>(null);
@@ -46,8 +54,8 @@ export default function HomePage() {
 
   // Matching hook with chat callbacks (initialize first to get userId and channelName)
   const matching = useMatching(
-    (_msg: string) => {}, // Temporary, will be replaced
-    () => {}, // Temporary, will be replaced
+    (_msg: string) => {}, // Temporary system message callback
+    () => clearMessages(), // Clear messages callback (will be set after chat hook)
     (errorMsg: string) => {
       // Only show error toast for video connection failures
       showError(errorMsg);
@@ -65,18 +73,18 @@ export default function HomePage() {
 
   // Chat hook with actual userId and channelName from matching
   const chat = useChat(userId, channelName);
-  const { messages, partnerTyping, sendMessage, setTypingIndicator } = chat;
+  const { messages, partnerTyping, sendMessage, setTypingIndicator, clearMessages } = chat;
 
   // Video chat hook (pass preview state for track publishing)
   const {
     localVideoTrack,
     remoteUsers,
-    isJoined,
+    isJoined: _isJoined,
     networkQuality,
     isMicOn: connectedMicOn,
     isCameraOn: connectedCameraOn,
-    toggleMic,
-    toggleCamera,
+    toggleMic: toggleConnectedMic,
+    toggleCamera: toggleConnectedCamera,
   } = useVideoChat(userId, channelName, isConnected, isCameraOn, isMicOn, (errorMsg: string) => {
     // Show error toast only for video connection failures
     showError(errorMsg);
@@ -86,13 +94,55 @@ export default function HomePage() {
     }
   });
 
-  // Sync preview state with connected state when connected
+  // Show media errors
   useEffect(() => {
-    if (isConnected && isJoined) {
-      setIsMicOn(connectedMicOn);
-      setIsCameraOn(connectedCameraOn);
+    if (mediaError) {
+      showError(mediaError);
     }
-  }, [isConnected, isJoined, connectedMicOn, connectedCameraOn]);
+  }, [mediaError, showError]);
+
+  // Show controls when connection is established, then auto-hide
+  useEffect(() => {
+    if (isConnected) {
+      setShowControls(true);
+      if (hideControlsTimerRef.current) {
+        clearTimeout(hideControlsTimerRef.current);
+      }
+      hideControlsTimerRef.current = setTimeout(() => {
+        setShowControls(false);
+      }, 3000);
+    } else {
+      // When disconnected, clear chat messages from frontend
+      if (messages.length > 0) {
+        clearMessages();
+      }
+
+      // When disconnected, restore preview tracks if camera/mic were on
+      const restorePreviewTracks = async () => {
+        try {
+          if (isCameraOn && !previewVideoTrack) {
+            await toggleCamera();
+          }
+          if (isMicOn && !previewAudioTrack) {
+            await toggleMic();
+          }
+        } catch (_error) {
+          // Error restoring preview tracks
+        }
+      };
+      restorePreviewTracks();
+    }
+  }, [
+    isConnected,
+    isCameraOn,
+    isMicOn,
+    previewVideoTrack,
+    previewAudioTrack,
+    toggleCamera,
+    toggleMic,
+    messages.length,
+    clearMessages,
+  ]);
 
   // Check if user has submitted their info
   useEffect(() => {
@@ -126,20 +176,35 @@ export default function HomePage() {
     const videoElement = localVideoRef.current;
     if (!videoElement) return;
 
-    if (!isConnected && previewVideoTrack) {
-      // Show preview before connecting
-      previewVideoTrack.play(videoElement);
-      return () => {
-        previewVideoTrack.stop();
-      };
-    } else if (isConnected && localVideoTrack) {
-      // Show connected video
-      localVideoTrack.play(videoElement);
-      return () => {
-        localVideoTrack.stop();
-      };
+    // Clear previous content first
+    const clearVideo = () => {
+      videoElement.innerHTML = "";
+    };
+
+    // Only play when we have a track and camera is on
+    if (!isConnected && previewVideoTrack && isCameraOn) {
+      // Preview mode (idle OR searching) - play the preview track
+      clearVideo();
+      try {
+        previewVideoTrack.play(videoElement);
+      } catch {
+        // Ignore sync errors
+      }
+    } else if (isConnected && localVideoTrack && connectedCameraOn) {
+      // Connected mode - play the connected track when camera is ON
+      clearVideo();
+      try {
+        localVideoTrack.play(videoElement);
+      } catch {
+        // Ignore sync errors
+      }
+    } else {
+      // Clear video element when camera is off or no tracks available
+      clearVideo();
     }
-  }, [previewVideoTrack, localVideoTrack, isConnected]);
+
+    // No cleanup - tracks are managed by useMediaTracks hook
+  }, [previewVideoTrack, localVideoTrack, isConnected, isSearching, isCameraOn, connectedCameraOn]);
 
   // Render remote video
   useVideoRenderer(
@@ -148,21 +213,8 @@ export default function HomePage() {
     true
   );
 
-  // Cleanup preview tracks when connecting
-  useEffect(() => {
-    if (isConnected && (previewVideoTrack || previewAudioTrack)) {
-      if (previewVideoTrack) {
-        previewVideoTrack.stop();
-        previewVideoTrack.close();
-        setPreviewVideoTrack(null);
-      }
-      if (previewAudioTrack) {
-        previewAudioTrack.stop();
-        previewAudioTrack.close();
-        setPreviewAudioTrack(null);
-      }
-    }
-  }, [isConnected, previewVideoTrack, previewAudioTrack]);
+  // Note: We don't cleanup preview tracks when connecting anymore
+  // useVideoChat will publish the existing tracks from agoraService
 
   // Auto-hide pre-call controls after 3 seconds
   useEffect(() => {
@@ -188,30 +240,37 @@ export default function HomePage() {
   // Comprehensive cleanup on unmount or route change
   useEffect(() => {
     return () => {
-      // Cleanup preview tracks
-      if (previewVideoTrack) {
-        previewVideoTrack.stop();
-        previewVideoTrack.close();
-      }
-      if (previewAudioTrack) {
-        previewAudioTrack.stop();
-        previewAudioTrack.close();
-      }
+      // Cleanup all media tracks
+      cleanupTracks();
 
       // Cleanup timers
       if (hideControlsTimerRef.current) {
         clearTimeout(hideControlsTimerRef.current);
       }
     };
-  }, [previewVideoTrack, previewAudioTrack]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount/unmount
 
   // Show controls on video click - TOGGLE functionality
   const handleLocalVideoClick = () => {
     if (!isSearching) {
       if (!isConnected) {
-        setShowPreCallControls((prev) => !prev);
+        // When not connected, controls always stay visible (don't toggle)
+        setShowPreCallControls(true);
       } else {
-        setShowControls((prev) => !prev);
+        // When connected, toggle with auto-hide
+        const newShowControls = !showControls;
+        setShowControls(newShowControls);
+
+        // Auto-hide after 3 seconds when controls are shown
+        if (newShowControls) {
+          if (hideControlsTimerRef.current) {
+            clearTimeout(hideControlsTimerRef.current);
+          }
+          hideControlsTimerRef.current = setTimeout(() => {
+            setShowControls(false);
+          }, 3000);
+        }
       }
     }
   };
@@ -219,105 +278,57 @@ export default function HomePage() {
   // Keyboard shortcuts (ESC to skip)
   useKeyboardShortcuts(isConnected, handleNext);
 
-  // Handlers for preview (before connecting)
+  // Handlers for preview (before connecting) - use centralized media tracks
   const handlePreviewMicToggle = useCallback(async () => {
     try {
-      if (!isMicOn) {
-        // Turn ON microphone
-        if (!previewAudioTrack) {
-          // Create new audio track
-          const tracks = await agoraService.createLocalTracks(false, true);
-          if (tracks.audioTrack) {
-            setPreviewAudioTrack(tracks.audioTrack);
-            setIsMicOn(true);
-            analyticsService.trackPermissionGranted("microphone");
-          }
-        } else {
-          // Re-enable existing track
-          await previewAudioTrack.setEnabled(true);
-          setIsMicOn(true);
-        }
-      } else {
-        // Turn OFF microphone
-        if (previewAudioTrack) {
-          await previewAudioTrack.setEnabled(false);
-        }
-        setIsMicOn(false);
-      }
-      // Track audio toggle
-      analyticsService.trackAudioToggle(!isMicOn);
+      await toggleMic();
     } catch (error: unknown) {
       const message = getErrorMessage(error);
-      const err = error as Record<string, unknown>;
-      if (err?.code === "PERMISSION_DENIED" || err?.name === "NotAllowedError") {
-        analyticsService.trackPermissionDenied("microphone");
-        warning(message);
-      } else {
-        showError(message);
-      }
+      showError(message);
     }
-  }, [isMicOn, previewAudioTrack, warning, showError]);
+  }, [toggleMic, showError]);
 
   const handlePreviewCameraToggle = useCallback(async () => {
     try {
-      if (!isCameraOn) {
-        // Turn ON camera
-        if (!previewVideoTrack) {
-          // Create new video track
-          const tracks = await agoraService.createLocalTracks(true, false);
-          if (tracks.videoTrack) {
-            setPreviewVideoTrack(tracks.videoTrack);
-            setIsCameraOn(true);
-            analyticsService.trackPermissionGranted("camera");
-          }
-        } else {
-          // Re-enable existing track
-          await previewVideoTrack.setEnabled(true);
-          setIsCameraOn(true);
-        }
-      } else {
-        // Turn OFF camera
-        if (previewVideoTrack) {
-          await previewVideoTrack.setEnabled(false);
-        }
-        setIsCameraOn(false);
-      }
-      // Track video toggle
-      analyticsService.trackVideoToggle(!isCameraOn);
+      await toggleCamera();
     } catch (error: unknown) {
       const message = getErrorMessage(error);
-      const err = error as Record<string, unknown>;
-      if (err?.code === "PERMISSION_DENIED" || err?.name === "NotAllowedError") {
-        analyticsService.trackPermissionDenied("camera");
-        warning(message);
-      } else {
-        showError(message);
-      }
+      showError(message);
     }
-  }, [isCameraOn, previewVideoTrack, warning, showError]);
+  }, [toggleCamera, showError]);
 
   // Handlers for connected state (use videoChat toggles)
   const handleConnectedMicToggle = useCallback(async () => {
     try {
-      await toggleMic();
-      // Track audio toggle
-      analyticsService.trackAudioToggle(!connectedMicOn);
-      // State is automatically updated in useVideoChat hook
+      await toggleConnectedMic();
+      // Show controls and reset auto-hide timer
+      setShowControls(true);
+      if (hideControlsTimerRef.current) {
+        clearTimeout(hideControlsTimerRef.current);
+      }
+      hideControlsTimerRef.current = setTimeout(() => {
+        setShowControls(false);
+      }, 3000);
     } catch (_error) {
       showError("Unable to toggle microphone");
     }
-  }, [toggleMic, showError, connectedMicOn]);
+  }, [toggleConnectedMic, showError]);
 
   const handleConnectedCameraToggle = useCallback(async () => {
     try {
-      await toggleCamera();
-      // Track video toggle
-      analyticsService.trackVideoToggle(!connectedCameraOn);
-      // State is automatically updated in useVideoChat hook
+      await toggleConnectedCamera();
+      // Show controls and reset auto-hide timer
+      setShowControls(true);
+      if (hideControlsTimerRef.current) {
+        clearTimeout(hideControlsTimerRef.current);
+      }
+      hideControlsTimerRef.current = setTimeout(() => {
+        setShowControls(false);
+      }, 3000);
     } catch (_error) {
       showError("Unable to toggle camera");
     }
-  }, [toggleCamera, showError, connectedCameraOn]);
+  }, [toggleConnectedCamera, showError]);
 
   const handleSendMessage = (message: string) => {
     sendMessage(message);
@@ -329,22 +340,9 @@ export default function HomePage() {
   };
 
   const handleStartWithPermissions = async () => {
-    // Start searching with current camera/mic state (don't force them on)
+    // Ensure tracks are created and enabled based on current state
     try {
-      // Only create tracks if user has them enabled
-      if (isCameraOn && !previewVideoTrack) {
-        const videoTracks = await agoraService.createLocalTracks(true, false);
-        if (videoTracks.videoTrack) {
-          setPreviewVideoTrack(videoTracks.videoTrack);
-        }
-      }
-
-      if (isMicOn && !previewAudioTrack) {
-        const audioTracks = await agoraService.createLocalTracks(false, true);
-        if (audioTracks.audioTrack) {
-          setPreviewAudioTrack(audioTracks.audioTrack);
-        }
-      }
+      await ensureTracksForCall();
 
       // Track analytics - chat started
       analyticsService.trackChatStarted(isCameraOn, isMicOn);
@@ -353,21 +351,24 @@ export default function HomePage() {
       searchForPartner();
     } catch (error: unknown) {
       const message = getErrorMessage(error);
-      if (
-        (error as Error & { code?: string })?.code === "PERMISSION_DENIED" ||
-        (error as Error)?.name === "NotAllowedError"
-      ) {
-        warning(message);
-      } else {
-        showError(message);
-      }
+      showError(message);
     }
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-white overflow-hidden">
+    <div
+      className={`flex flex-col md:flex-row h-screen overflow-hidden transition-colors duration-300 ${
+        theme === "dark"
+          ? "bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900"
+          : "bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50"
+      }`}
+    >
       {/* Video panels - full height on mobile, 65% width on desktop */}
-      <div className="flex flex-col gap-2 md:gap-4 p-2 md:p-4 w-full md:w-[65%] h-full">
+      <div
+        className={`flex flex-col gap-3 md:gap-4 p-3 md:p-6 w-full md:w-[65%] h-full transition-colors duration-300 ${
+          theme === "dark" ? "bg-slate-900/50" : "bg-white/30 backdrop-blur-sm"
+        }`}
+      >
         {/* Stranger's video */}
         <VideoPanel
           videoRef={remoteVideoRef}
@@ -375,6 +376,7 @@ export default function HomePage() {
           isConnected={isConnected}
           isSearching={isSearching}
           remoteUsers={remoteUsers}
+          hasVideoTrack={!!(remoteUsers.length > 0 && remoteUsers[0].videoTrack)}
         />
 
         {/* Your video */}
@@ -383,7 +385,7 @@ export default function HomePage() {
           isRemote={false}
           isConnected={isConnected}
           isSearching={isSearching}
-          isCameraOn={isCameraOn}
+          isCameraOn={isConnected ? connectedCameraOn : isCameraOn}
           hasVideoTrack={!!(previewVideoTrack || localVideoTrack)}
           onToggleControls={handleLocalVideoClick}
         >
@@ -418,8 +420,8 @@ export default function HomePage() {
           {/* In-call controls - show during connection */}
           {isConnected && (
             <VideoControls
-              isMicOn={isMicOn}
-              isCameraOn={isCameraOn}
+              isMicOn={connectedMicOn}
+              isCameraOn={connectedCameraOn}
               networkQuality={networkQuality}
               onMicToggle={handleConnectedMicToggle}
               onCameraToggle={handleConnectedCameraToggle}
@@ -432,7 +434,13 @@ export default function HomePage() {
       </div>
 
       {/* Desktop Chat - Hidden on mobile, 35% width on desktop */}
-      <div className="hidden md:block w-[35%] border-l border-gray-200 h-full">
+      <div
+        className={`hidden md:block w-[35%] h-full shadow-xl transition-colors duration-300 ${
+          theme === "dark"
+            ? "bg-black border-l border-purple-900/50"
+            : "bg-white border-l border-purple-200"
+        }`}
+      >
         <ChatWindow
           messages={messages}
           partnerTyping={partnerTyping}
@@ -441,6 +449,7 @@ export default function HomePage() {
           onTyping={handleTyping}
           isConnected={isConnected}
           userId={userId}
+          onToggleTheme={toggleTheme}
         />
       </div>
 
@@ -457,6 +466,7 @@ export default function HomePage() {
         onSendMessage={handleSendMessage}
         onTyping={handleTyping}
         userId={userId}
+        onToggleTheme={toggleTheme}
       />
 
       {/* Toast Notifications */}

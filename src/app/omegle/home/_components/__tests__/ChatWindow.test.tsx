@@ -11,6 +11,7 @@ describe("ChatWindow", () => {
     onTyping: jest.fn(),
     isConnected: false,
     userId: "user1",
+    onToggleTheme: jest.fn(),
   };
 
   beforeEach(() => {

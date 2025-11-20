@@ -54,6 +54,8 @@ export function useMatching(
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const partnerConnectedCallbackRef = useRef<(() => void) | null>(null);
   const partnerDisconnectedCallbackRef = useRef<(() => void) | null>(null);
+  const isConnectingRef = useRef<boolean>(false);
+  const manuallyStoppedRef = useRef<boolean>(false);
 
   // Generate userId on mount
   useEffect(() => {
@@ -75,9 +77,11 @@ export function useMatching(
   // Connect to partner
   const connectToPartner = (newPartnerId: string) => {
     // Prevent duplicate connections
-    if (isConnected || partnerId) {
+    if (isConnected || partnerId || isConnectingRef.current) {
       return;
     }
+
+    isConnectingRef.current = true;
 
     // Clear search intervals/timeouts immediately
     if (searchIntervalRef.current) {
@@ -92,11 +96,11 @@ export function useMatching(
 
     setPartnerId(newPartnerId);
 
-    // Track this partner in recent partners (keep last 5)
+    // Track this partner in recent partners (keep last 2)
     const updatedRecent = [
       newPartnerId,
       ...recentPartners.filter((id) => id !== newPartnerId),
-    ].slice(0, 5);
+    ].slice(0, 2);
     setRecentPartners(updatedRecent);
     localStorage.setItem("recentPartners", JSON.stringify(updatedRecent));
 
@@ -105,24 +109,15 @@ export function useMatching(
 
     setIsSearching(false);
 
-    // Show "You're now chatting" message after a delay
-    // This allows time for video connection to initialize
-    setTimeout(() => {
-      onSystemMessage("You are now connected with a stranger!");
-      setIsConnected(true);
+    // Setup disconnect listener BEFORE marking as connected
+    // This ensures we catch real disconnects but not the initial connection
+    const unsubDisconnect = userQueueService.onPartnerDisconnected(userId, async () => {
+      // Check if this user manually stopped - if so, don't auto-search
+      if (manuallyStoppedRef.current) {
+        manuallyStoppedRef.current = false; // Reset for next time
+        return;
+      }
 
-      // Track partner found (calculate wait time from search start)
-      const waitTime = searchIntervalRef.current ? 0 : 0; // Simplified, actual wait time would need timestamp tracking
-      analyticsService.trackPartnerFound(waitTime);
-    }, 300);
-
-    // Notify callback
-    if (partnerConnectedCallbackRef.current) {
-      partnerConnectedCallbackRef.current();
-    }
-
-    // Listen for partner disconnect
-    const unsubDisconnect = userQueueService.onPartnerDisconnected(userId, () => {
       onSystemMessage("Stranger has disconnected.");
 
       // Track partner disconnection
@@ -132,24 +127,62 @@ export function useMatching(
         partnerDisconnectedCallbackRef.current();
       }
 
-      // Reset state and start searching again
+      // Reset state immediately
+      isConnectingRef.current = false;
+      setIsConnected(false);
+      setPartnerId("");
+      setChannelName("");
+
+      // Clear the disconnect listener to prevent loops
+      if (unsubscribePartnerRef.current) {
+        unsubscribePartnerRef.current();
+        unsubscribePartnerRef.current = null;
+      }
+
+      // Remove from queue and wait for cleanup
+      try {
+        if (userId) {
+          await userQueueService.removeFromQueue(userId);
+        }
+      } catch (_error) {
+        // Error removing from queue
+      }
+
+      // Wait a bit then automatically start searching for new partner
       setTimeout(() => {
-        handlePartnerLeft();
-        // Auto-search for next partner after disconnect with timeout
-        setTimeout(() => {
-          searchForPartner();
-        }, 500);
-      }, 1500);
+        onSystemMessage("Looking for a new stranger...");
+        onClearMessages();
+        // Start searching again
+        searchForPartner();
+      }, 1000);
     });
 
     if (unsubscribePartnerRef.current) {
       unsubscribePartnerRef.current();
     }
     unsubscribePartnerRef.current = unsubDisconnect;
+
+    // Add delay to ensure both users' Firebase records are updated with partner info
+    // before either one joins the Agora channel. This prevents mismatched channels.
+    setTimeout(() => {
+      onSystemMessage("You are now connected with a stranger!");
+      setIsConnected(true);
+      isConnectingRef.current = false;
+
+      // Track partner found
+      const waitTime = searchIntervalRef.current ? 0 : 0; // Simplified
+      analyticsService.trackPartnerFound(waitTime);
+    }, 500); // Increased delay from 300ms to 500ms to ensure both updates complete
+
+    // Notify callback
+    if (partnerConnectedCallbackRef.current) {
+      partnerConnectedCallbackRef.current();
+    }
   };
 
   // Handle partner left
-  const handlePartnerLeft = () => {
+  const _handlePartnerLeft = async () => {
+    isConnectingRef.current = false;
     setIsConnected(false);
     setPartnerId("");
     setChannelName("");
@@ -158,6 +191,15 @@ export function useMatching(
     if (unsubscribePartnerRef.current) {
       unsubscribePartnerRef.current();
       unsubscribePartnerRef.current = null;
+    }
+
+    // Remove user from queue when partner leaves
+    try {
+      if (userId) {
+        await userQueueService.removeFromQueue(userId);
+      }
+    } catch (_error) {
+      // Error removing from queue
     }
   };
 
@@ -194,7 +236,7 @@ export function useMatching(
       }
 
       const unsubscribe = userQueueService.onPartnerConnected(userId, (partnerId) => {
-        if (partnerId) {
+        if (partnerId && !isConnected) {
           connectToPartner(partnerId);
         }
       });
@@ -215,9 +257,9 @@ export function useMatching(
           // Actually connect to the partner!
           connectToPartner(partner);
         }
-      }, 500);
+      }, 1000); // Increased to 1 second to reduce DB queries
 
-      // Auto-cancel search after 15 seconds
+      // Auto-cancel search after 30 seconds (increased timeout)
       searchTimeoutRef.current = setTimeout(async () => {
         if (searchIntervalRef.current) {
           clearInterval(searchIntervalRef.current);
@@ -226,7 +268,7 @@ export function useMatching(
         await disconnectFromPartner();
         setIsSearching(false);
         onSystemMessage('No match found. Click "Start" to search again.');
-      }, 15000);
+      }, 30000);
     } catch (_error) {
       setIsSearching(false);
     }
@@ -234,7 +276,12 @@ export function useMatching(
 
   // Handle next
   const handleNext = async () => {
-    if (!userId || isSearching) return; // Prevent if already searching
+    if (!userId || isSearching) {
+      return; // Prevent if already searching
+    }
+
+    // Set flag to indicate this is a manual action (not partner disconnect)
+    manuallyStoppedRef.current = true;
 
     try {
       // Track skip partner action
@@ -283,7 +330,12 @@ export function useMatching(
 
   // Handle stop
   const handleStop = async () => {
-    if (!userId) return;
+    if (!userId) {
+      return;
+    }
+
+    // Set flag to indicate this is a manual stop (not partner disconnect)
+    manuallyStoppedRef.current = true;
 
     // Clear messages regardless of state
     onClearMessages();
@@ -324,7 +376,9 @@ export function useMatching(
       if (userId) {
         await userQueueService.removeFromQueue(userId);
       }
-    } catch (_error) {}
+    } catch (_error) {
+      // Error removing from queue
+    }
 
     setPartnerId("");
     setChannelName("");

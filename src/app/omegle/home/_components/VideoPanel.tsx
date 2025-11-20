@@ -2,6 +2,8 @@
 
 import { RefObject } from "react";
 import { IAgoraRTCRemoteUser } from "agora-rtc-sdk-ng";
+import { DottedGlowBackground } from "@/components/ui/dotted-glow-background";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface VideoPanelProps {
   videoRef: RefObject<HTMLDivElement | null>;
@@ -28,81 +30,57 @@ export default function VideoPanel({
   onToggleControls,
   children,
 }: VideoPanelProps) {
+  const { theme } = useTheme();
+
   const renderPlaceholder = () => {
+    // IMPORTANT: Don't show placeholder when camera is ON (for local video)
+    if (!isRemote && isCameraOn) {
+      return null;
+    }
+
     if (isRemote) {
-      // Stranger's video placeholders - NO SEARCHING ANIMATION
+      // Stranger's video placeholders
       if (!isConnected) {
         return (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-            <div className="text-center">
-              <div className="w-20 h-20 md:w-24 md:h-24 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg
-                  className="w-10 h-10 md:w-12 md:h-12 text-gray-500"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
+          <div
+            className={`absolute inset-0 flex items-center justify-center ${
+              theme === "dark" ? "bg-black" : "bg-gradient-to-br from-purple-100 to-indigo-100"
+            }`}
+            style={{ zIndex: 0 }}
+          >
+            <div className="absolute inset-0 pointer-events-none">
+              <DottedGlowBackground
+                gap={18}
+                radius={2.5}
+                color="rgba(255, 255, 255, 0.9)"
+                glowColor="rgba(59, 130, 246, 1)"
+                opacity={0.9}
+                backgroundOpacity={0}
+                speedMin={0.6}
+                speedMax={1.4}
+                speedScale={1.5}
+              />
+            </div>
+            <div className="text-center relative z-10">
+              <div className="relative w-24 h-24 md:w-28 md:h-28 mx-auto mb-4">
+                {/* Rotating border circle - only show when searching */}
+                {isSearching && (
+                  <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 border-r-blue-500 animate-spin"></div>
+                )}
+                {/* Icon - always same size and position */}
+                <div
+                  className={`rounded-full flex items-center justify-center shadow-xl w-full h-full ${
+                    isSearching ? "p-1" : ""
+                  } ${
+                    theme === "dark"
+                      ? "bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-gray-700"
+                      : "bg-gradient-to-br from-purple-200 to-indigo-200 border-2 border-purple-300"
+                  }`}
                 >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <p className="text-gray-400 text-sm md:text-base">Stranger</p>
-            </div>
-          </div>
-        );
-      }
-
-      if (isConnected && remoteUsers.length === 0) {
-        return (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-            <div className="text-center">
-              <div className="w-20 h-20 md:w-24 md:h-24 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg
-                  className="w-10 h-10 md:w-12 md:h-12 text-gray-500"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <p className="text-gray-400 text-sm md:text-base">Stranger's camera is off</p>
-            </div>
-          </div>
-        );
-      }
-    } else {
-      // Local video placeholder - SHOW SEARCHING ANIMATION HERE
-      if (isSearching) {
-        return (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-            <div className="text-center space-y-4">
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent mx-auto"></div>
-              <div className="space-y-2">
-                <p className="text-white text-lg font-semibold">
-                  Looking for someone you can chat with...
-                </p>
-                <p className="text-gray-400 text-sm">Hang on!</p>
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      if (isConnected) {
-        // Show "Connecting..." when connected but video not ready yet
-        if (!hasVideoTrack || !isCameraOn) {
-          return (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-              <div className="text-center">
-                <div className="w-20 h-20 md:w-24 md:h-24 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg
-                    className="w-10 h-10 md:w-12 md:h-12 text-gray-500"
+                    className={`w-12 h-12 md:w-14 md:h-14 ${
+                      theme === "dark" ? "text-gray-400" : "text-purple-600"
+                    }`}
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -113,20 +91,196 @@ export default function VideoPanel({
                     />
                   </svg>
                 </div>
-                <p className="text-gray-400 text-sm md:text-base">Camera is off</p>
+              </div>
+              <p
+                className={`text-sm md:text-base font-medium tracking-wide ${
+                  theme === "dark" ? "text-gray-300" : "text-purple-700"
+                }`}
+              >
+                Stranger
+              </p>
+            </div>
+          </div>
+        );
+      }
+
+      // Show placeholder if connected but no video track (camera off)
+      if (isConnected && (remoteUsers.length === 0 || !hasVideoTrack)) {
+        return (
+          <div
+            className={`absolute inset-0 flex items-center justify-center ${
+              theme === "dark" ? "bg-black" : "bg-gradient-to-br from-purple-100 to-indigo-100"
+            }`}
+            style={{ zIndex: 10 }}
+          >
+            <div className="absolute inset-0 pointer-events-none">
+              <DottedGlowBackground
+                gap={18}
+                radius={2.5}
+                color="rgba(255, 255, 255, 0.9)"
+                glowColor="rgba(59, 130, 246, 1)"
+                opacity={0.9}
+                backgroundOpacity={0}
+                speedMin={0.6}
+                speedMax={1.4}
+                speedScale={1.5}
+              />
+            </div>
+            <div className="text-center relative z-10">
+              <div
+                className={`w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl ${
+                  theme === "dark"
+                    ? "bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-gray-700"
+                    : "bg-gradient-to-br from-purple-200 to-indigo-200 border-2 border-purple-300"
+                }`}
+              >
+                <svg
+                  className={`w-12 h-12 md:w-14 md:h-14 ${
+                    theme === "dark" ? "text-gray-400" : "text-purple-600"
+                  }`}
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <p
+                className={`text-sm md:text-base font-medium ${
+                  theme === "dark" ? "text-gray-300" : "text-purple-700"
+                }`}
+              >
+                Stranger's camera is off
+              </p>
+            </div>
+          </div>
+        );
+      }
+    } else {
+      // Local video placeholder
+      if (isSearching) {
+        // Show background animation while searching if camera is off
+        if (!isCameraOn) {
+          return (
+            <div
+              className={`absolute inset-0 flex items-center justify-center ${
+                theme === "dark" ? "bg-black" : "bg-gradient-to-br from-purple-100 to-indigo-100"
+              }`}
+              style={{ zIndex: 0 }}
+            >
+              <div className="absolute inset-0 pointer-events-none">
+                <DottedGlowBackground
+                  gap={18}
+                  radius={2.5}
+                  color="rgba(255, 255, 255, 0.9)"
+                  glowColor="rgba(59, 130, 246, 1)"
+                  opacity={0.9}
+                  backgroundOpacity={0}
+                  speedMin={0.6}
+                  speedMax={1.4}
+                  speedScale={1.5}
+                />
+              </div>
+            </div>
+          );
+        }
+        return null;
+      }
+
+      if (isConnected) {
+        // Show "Connecting..." when connected but video not ready yet
+        if (!isCameraOn) {
+          return (
+            <div
+              className={`absolute inset-0 flex items-center justify-center ${
+                theme === "dark" ? "bg-black" : "bg-gradient-to-br from-purple-100 to-indigo-100"
+              }`}
+              style={{ zIndex: 0 }}
+            >
+              <div className="absolute inset-0 pointer-events-none">
+                <DottedGlowBackground
+                  gap={18}
+                  radius={2.5}
+                  color="rgba(255, 255, 255, 0.9)"
+                  glowColor="rgba(59, 130, 246, 1)"
+                  opacity={0.9}
+                  backgroundOpacity={0}
+                  speedMin={0.6}
+                  speedMax={1.4}
+                  speedScale={1.5}
+                />
+              </div>
+              <div className="text-center relative z-10">
+                <div
+                  className={`w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl ${
+                    theme === "dark"
+                      ? "bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-gray-700"
+                      : "bg-gradient-to-br from-purple-200 to-indigo-200 border-2 border-purple-300"
+                  }`}
+                >
+                  <svg
+                    className={`w-12 h-12 md:w-14 md:h-14 ${
+                      theme === "dark" ? "text-gray-400" : "text-purple-600"
+                    }`}
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <p
+                  className={`text-sm md:text-base font-medium ${
+                    theme === "dark" ? "text-gray-300" : "text-purple-700"
+                  }`}
+                >
+                  Camera is off
+                </p>
               </div>
             </div>
           );
         }
       } else {
         // Not connected and not searching - idle state
-        if (!hasVideoTrack || !isCameraOn) {
+        if (!isCameraOn) {
           return (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-              <div className="text-center">
-                <div className="w-20 h-20 md:w-24 md:h-24 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div
+              className={`absolute inset-0 flex items-center justify-center ${
+                theme === "dark" ? "bg-black" : "bg-gradient-to-br from-purple-100 to-indigo-100"
+              }`}
+              style={{ zIndex: 0 }}
+            >
+              <div className="absolute inset-0 pointer-events-none">
+                <DottedGlowBackground
+                  gap={18}
+                  radius={2.5}
+                  color="rgba(255, 255, 255, 0.9)"
+                  glowColor="rgba(59, 130, 246, 1)"
+                  opacity={0.9}
+                  backgroundOpacity={0}
+                  speedMin={0.6}
+                  speedMax={1.4}
+                  speedScale={1.5}
+                />
+              </div>
+              <div className="text-center relative z-10">
+                <div
+                  className={`w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl ${
+                    theme === "dark"
+                      ? "bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-gray-700"
+                      : "bg-gradient-to-br from-purple-200 to-indigo-200 border-2 border-purple-300"
+                  }`}
+                >
                   <svg
-                    className="w-10 h-10 md:w-12 md:h-12 text-gray-500"
+                    className={`w-12 h-12 md:w-14 md:h-14 ${
+                      theme === "dark" ? "text-gray-400" : "text-purple-600"
+                    }`}
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -137,7 +291,13 @@ export default function VideoPanel({
                     />
                   </svg>
                 </div>
-                <p className="text-gray-400 text-sm md:text-base">Your camera</p>
+                <p
+                  className={`text-sm md:text-base font-medium ${
+                    theme === "dark" ? "text-gray-300" : "text-purple-700"
+                  }`}
+                >
+                  Your camera
+                </p>
               </div>
             </div>
           );
@@ -150,11 +310,25 @@ export default function VideoPanel({
 
   return (
     <div
-      className="flex-1 min-h-0 relative bg-gray-900 rounded-lg overflow-hidden"
+      className={`flex-1 min-h-0 relative rounded-xl overflow-hidden shadow-2xl transition-colors duration-300 ${
+        theme === "dark"
+          ? "bg-black border border-purple-900/50"
+          : "bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200"
+      }`}
       onClick={onToggleControls}
     >
-      <div ref={videoRef} className="w-full h-full"></div>
+      {/* Show placeholder when camera is off or not connected */}
       {renderPlaceholder()}
+      {/* Always render video div - but hide it when camera is off or no video track */}
+      <div
+        ref={videoRef}
+        className="w-full h-full absolute inset-0"
+        style={{
+          zIndex: (isCameraOn && !isRemote) || (isRemote && hasVideoTrack) ? 1 : -1,
+          visibility:
+            (!isRemote && !isCameraOn) || (isRemote && !hasVideoTrack) ? "hidden" : "visible",
+        }}
+      ></div>
       {children}
     </div>
   );

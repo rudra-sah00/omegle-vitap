@@ -50,10 +50,19 @@ export function useVideoChat(
 
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const isJoiningRef = useRef(false);
+  const isCameraTogglingRef = useRef(false);
+  const isMicTogglingRef = useRef(false);
 
   // Initialize and join channel
   const joinChannel = useCallback(async () => {
-    if (!userId || !channelName || !enabled || isJoiningRef.current || isJoined) return;
+    // Skip if toggle operations are in progress
+    if (isCameraTogglingRef.current || isMicTogglingRef.current) {
+      return;
+    }
+
+    if (!userId || !channelName || !enabled || isJoiningRef.current || isJoined) {
+      return;
+    }
 
     isJoiningRef.current = true;
 
@@ -68,18 +77,36 @@ export function useVideoChat(
           async (user: IAgoraRTCRemoteUser, mediaType: "audio" | "video") => {
             if (clientRef.current) {
               await clientRef.current.subscribe(user, mediaType);
+
               setRemoteUsers((prev) => {
                 const exists = prev.find((u) => u.uid === user.uid);
-                if (exists) return prev;
+                if (exists) {
+                  // Update the user with new track info
+                  return prev.map((u) => (u.uid === user.uid ? user : u));
+                }
                 return [...prev, user];
               });
             }
           }
         );
 
-        clientRef.current.on("user-unpublished", (user: IAgoraRTCRemoteUser) => {
-          setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
-        });
+        clientRef.current.on(
+          "user-unpublished",
+          (user: IAgoraRTCRemoteUser, _mediaType: "audio" | "video") => {
+            // Update the user in the array to reflect track changes
+            setRemoteUsers((prev) => {
+              const exists = prev.find((u) => u.uid === user.uid);
+              if (!exists) return prev;
+
+              // Only remove user if they have no tracks at all
+              if (!user.videoTrack && !user.audioTrack) {
+                return prev.filter((u) => u.uid !== user.uid);
+              } else {
+                return prev.map((u) => (u.uid === user.uid ? user : u));
+              }
+            });
+          }
+        );
 
         clientRef.current.on("user-left", (user: IAgoraRTCRemoteUser) => {
           setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
@@ -132,26 +159,43 @@ export function useVideoChat(
         throw new Error("Unable to join video call. Please try again.");
       }
 
-      // Create and publish local tracks based on preview state
-      const tracks = await agoraService.createLocalTracks(shouldPublishVideo, shouldPublishAudio);
+      // Set camera and mic state immediately based on what we're trying to publish
+      setIsCameraOn(shouldPublishVideo);
+      setIsMicOn(shouldPublishAudio);
 
-      if (shouldPublishVideo && tracks.videoTrack) {
-        setLocalVideoTrack(tracks.videoTrack);
-        setIsCameraOn(true);
-      } else {
-        setIsCameraOn(false);
+      // Get existing tracks from agoraService (they were created in preview)
+      const existingTracks = agoraService.getLocalTracks();
+
+      // Create or use existing tracks
+      if (shouldPublishVideo || shouldPublishAudio) {
+        let videoToPublish = shouldPublishVideo ? existingTracks.videoTrack : null;
+        let audioToPublish = shouldPublishAudio ? existingTracks.audioTrack : null;
+
+        // Create tracks if they don't exist but are needed
+        if (shouldPublishVideo && !videoToPublish) {
+          const tracks = await agoraService.createLocalTracks(true, false);
+          videoToPublish = tracks.videoTrack;
+        }
+        if (shouldPublishAudio && !audioToPublish) {
+          const tracks = await agoraService.createLocalTracks(false, true);
+          audioToPublish = tracks.audioTrack;
+        }
+
+        // Set local track state
+        if (videoToPublish) {
+          setLocalVideoTrack(videoToPublish);
+        }
+        if (audioToPublish) {
+          setLocalAudioTrack(audioToPublish);
+        }
+
+        // Publish tracks to channel
+        if (videoToPublish || audioToPublish) {
+          await agoraService.publishTracks();
+        }
       }
 
-      if (shouldPublishAudio && tracks.audioTrack) {
-        setLocalAudioTrack(tracks.audioTrack);
-        setIsMicOn(true);
-      } else {
-        setIsMicOn(false);
-      }
-
-      await agoraService.publishTracks();
-
-      // Enable dual stream for adaptive quality
+      // Enable dual stream for adaptive quality (only if video is enabled)
       if (shouldPublishVideo) {
         await agoraService.enableDualStream();
       }
@@ -187,20 +231,24 @@ export function useVideoChat(
     } finally {
       isJoiningRef.current = false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     userId,
     channelName,
     enabled,
     isJoined,
-    shouldPublishVideo,
-    shouldPublishAudio,
     onError,
-    localVideoTrack,
-    localAudioTrack,
+    // Note: shouldPublishVideo and shouldPublishAudio intentionally excluded
+    // They should only affect initial join, not cause rejoins
   ]);
 
   // Leave channel
   const leaveChannel = useCallback(async () => {
+    // Skip if toggle operations are in progress
+    if (isCameraTogglingRef.current || isMicTogglingRef.current) {
+      return;
+    }
+
     // Prevent multiple simultaneous leave calls
     if (!isJoined && !isJoiningRef.current) {
       return;
@@ -211,17 +259,29 @@ export function useVideoChat(
       setIsJoined(false);
       isJoiningRef.current = false;
 
-      // Stop and close local tracks
+      // Stop and close tracks
       if (localVideoTrack) {
-        localVideoTrack.stop();
-        localVideoTrack.close();
+        try {
+          localVideoTrack.stop();
+          localVideoTrack.close();
+        } catch (_trackError) {
+          // Video track already closed
+        }
         setLocalVideoTrack(null);
       }
       if (localAudioTrack) {
-        localAudioTrack.stop();
-        localAudioTrack.close();
+        try {
+          localAudioTrack.stop();
+          localAudioTrack.close();
+        } catch (_trackError) {
+          // Audio track already closed
+        }
         setLocalAudioTrack(null);
       }
+
+      // Reset camera and mic states to match track state
+      setIsCameraOn(false);
+      setIsMicOn(false);
 
       // Clear remote users immediately
       setRemoteUsers([]);
@@ -235,57 +295,143 @@ export function useVideoChat(
       setIsJoined(false);
       isJoiningRef.current = false;
       setRemoteUsers([]);
+      setLocalVideoTrack(null);
+      setLocalAudioTrack(null);
+      setIsCameraOn(false);
+      setIsMicOn(false);
     }
   }, [localVideoTrack, localAudioTrack, isJoined]);
 
   // Toggle microphone
   const toggleMic = useCallback(async () => {
-    if (!localAudioTrack) {
-      // Create audio track if it doesn't exist
-      try {
+    // Prevent concurrent toggle operations
+    if (isMicTogglingRef.current) {
+      return;
+    }
+    isMicTogglingRef.current = true;
+
+    try {
+      // If track is null but state says mic is on, fix the state mismatch
+      if (!localAudioTrack && isMicOn) {
+        setIsMicOn(false);
+      }
+
+      if (!localAudioTrack) {
+        // Create audio track if it doesn't exist
         const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
         setLocalAudioTrack(audioTrack);
-        setIsMicOn(true);
-        // Publish the new track
+
+        await audioTrack.setEnabled(true);
+
+        // Publish the new track if in a call
         if (isJoined && clientRef.current) {
-          await clientRef.current.publish([audioTrack]);
+          try {
+            await clientRef.current.publish([audioTrack]);
+          } catch (_publishError) {
+            audioTrack.close();
+            setLocalAudioTrack(null);
+            setIsMicOn(false);
+            isMicTogglingRef.current = false;
+            return;
+          }
         }
-      } catch (_error) {
-        throw _error;
+
+        setIsMicOn(true);
+      } else {
+        // Toggle existing track
+        const newState = !isMicOn;
+
+        // Just use setEnabled - keep track published so remote users stay connected
+        await localAudioTrack.setEnabled(newState);
+
+        setIsMicOn(newState);
       }
-    } else {
-      // Toggle existing track
-      const newState = !isMicOn;
-      await localAudioTrack.setEnabled(newState);
-      setIsMicOn(newState);
+    } catch (_error) {
+      setIsMicOn(false);
+      if (onError) {
+        onError("Failed to toggle microphone. Please try again.");
+      }
+    } finally {
+      setTimeout(() => {
+        isMicTogglingRef.current = false;
+      }, 300);
     }
-  }, [localAudioTrack, isMicOn, isJoined]);
+  }, [localAudioTrack, isMicOn, isJoined, onError]);
 
   // Toggle camera
   const toggleCamera = useCallback(async () => {
-    if (!localVideoTrack) {
-      // Create video track if it doesn't exist
-      try {
-        const videoTrack = await AgoraRTC.createCameraVideoTrack();
-        setLocalVideoTrack(videoTrack);
-        setIsCameraOn(true);
-        // Publish the new track
-        if (isJoined && clientRef.current) {
-          await clientRef.current.publish([videoTrack]);
-        }
-      } catch (_error) {
-        throw _error;
-      }
-    } else {
-      // Toggle existing track
-      const newState = !isCameraOn;
-      await localVideoTrack.setEnabled(newState);
-      setIsCameraOn(newState);
+    // Prevent concurrent toggle operations
+    if (isCameraTogglingRef.current) {
+      return;
     }
-  }, [localVideoTrack, isCameraOn, isJoined]);
+    isCameraTogglingRef.current = true;
+
+    try {
+      // If track is null but state says camera is on, fix the state mismatch
+      if (!localVideoTrack && isCameraOn) {
+        setIsCameraOn(false);
+      }
+
+      if (!localVideoTrack) {
+        // Create video track if it doesn't exist
+        let videoTrack: ICameraVideoTrack;
+
+        try {
+          videoTrack = await AgoraRTC.createCameraVideoTrack({
+            optimizationMode: "detail",
+            encoderConfig: "480p_1",
+          });
+        } catch (_createError) {
+          if (onError) {
+            onError("Failed to access camera. Please check permissions.");
+          }
+          return;
+        }
+
+        // Set track and enable it
+        setLocalVideoTrack(videoTrack);
+        await videoTrack.setEnabled(true);
+        setIsCameraOn(true);
+
+        // Publish the new track if in a call
+        if (isJoined && clientRef.current) {
+          try {
+            await clientRef.current.publish([videoTrack]);
+          } catch (_publishError) {
+            // Don't turn off camera, just log the error
+            // The track is still active locally even if publish failed
+          }
+        }
+      } else {
+        const newState = !isCameraOn;
+
+        try {
+          // Just use setEnabled - keep track published so remote users stay connected
+          await localVideoTrack.setEnabled(newState);
+
+          setIsCameraOn(newState);
+        } catch (_toggleError) {
+          // Don't change the state if toggle failed
+          if (onError) {
+            onError("Failed to toggle camera. Please try again.");
+          }
+        }
+      }
+    } finally {
+      // Add small delay before allowing next toggle
+      setTimeout(() => {
+        isCameraTogglingRef.current = false;
+      }, 300);
+    }
+  }, [localVideoTrack, isCameraOn, isJoined, onError]);
 
   // Auto join when enabled
   useEffect(() => {
+    // Skip auto join/leave during toggle operations
+    if (isCameraTogglingRef.current || isMicTogglingRef.current) {
+      return;
+    }
+
     if (enabled && channelName && !isJoined) {
       joinChannel().catch((_err) => {
         // Error already handled in joinChannel, just prevent unhandled rejection

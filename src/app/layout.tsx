@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AnalyticsInitializer } from "@/components/AnalyticsInitializer";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -86,8 +87,10 @@ export default function RootLayout({
         <link rel="canonical" href="https://vitap.in" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AnalyticsInitializer />
-        {children}
+        <ThemeProvider>
+          <AnalyticsInitializer />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

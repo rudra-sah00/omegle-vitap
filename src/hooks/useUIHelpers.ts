@@ -34,16 +34,35 @@ export function useVideoRenderer(
   enabled: boolean = true
 ) {
   useEffect(() => {
-    if (!videoTrack || !videoRef.current || !enabled) return;
+    const element = videoRef.current;
+    if (!element) return;
+
+    // Clear any existing video content if no track
+    if (!videoTrack || !enabled) {
+      // Remove all video/canvas elements to clear last frame
+      while (element.firstChild) {
+        element.removeChild(element.firstChild);
+      }
+      return;
+    }
+
+    // Clear existing content before playing new track
+    while (element.firstChild) {
+      element.removeChild(element.firstChild);
+    }
 
     try {
-      videoTrack.play(videoRef.current);
-    } catch (_error) {}
+      videoTrack.play(element);
+    } catch (_error) {
+      // Error playing track
+    }
 
     return () => {
       try {
         videoTrack.stop();
-      } catch (_error) {}
+      } catch (_error) {
+        // Track already stopped
+      }
     };
   }, [videoTrack, videoRef, enabled]);
 }

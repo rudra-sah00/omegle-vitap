@@ -103,6 +103,13 @@ export class AgoraService {
   }
 
   /**
+   * Get current local tracks
+   */
+  public getLocalTracks(): MediaTracks {
+    return this.localTracks;
+  }
+
+  /**
    * Join a channel
    */
   public async joinChannel(channel: string, token: string | null, uid: UID): Promise<UID> {

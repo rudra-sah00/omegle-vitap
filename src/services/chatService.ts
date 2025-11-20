@@ -22,8 +22,8 @@ export interface ChatMessage {
   senderId: string;
   /** Message content */
   message: string;
-  /** Timestamp when message was sent */
-  timestamp: number;
+  /** Timestamp when message was sent (deprecated, kept for backward compatibility) */
+  timestamp?: number;
   /** Type of message (text or system notification) */
   type: "text" | "system";
 }
@@ -46,7 +46,6 @@ class ChatService {
     await push(messagesRef, {
       senderId,
       message,
-      timestamp: Date.now(),
       type: "text",
     });
   }
@@ -61,7 +60,6 @@ class ChatService {
     await push(messagesRef, {
       senderId: "system",
       message,
-      timestamp: Date.now(),
       type: "system",
     });
   }
@@ -82,7 +80,6 @@ class ChatService {
         id: snapshot.key || "",
         senderId: data.senderId,
         message: data.message,
-        timestamp: data.timestamp,
         type: data.type,
       };
       callback(message);

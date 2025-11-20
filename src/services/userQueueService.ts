@@ -227,13 +227,15 @@ class UserQueueService {
     }
 
     // Immediately mark both as connected using atomic transaction
-    try {
-      await this.markAsConnected(currentUserId, partner.userId);
+    const isConnected = await this.markAsConnected(currentUserId, partner.userId);
+
+    if (isConnected) {
       // Add partner to recent partners list for both users
       await this.addToRecentPartners(currentUserId, partner.userId);
       await this.addToRecentPartners(partner.userId, currentUserId);
       return partner.userId;
-    } catch (_error) {
+    } else {
+      // Connection failed, retry with another partner
       return this.tryInstantMatch(currentUserId, retryCount + 1);
     }
   }
@@ -267,18 +269,18 @@ class UserQueueService {
    * Mark two users as connected using atomic transaction to prevent race conditions
    * @param userId1 - First user's ID
    * @param userId2 - Second user's ID
-   * @throws Error if users cannot be connected
+   * @returns true if connection was successful, false otherwise
    */
-  async markAsConnected(userId1: string, userId2: string): Promise<void> {
+  async markAsConnected(userId1: string, userId2: string): Promise<boolean> {
     if (!userId1 || !userId2) {
-      return;
+      return false;
     }
 
     const queueRef = ref(this.db, "queue");
 
     try {
       // Use transaction to atomically check and update both users
-      await runTransaction(queueRef, (currentData) => {
+      const result = await runTransaction(queueRef, (currentData) => {
         if (!currentData) {
           return currentData; // Abort if queue doesn't exist
         }
@@ -288,16 +290,16 @@ class UserQueueService {
 
         // Check if both users exist and are waiting
         if (!user1 || !user2) {
-          throw new Error("Unable to connect");
+          return undefined; // Abort transaction
         }
 
         if (user1.status !== "waiting" || user2.status !== "waiting") {
-          throw new Error("Unable to connect");
+          return undefined; // Abort transaction
         }
 
         // Check if either user already has a partner
         if (user1.partnerId || user2.partnerId) {
-          throw new Error("Unable to connect");
+          return undefined; // Abort transaction
         }
 
         // Atomically update both users to connected
@@ -311,8 +313,15 @@ class UserQueueService {
 
         return currentData;
       });
-    } catch (error) {
-      throw error;
+
+      // Check if transaction was committed successfully
+      if (result.committed) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (_error) {
+      return false;
     }
   }
 
@@ -344,21 +353,30 @@ class UserQueueService {
             // Ignore errors during cleanup
           }
 
-          // Important: Remove the partner completely from queue to trigger disconnect
-          // This ensures the partner sees the disconnect and can search again
+          // IMPORTANT: Reset partner back to "waiting" status instead of removing them
+          // This allows them to receive the disconnect notification and search again
           const partnerRef = ref(this.db, `queue/${partnerId}`);
           try {
-            await remove(partnerRef);
+            const partnerSnapshot = await get(partnerRef);
+            if (partnerSnapshot.exists()) {
+              await update(partnerRef, {
+                status: "waiting",
+                partnerId: null,
+                connectedAt: null,
+              });
+            }
           } catch (_err) {
-            // Ignore errors during cleanup
+            // Ignore errors
           }
+        } else {
+          // User was not connected to anyone
         }
 
         // Remove current user from queue
         await remove(userRef);
       }
-    } catch (error) {
-      throw error;
+    } catch (_error) {
+      throw _error;
     }
   }
 
@@ -393,17 +411,37 @@ class UserQueueService {
    */
   onPartnerDisconnected(userId: string, callback: () => void): () => void {
     const userRef = ref(this.db, `queue/${userId}`);
+    let wasConnected = false;
+    let initialLoad = true;
 
     const unsubscribe = onValue(userRef, (snapshot) => {
+      // Skip the first load to avoid false triggers
+      if (initialLoad) {
+        initialLoad = false;
+        if (snapshot.exists()) {
+          const userData = snapshot.val();
+          wasConnected = userData.status === "connected" && !!userData.partnerId;
+        }
+        return;
+      }
+
       if (snapshot.exists()) {
         const userData = snapshot.val();
-        // Partner disconnected if status changed back to waiting or partnerId removed
-        if (userData.status === "waiting" && !userData.partnerId) {
+        const isConnected = userData.status === "connected" && !!userData.partnerId;
+
+        // Only trigger if we were connected and now we're not
+        if (wasConnected && !isConnected) {
           callback();
         }
+
+        wasConnected = isConnected;
       } else {
         // User was removed from queue entirely (partner left)
-        callback();
+        if (wasConnected) {
+          callback();
+        } else {
+          // User was not connected, ignoring removal
+        }
       }
     });
 
