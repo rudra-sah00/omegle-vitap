@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getDatabase, ref, set, push, onValue, remove } from "firebase/database";
 import { getAnalytics, Analytics, isSupported } from "firebase/analytics";
+import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -39,6 +40,23 @@ try {
  * Used for real-time chat messaging and user queue management
  */
 export const database = getDatabase(app);
+
+// Initialize App Check (only in browser and production)
+if (typeof window !== "undefined") {
+  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+
+  if (recaptchaSiteKey) {
+    try {
+      initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider(recaptchaSiteKey),
+        isTokenAutoRefreshEnabled: true,
+      });
+    } catch (error) {
+      // App Check initialization failed, continue without it
+      console.warn("Failed to initialize Firebase App Check:", error);
+    }
+  }
+}
 
 // Initialize Analytics (only in browser and if supported)
 let analytics: Analytics | null = null;

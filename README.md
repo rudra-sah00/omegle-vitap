@@ -31,10 +31,13 @@ src/
 2. **Set up environment variables:**
 
    ```bash
-   cp .env.example .env.local
+   cp .env.local.example .env.local
    ```
 
-   Fill in your Firebase configuration in `.env.local`
+   Fill in your configuration in `.env.local`:
+   - Firebase configuration (from Firebase Console)
+   - Agora RTC credentials (from Agora Console)
+   - reCAPTCHA v3 Site Key (from [Google reCAPTCHA](https://www.google.com/recaptcha/admin/create))
 
 3. **Run the development server:**
 
@@ -53,13 +56,40 @@ src/
 - **Authentication:** Firebase Auth
 - **Deployment:** Vercel (recommended)
 
+## Firebase App Check Setup
+
+To enable Firebase App Check with reCAPTCHA v3:
+
+1. **Get reCAPTCHA v3 credentials:**
+   - Visit [Google reCAPTCHA Admin Console](https://www.google.com/recaptcha/admin/create)
+   - Select **reCAPTCHA v3**
+   - Add domains: `localhost`, `omegle-vitap.web.app`, `omegle-vitap.firebaseapp.com`
+   - Copy the **Site Key**
+
+2. **Register with Firebase App Check:**
+   - Go to Firebase Console → Your Project
+   - Navigate to **Build** → **App Check**
+   - Click **Get Started** → Select **Web** → Choose **reCAPTCHA v3**
+   - Enter your Site Key and Save
+
+3. **Add to environment variables:**
+
+   ```bash
+   NEXT_PUBLIC_RECAPTCHA_SITE_KEY=your_recaptcha_v3_site_key
+   ```
+
+4. **Add to GitHub Secrets** (for CI/CD):
+   - Go to GitHub repo → Settings → Secrets and variables → Actions
+   - Add secret: `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`
+
 ## Features
 
-- Anonymous real-time chat
-- Random user pairing
-- Interest-based matching
+- Anonymous real-time chat with video/audio
+- Random user pairing with matching system
+- Real-time text messaging
+- Firebase App Check security
 - Responsive design
-- Type-safe codebase
+- Type-safe codebase with strict TypeScript
 
 ## Scripts
 
