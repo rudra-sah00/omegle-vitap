@@ -24,6 +24,8 @@ const config: Config = {
     "^@/constants/(.*)$": "<rootDir>/src/constants/$1",
     "^@/models/(.*)$": "<rootDir>/src/models/$1",
   },
+  // Coverage reporters - ensure coverage-summary.json is generated
+  coverageReporters: ["text", "lcov", "json-summary"],
   // Coverage thresholds - fail tests if coverage drops below these values
   coverageThreshold: {
     global: {
