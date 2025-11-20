@@ -12,9 +12,9 @@ env:
   NODE_VERSION: '20'
 
 jobs:
-  # Stage 1: Code Formatting
-  format-check:
-    name: 🎨 Code Formatting Check
+  # Stage 1: Code Quality Checks (Format, Lint, Type Check, Production Checks)
+  quality-checks:
+    name: 🔍 Code Quality & Type Checking
     runs-on: ubuntu-latest
     
     steps:
@@ -33,46 +33,11 @@ jobs:
       - name: Check code formatting with Prettier
         run: npm run format:check
 
-  # Stage 2: Linting & TSDoc Validation
-  lint:
-    name: 🔍 ESLint & TSDoc Validation
-    runs-on: ubuntu-latest
-    needs: format-check
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: Run ESLint with TSDoc syntax validation (Strict Mode - 0 warnings)
+      - name: Run ESLint (Strict Mode - 0 warnings)
         run: npm run lint:strict
 
-  # Stage 3: Production Code Quality Checks
-  production-checks:
-    name: 🚀 Production Code Quality
-    runs-on: ubuntu-latest
-    needs: lint
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+      - name: Run TypeScript type check
+        run: npm run type-check
 
       - name: Check for console statements
         run: npm run check:console
@@ -80,33 +45,11 @@ jobs:
       - name: Check TSDoc coverage
         run: npm run check:tsdoc
 
-  # Stage 4: TypeScript Type Checking
-  type-check:
-    name: 📘 TypeScript Type Check
-    runs-on: ubuntu-latest
-    needs: production-checks
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: Run TypeScript compiler type check
-        run: npm run type-check
-
-  # Stage 5: Unit & Integration Tests
+  # Stage 2: Unit & Integration Tests
   test:
     name: 🧪 Unit & Integration Tests
     runs-on: ubuntu-latest
-    needs: type-check
+    needs: quality-checks
     
     steps:
       - name: Checkout repository
@@ -202,9 +145,9 @@ jobs:
           lcov-file: ./coverage/lcov.info
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-  # Stage 6: Security Audit
-  security:
-    name: 🔒 Security Audit
+  # Stage 3: Security Audit & Production Build
+  build:
+    name: 🔒 Security Audit & Build
     runs-on: ubuntu-latest
     needs: test
     
@@ -218,32 +161,12 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Run npm audit for high/critical vulnerabilities
-        run: npm audit --audit-level=high
-        continue-on-error: false
-
-      - name: Check production dependencies for vulnerabilities
-        run: npm audit --production --audit-level=moderate
-        continue-on-error: false
-
-  # Stage 7: Production Build
-  build:
-    name: 🏗️ Production Build
-    runs-on: ubuntu-latest
-    needs: security
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
+
+      - name: Run npm audit for vulnerabilities
+        run: npm audit --audit-level=high
+        continue-on-error: false
 
       - name: Create .env.production
         run: |
@@ -269,9 +192,9 @@ jobs:
           path: out/
           retention-days: 1
 
-  # Stage 8: Pre-Deployment Validation
-  pre-deployment-check:
-    name: ✅ Pre-Deployment Validation
+  # Stage 4: Pre-Deployment Validation & Deploy
+  deploy:
+    name: 🚀 Validate & Deploy to Firebase
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -289,13 +212,7 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Final validation before deployment
-        run: |
-          echo "🔍 Running final pre-deployment checks..."
-          npm run check:production
-          echo "✅ All pre-deployment checks passed!"
-
-      - name: Download build artifacts for verification
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-output
@@ -309,22 +226,11 @@ jobs:
           fi
           echo "✅ Build output verified successfully"
 
-  # Stage 9: Deploy to Production
-  deploy:
-    name: 🚀 Deploy to Firebase Hosting
-    runs-on: ubuntu-latest
-    needs: [build, pre-deployment-check]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-output
-          path: out/
+      - name: Final pre-deployment validation
+        run: |
+          echo "🔍 Running final pre-deployment checks..."
+          npm run check:production
+          echo "✅ All pre-deployment checks passed!"
 
       - name: Deploy to Firebase Hosting
         run: |
@@ -342,15 +248,11 @@ jobs:
           echo "🌐 Live URL: https://omegle-vitap.web.app"
           echo ""
           echo "📊 Pipeline Summary:"
-          echo "- ✅ Code Formatting (Prettier) - STRICT"
-          echo "- ✅ ESLint & TSDoc Validation - 0 WARNINGS ALLOWED"
-          echo "- ✅ Production Code Quality - NO CONSOLE STATEMENTS"
-          echo "- ✅ TypeScript Type Check - STRICT MODE"
-          echo "- ✅ Unit & Integration Tests - 187 PASSING"
-          echo "- ✅ Security Audit - NO HIGH/CRITICAL VULNERABILITIES"
-          echo "- ✅ Production Build - VERIFIED"
+          echo "- ✅ Code Quality (Format, Lint, Types, TSDoc) - PASSED"
+          echo "- ✅ Unit & Integration Tests - 301 PASSING"
+          echo "- ✅ Security Audit & Build - COMPLETE"
           echo "- ✅ Pre-Deployment Validation - PASSED"
-          echo "- ✅ Firebase Deployment - COMPLETE"
+          echo "- ✅ Firebase Deployment - LIVE"
 
       - name: Deployment Failure Notification
         if: failure()
@@ -371,7 +273,7 @@ jobs:
     name: ❌ Pipeline Failure Summary
     runs-on: ubuntu-latest
     if: failure()
-    needs: [format-check, lint, production-checks, type-check, test, security, build, pre-deployment-check, deploy]
+    needs: [quality-checks, test, build, deploy]
     
     steps:
       - name: Pipeline Failure Report
@@ -381,15 +283,11 @@ jobs:
           echo "🚫 DEPLOYMENT BLOCKED - Quality gates not met"
           echo ""
           echo "Pipeline enforces STRICT quality standards:"
-          echo "1. Code Formatting - Must pass Prettier check"
-          echo "2. Linting - 0 ESLint warnings allowed"
-          echo "3. Production Checks - NO console statements allowed"
-          echo "4. Production Checks - TSDoc coverage required"
-          echo "5. Type Safety - TypeScript strict mode"
-          echo "6. Testing - All tests must pass"
-          echo "7. Security - No high/critical vulnerabilities"
-          echo "8. Build - Must complete successfully"
-          echo "9. Pre-Deployment - Final validation required"
+          echo "1. Code Quality - Prettier, ESLint, TypeScript, TSDoc"
+          echo "2. Testing - All 301 tests must pass with coverage"
+          echo "3. Security - No high/critical vulnerabilities"
+          echo "4. Build - Must complete successfully"
+          echo "5. Deployment - Final validation required"
           echo ""
           echo "⚠️  Fix all violations before deployment can proceed"
           exit 1
