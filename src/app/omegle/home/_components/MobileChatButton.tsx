@@ -9,7 +9,8 @@ export default function MobileChatButton({ messageCount, onClick }: MobileChatBu
   return (
     <button
       onClick={onClick}
-      className="md:hidden fixed bottom-4 right-4 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center z-30 hover:bg-blue-700 transition-colors"
+      className="md:hidden fixed bottom-4 right-4 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center z-50 hover:bg-blue-700 transition-colors active:scale-95"
+      style={{ touchAction: "manipulation" }}
     >
       <span className="text-2xl">💬</span>
       {messageCount > 0 && (
