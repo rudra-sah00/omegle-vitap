@@ -24,6 +24,15 @@ const config: Config = {
     "^@/constants/(.*)$": "<rootDir>/src/constants/$1",
     "^@/models/(.*)$": "<rootDir>/src/models/$1",
   },
+  // Coverage thresholds - fail tests if coverage drops below these values
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 60,
+      lines: 75,
+      statements: 75,
+    },
+  },
 };
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

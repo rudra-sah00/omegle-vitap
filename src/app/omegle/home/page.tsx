@@ -200,6 +200,16 @@ export default function HomePage() {
           // If camera should be on and track exists, ensure it's playing in preview
           if (isCameraOn && currentTracks.videoTrack) {
             await currentTracks.videoTrack.setEnabled(true);
+            // CRITICAL FIX: Force replay in the video element to fix blank screen
+            if (localVideoRef.current) {
+              localVideoRef.current.innerHTML = "";
+              localVideoRef.current.removeAttribute("data-track-id");
+              try {
+                currentTracks.videoTrack.play(localVideoRef.current);
+              } catch (_playError) {
+                // Ignore play errors
+              }
+            }
           }
 
           // If mic should be on and track exists, ensure it's enabled
@@ -211,10 +221,10 @@ export default function HomePage() {
         }
       };
 
-      // Delay restoration slightly to ensure cleanup is complete
+      // Delay restoration to ensure cleanup is complete
       setTimeout(() => {
         restorePreviewTracks();
-      }, 200);
+      }, 300);
     }
   }, [isConnected, isCameraOn, isMicOn, messages.length, clearMessages]);
 
@@ -291,14 +301,24 @@ export default function HomePage() {
         }
       }
     } else if (!shouldShow) {
-      // Only clear if camera is explicitly off
-      if (!isCameraOn) {
+      // Clear video if camera is off OR if we just disconnected (force re-render)
+      if (!isCameraOn || (!isConnected && !previewVideoTrack)) {
         clearVideo();
         videoElement.removeAttribute("data-track-id");
       }
     }
 
-    // No cleanup - tracks are managed by useMediaTracks hook
+    // Cleanup function to handle transition from connected to preview mode
+    return () => {
+      // When transitioning from connected to disconnected, clear track ID to force re-render
+      if (videoElement) {
+        const currentId = videoElement.getAttribute("data-track-id");
+        // Only clear if we have a track ID (prevents unnecessary clears)
+        if (currentId) {
+          videoElement.removeAttribute("data-track-id");
+        }
+      }
+    };
   }, [previewVideoTrack, localVideoTrack, isConnected, isSearching, isCameraOn, connectedCameraOn]);
 
   // Render remote video

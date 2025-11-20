@@ -207,6 +207,12 @@ export function useVideoChat(
           setLocalAudioTrack(audioToPublish);
         }
 
+        // CRITICAL: Update agoraService.localTracks to ensure publishTracks uses correct tracks
+        agoraService.setLocalTracks({
+          videoTrack: videoToPublish,
+          audioTrack: audioToPublish,
+        });
+
         // Publish tracks to channel
         if (videoToPublish || audioToPublish) {
           await agoraService.publishTracks();
@@ -272,11 +278,10 @@ export function useVideoChat(
       return;
     }
 
-    try {
-      // Immediately mark as not joined to prevent race conditions
-      setIsJoined(false);
-      isJoiningRef.current = false;
+    // Mark as leaving to prevent race conditions with auto-join effect
+    isJoiningRef.current = true;
 
+    try {
       // Unpublish tracks first before leaving channel
       if (clientRef.current) {
         try {
@@ -298,23 +303,29 @@ export function useVideoChat(
       setLocalVideoTrack(null);
       setLocalAudioTrack(null);
 
+      // Clear remote users
+      setRemoteUsers([]);
+
       // Restore states from shouldPublish props (user's preview preference)
       // This ensures UI reflects the actual preview state
       setIsCameraOn(shouldPublishVideo);
       setIsMicOn(shouldPublishAudio);
 
-      // Clear remote users immediately
-      setRemoteUsers([]);
+      // Update joined state at the END after all cleanup is complete
+      // This matches the pattern in joinChannel and prevents race conditions
+      setIsJoined(false);
     } catch (_error) {
       // Ensure state is reset even on error
       setIsJoined(false);
-      isJoiningRef.current = false;
       setRemoteUsers([]);
       setLocalVideoTrack(null);
       setLocalAudioTrack(null);
       // Preserve user's preview preference
       setIsCameraOn(shouldPublishVideo);
       setIsMicOn(shouldPublishAudio);
+    } finally {
+      // Reset the joining ref AFTER state update to prevent auto-rejoin race
+      isJoiningRef.current = false;
     }
   }, [isJoined, shouldPublishVideo, shouldPublishAudio]);
 
@@ -373,9 +384,7 @@ export function useVideoChat(
         onError("Failed to toggle microphone. Please try again.");
       }
     } finally {
-      setTimeout(() => {
-        isMicTogglingRef.current = false;
-      }, 300);
+      isMicTogglingRef.current = false;
     }
   }, [isMicOn, isJoined, onError]);
 
@@ -434,17 +443,14 @@ export function useVideoChat(
         onError("Failed to toggle camera. Please try again.");
       }
     } finally {
-      // Add small delay before allowing next toggle
-      setTimeout(() => {
-        isCameraTogglingRef.current = false;
-      }, 300);
+      isCameraTogglingRef.current = false;
     }
   }, [isCameraOn, isJoined, onError]);
 
   // Auto join when enabled
   useEffect(() => {
-    // Skip auto join/leave during toggle operations
-    if (isCameraTogglingRef.current || isMicTogglingRef.current) {
+    // Skip auto join/leave during toggle operations or ongoing join/leave
+    if (isCameraTogglingRef.current || isMicTogglingRef.current || isJoiningRef.current) {
       return;
     }
 

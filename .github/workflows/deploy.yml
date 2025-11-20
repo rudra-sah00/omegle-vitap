@@ -124,6 +124,67 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:ci
 
+      - name: Check coverage thresholds
+        run: |
+          echo "📊 Checking test coverage requirements..."
+          
+          # Extract coverage percentages from coverage-summary.json
+          STMT_COV=$(node -p "require('./coverage/coverage-summary.json').total.statements.pct")
+          BRANCH_COV=$(node -p "require('./coverage/coverage-summary.json').total.branches.pct")
+          FUNC_COV=$(node -p "require('./coverage/coverage-summary.json').total.functions.pct")
+          LINE_COV=$(node -p "require('./coverage/coverage-summary.json').total.lines.pct")
+          
+          echo "Current Coverage:"
+          echo "  Statements: ${STMT_COV}%"
+          echo "  Branches: ${BRANCH_COV}%"
+          echo "  Functions: ${FUNC_COV}%"
+          echo "  Lines: ${LINE_COV}%"
+          echo ""
+          
+          # Define minimum thresholds
+          MIN_STMT=75
+          MIN_BRANCH=70
+          MIN_FUNC=60
+          MIN_LINE=75
+          
+          echo "Required Coverage Thresholds:"
+          echo "  Statements: ${MIN_STMT}%"
+          echo "  Branches: ${MIN_BRANCH}%"
+          echo "  Functions: ${MIN_FUNC}%"
+          echo "  Lines: ${MIN_LINE}%"
+          echo ""
+          
+          # Check thresholds
+          FAILED=0
+          
+          if (( $(echo "$STMT_COV < $MIN_STMT" | bc -l) )); then
+            echo "❌ Statement coverage ${STMT_COV}% is below threshold ${MIN_STMT}%"
+            FAILED=1
+          fi
+          
+          if (( $(echo "$BRANCH_COV < $MIN_BRANCH" | bc -l) )); then
+            echo "❌ Branch coverage ${BRANCH_COV}% is below threshold ${MIN_BRANCH}%"
+            FAILED=1
+          fi
+          
+          if (( $(echo "$FUNC_COV < $MIN_FUNC" | bc -l) )); then
+            echo "❌ Function coverage ${FUNC_COV}% is below threshold ${MIN_FUNC}%"
+            FAILED=1
+          fi
+          
+          if (( $(echo "$LINE_COV < $MIN_LINE" | bc -l) )); then
+            echo "❌ Line coverage ${LINE_COV}% is below threshold ${MIN_LINE}%"
+            FAILED=1
+          fi
+          
+          if [ $FAILED -eq 1 ]; then
+            echo ""
+            echo "🚫 Coverage requirements not met. Please add more tests."
+            exit 1
+          fi
+          
+          echo "✅ All coverage thresholds met!"
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         if: always()
