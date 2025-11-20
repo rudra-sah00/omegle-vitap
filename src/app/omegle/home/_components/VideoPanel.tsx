@@ -3,7 +3,6 @@
 import { RefObject } from "react";
 import { IAgoraRTCRemoteUser } from "agora-rtc-sdk-ng";
 import { DottedGlowBackground } from "@/components/ui/dotted-glow-background";
-import { useTheme } from "@/contexts/ThemeContext";
 
 interface VideoPanelProps {
   videoRef: RefObject<HTMLDivElement | null>;
@@ -30,8 +29,6 @@ export default function VideoPanel({
   onToggleControls,
   children,
 }: VideoPanelProps) {
-  const { theme } = useTheme();
-
   const renderPlaceholder = () => {
     // IMPORTANT: Don't show placeholder when camera is ON (for local video)
     if (!isRemote && isCameraOn) {
@@ -43,9 +40,7 @@ export default function VideoPanel({
       if (!isConnected) {
         return (
           <div
-            className={`absolute inset-0 flex items-center justify-center ${
-              theme === "dark" ? "bg-black" : "bg-gradient-to-br from-purple-100 to-indigo-100"
-            }`}
+            className="absolute inset-0 flex items-center justify-center bg-[#0084d1]/10"
             style={{ zIndex: 0 }}
           >
             <div className="absolute inset-0 pointer-events-none">
@@ -71,16 +66,10 @@ export default function VideoPanel({
                 <div
                   className={`rounded-full flex items-center justify-center shadow-xl w-full h-full ${
                     isSearching ? "p-1" : ""
-                  } ${
-                    theme === "dark"
-                      ? "bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-gray-700"
-                      : "bg-gradient-to-br from-purple-200 to-indigo-200 border-2 border-purple-300"
-                  }`}
+                  } bg-[#0084d1]/20 backdrop-blur-sm border-2 border-[#0084d1]/40`}
                 >
                   <svg
-                    className={`w-12 h-12 md:w-14 md:h-14 ${
-                      theme === "dark" ? "text-gray-400" : "text-purple-600"
-                    }`}
+                    className="w-12 h-12 md:w-14 md:h-14 text-[#0084d1]"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -92,11 +81,7 @@ export default function VideoPanel({
                   </svg>
                 </div>
               </div>
-              <p
-                className={`text-sm md:text-base font-medium tracking-wide ${
-                  theme === "dark" ? "text-gray-300" : "text-purple-700"
-                }`}
-              >
+              <p className="text-sm md:text-base font-medium tracking-wide text-[#0084d1]">
                 Stranger
               </p>
             </div>
@@ -108,9 +93,7 @@ export default function VideoPanel({
       if (isConnected && (remoteUsers.length === 0 || !hasVideoTrack)) {
         return (
           <div
-            className={`absolute inset-0 flex items-center justify-center ${
-              theme === "dark" ? "bg-black" : "bg-gradient-to-br from-purple-100 to-indigo-100"
-            }`}
+            className="absolute inset-0 flex items-center justify-center bg-[#0084d1]/10"
             style={{ zIndex: 10 }}
           >
             <div className="absolute inset-0 pointer-events-none">
@@ -127,17 +110,9 @@ export default function VideoPanel({
               />
             </div>
             <div className="text-center relative z-10">
-              <div
-                className={`w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl ${
-                  theme === "dark"
-                    ? "bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-gray-700"
-                    : "bg-gradient-to-br from-purple-200 to-indigo-200 border-2 border-purple-300"
-                }`}
-              >
+              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl bg-[#0084d1]/20 backdrop-blur-sm border-2 border-[#0084d1]/40">
                 <svg
-                  className={`w-12 h-12 md:w-14 md:h-14 ${
-                    theme === "dark" ? "text-gray-400" : "text-purple-600"
-                  }`}
+                  className="w-12 h-12 md:w-14 md:h-14 text-[#0084d1]"
                   fill="currentColor"
                   viewBox="0 0 20 20"
                 >
@@ -148,11 +123,7 @@ export default function VideoPanel({
                   />
                 </svg>
               </div>
-              <p
-                className={`text-sm md:text-base font-medium ${
-                  theme === "dark" ? "text-gray-300" : "text-purple-700"
-                }`}
-              >
+              <p className="text-sm md:text-base font-medium text-[#0084d1]">
                 Stranger's camera is off
               </p>
             </div>
@@ -166,9 +137,7 @@ export default function VideoPanel({
         if (!isCameraOn) {
           return (
             <div
-              className={`absolute inset-0 flex items-center justify-center ${
-                theme === "dark" ? "bg-black" : "bg-gradient-to-br from-purple-100 to-indigo-100"
-              }`}
+              className="absolute inset-0 flex items-center justify-center bg-[#0084d1]/10"
               style={{ zIndex: 0 }}
             >
               <div className="absolute inset-0 pointer-events-none">
@@ -195,9 +164,7 @@ export default function VideoPanel({
         if (!isCameraOn) {
           return (
             <div
-              className={`absolute inset-0 flex items-center justify-center ${
-                theme === "dark" ? "bg-black" : "bg-gradient-to-br from-purple-100 to-indigo-100"
-              }`}
+              className="absolute inset-0 flex items-center justify-center bg-[#0084d1]/10"
               style={{ zIndex: 0 }}
             >
               <div className="absolute inset-0 pointer-events-none">
@@ -214,17 +181,9 @@ export default function VideoPanel({
                 />
               </div>
               <div className="text-center relative z-10">
-                <div
-                  className={`w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl ${
-                    theme === "dark"
-                      ? "bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-gray-700"
-                      : "bg-gradient-to-br from-purple-200 to-indigo-200 border-2 border-purple-300"
-                  }`}
-                >
+                <div className="w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl bg-[#0084d1]/20 backdrop-blur-sm border-2 border-[#0084d1]/40">
                   <svg
-                    className={`w-12 h-12 md:w-14 md:h-14 ${
-                      theme === "dark" ? "text-gray-400" : "text-purple-600"
-                    }`}
+                    className="w-12 h-12 md:w-14 md:h-14 text-[#0084d1]"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -235,13 +194,7 @@ export default function VideoPanel({
                     />
                   </svg>
                 </div>
-                <p
-                  className={`text-sm md:text-base font-medium ${
-                    theme === "dark" ? "text-gray-300" : "text-purple-700"
-                  }`}
-                >
-                  Camera is off
-                </p>
+                <p className="text-sm md:text-base font-medium text-[#0084d1]">Camera is off</p>
               </div>
             </div>
           );
@@ -251,9 +204,7 @@ export default function VideoPanel({
         if (!isCameraOn) {
           return (
             <div
-              className={`absolute inset-0 flex items-center justify-center ${
-                theme === "dark" ? "bg-black" : "bg-gradient-to-br from-purple-100 to-indigo-100"
-              }`}
+              className="absolute inset-0 flex items-center justify-center bg-[#0084d1]/10"
               style={{ zIndex: 0 }}
             >
               <div className="absolute inset-0 pointer-events-none">
@@ -270,17 +221,9 @@ export default function VideoPanel({
                 />
               </div>
               <div className="text-center relative z-10">
-                <div
-                  className={`w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl ${
-                    theme === "dark"
-                      ? "bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-gray-700"
-                      : "bg-gradient-to-br from-purple-200 to-indigo-200 border-2 border-purple-300"
-                  }`}
-                >
+                <div className="w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl bg-[#0084d1]/20 backdrop-blur-sm border-2 border-[#0084d1]/40">
                   <svg
-                    className={`w-12 h-12 md:w-14 md:h-14 ${
-                      theme === "dark" ? "text-gray-400" : "text-purple-600"
-                    }`}
+                    className="w-12 h-12 md:w-14 md:h-14 text-[#0084d1]"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -291,13 +234,7 @@ export default function VideoPanel({
                     />
                   </svg>
                 </div>
-                <p
-                  className={`text-sm md:text-base font-medium ${
-                    theme === "dark" ? "text-gray-300" : "text-purple-700"
-                  }`}
-                >
-                  Your camera
-                </p>
+                <p className="text-sm md:text-base font-medium text-[#0084d1]">Your camera</p>
               </div>
             </div>
           );
@@ -310,11 +247,7 @@ export default function VideoPanel({
 
   return (
     <div
-      className={`flex-1 min-h-0 relative rounded-xl overflow-hidden shadow-2xl transition-colors duration-300 ${
-        theme === "dark"
-          ? "bg-black border border-purple-900/50"
-          : "bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200"
-      }`}
+      className="flex-1 min-h-0 relative rounded-xl overflow-hidden shadow-2xl transition-colors duration-300 bg-[#0084d1]/5 backdrop-blur-sm border border-[#0084d1]/20"
       onClick={onToggleControls}
     >
       {/* Show placeholder when camera is off or not connected */}

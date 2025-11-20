@@ -1,17 +1,12 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import VideoPanel from "../VideoPanel";
-import { ThemeProvider } from "@/contexts/ThemeContext";
 
 describe("VideoPanel", () => {
   const mockVideoRef = { current: document.createElement("div") };
 
-  const renderWithTheme = (ui: React.ReactElement) => {
-    return render(<ThemeProvider>{ui}</ThemeProvider>);
-  };
-
   it("renders video container", () => {
-    const { container } = renderWithTheme(
+    const { container } = render(
       <VideoPanel
         videoRef={mockVideoRef}
         isConnected={false}
@@ -25,14 +20,14 @@ describe("VideoPanel", () => {
   });
 
   it("renders Stranger placeholder when isRemote is true and not connected", () => {
-    renderWithTheme(
+    render(
       <VideoPanel videoRef={mockVideoRef} isRemote={true} isConnected={false} isSearching={false} />
     );
     expect(screen.getByText("Stranger")).toBeInTheDocument();
   });
 
   it("renders Stranger camera off when isRemote is true, connected, but no remote users", () => {
-    renderWithTheme(
+    render(
       <VideoPanel
         videoRef={mockVideoRef}
         isRemote={true}
@@ -45,7 +40,7 @@ describe("VideoPanel", () => {
   });
 
   it("renders searching animation when not remote and isSearching is true", () => {
-    const { container } = renderWithTheme(
+    const { container } = render(
       <VideoPanel
         videoRef={mockVideoRef}
         isRemote={false}
@@ -60,7 +55,7 @@ describe("VideoPanel", () => {
   });
 
   it("renders Camera is off when not remote, connected, but camera/video off", () => {
-    renderWithTheme(
+    render(
       <VideoPanel
         videoRef={mockVideoRef}
         isRemote={false}
@@ -73,7 +68,7 @@ describe("VideoPanel", () => {
   });
 
   it("renders Your camera when not remote, not connected, not searching, and camera off", () => {
-    renderWithTheme(
+    render(
       <VideoPanel
         videoRef={mockVideoRef}
         isRemote={false}
@@ -87,7 +82,7 @@ describe("VideoPanel", () => {
 
   it("calls onToggleControls when clicked", () => {
     const handleToggle = jest.fn();
-    const { container } = renderWithTheme(
+    const { container } = render(
       <VideoPanel
         videoRef={mockVideoRef}
         isConnected={false}

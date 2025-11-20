@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { ChatMessage } from "@/hooks/useChat";
 import { EncryptedText } from "@/components/ui/encrypted-text";
-import { useTheme } from "@/contexts/ThemeContext";
 
 interface ChatWindowProps {
   messages: ChatMessage[];
@@ -13,7 +12,6 @@ interface ChatWindowProps {
   onTyping: () => void;
   isConnected: boolean;
   userId: string;
-  onToggleTheme: () => void;
 }
 
 export default function ChatWindow({
@@ -24,9 +22,7 @@ export default function ChatWindow({
   onTyping,
   isConnected,
   userId,
-  onToggleTheme,
 }: ChatWindowProps) {
-  const { theme } = useTheme();
   const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -67,31 +63,15 @@ export default function ChatWindow({
   };
 
   return (
-    <div
-      className={`flex flex-col h-full shadow-xl transition-colors duration-300 ${
-        theme === "dark"
-          ? "bg-black border-l border-purple-900/50"
-          : "bg-white border-l border-purple-200"
-      }`}
-    >
+    <div className="flex flex-col h-full shadow-xl transition-colors duration-300 bg-white border-l border-[#0084d1]/20">
       {/* Header with status */}
-      <div
-        className={`flex-shrink-0 px-4 py-3 transition-colors duration-300 ${
-          theme === "dark"
-            ? "bg-gradient-to-r from-purple-900 to-slate-900 border-b border-purple-800"
-            : "bg-gradient-to-r from-purple-100 to-indigo-100 border-b border-purple-200"
-        }`}
-      >
+      <div className="flex-shrink-0 px-4 py-3 transition-colors duration-300 bg-gradient-to-r from-[#0084d1]/10 to-[#0084d1]/15 border-b border-[#0084d1]/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div
-              className={`w-2 h-2 rounded-full ${partnerOnline ? "bg-emerald-500 shadow-lg shadow-emerald-500/50 animate-pulse" : theme === "dark" ? "bg-slate-400" : "bg-purple-300"}`}
+              className={`w-2 h-2 rounded-full ${partnerOnline ? "bg-emerald-500 shadow-lg shadow-emerald-500/50 animate-pulse" : "bg-[#0084d1]/40"}`}
             />
-            <span
-              className={`text-sm font-semibold ${
-                theme === "dark" ? "text-gray-200" : "text-purple-900"
-              }`}
-            >
+            <span className="text-sm font-semibold text-[#0084d1]">
               {isConnected
                 ? partnerOnline
                   ? "Stranger is online"
@@ -100,54 +80,48 @@ export default function ChatWindow({
             </span>
           </div>
 
-          {/* Right side: Typing indicator and Theme Toggle */}
+          {/* Right side: Typing indicator and Home button */}
           <div className="flex items-center gap-3">
             {partnerTyping && (
-              <div
-                className={`flex items-center gap-1 text-xs font-medium ${
-                  theme === "dark" ? "text-gray-400" : "text-purple-600"
-                }`}
-              >
+              <div className="flex items-center gap-1 text-xs font-medium text-[#0084d1]">
                 <span>Stranger is typing</span>
                 <div className="flex gap-1">
                   <div
-                    className={`w-1.5 h-1.5 rounded-full animate-bounce ${
-                      theme === "dark" ? "bg-purple-500" : "bg-indigo-500"
-                    }`}
+                    className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#0084d1]"
                     style={{ animationDelay: "0ms" }}
                   />
                   <div
-                    className={`w-1.5 h-1.5 rounded-full animate-bounce ${
-                      theme === "dark" ? "bg-purple-500" : "bg-indigo-500"
-                    }`}
+                    className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#0084d1]"
                     style={{ animationDelay: "150ms" }}
                   />
                   <div
-                    className={`w-1.5 h-1.5 rounded-full animate-bounce ${
-                      theme === "dark" ? "bg-purple-500" : "bg-indigo-500"
-                    }`}
+                    className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#0084d1]"
                     style={{ animationDelay: "300ms" }}
                   />
                 </div>
               </div>
             )}
-
-            {/* Theme Toggle Switch */}
-            <button
-              onClick={onToggleTheme}
-              className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                theme === "dark"
-                  ? "bg-purple-600 focus:ring-purple-500"
-                  : "bg-purple-400 focus:ring-purple-300"
-              }`}
-              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              <span
-                className={`inline-block w-4 h-4 transform transition-transform duration-300 rounded-full ${
-                  theme === "dark" ? "translate-x-6 bg-yellow-300" : "translate-x-1 bg-white"
-                }`}
-              />
-            </button>
+            {!isConnected && (
+              <a
+                href="/omegle"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/80 hover:bg-white border border-[#0084d1]/30 hover:border-[#0084d1]/50 transition-all shadow-sm hover:shadow-md group"
+                title="Back to home"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="w-4 h-4 text-[#0084d1] group-hover:-translate-x-0.5 transition-transform"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span className="text-xs font-semibold text-[#0084d1]">Home</span>
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -159,55 +133,35 @@ export default function ChatWindow({
       >
         {!isConnected && (
           <div className="flex items-center justify-center h-full">
-            <p
-              className={`text-base font-medium ${
-                theme === "dark" ? "text-gray-400" : "text-purple-600"
-              }`}
-            >
-              Click "Start" to begin chatting
-            </p>
+            <p className="text-base font-medium text-[#0084d1]">Click "Start" to begin chatting</p>
           </div>
         )}
 
         {messages.map((msg) => (
           <div key={msg.id} className={`${msg.type === "system" ? "text-center" : ""}`}>
             {msg.type === "system" ? (
-              <div
-                className={`text-xs italic rounded-full px-3 py-1 inline-block ${
-                  theme === "dark"
-                    ? "text-gray-400 bg-gray-800/50"
-                    : "text-purple-600 bg-purple-100"
-                }`}
-              >
+              <div className="text-xs italic rounded-full px-3 py-1 inline-block text-[#0084d1] bg-[#0084d1]/10">
                 {msg.message}
               </div>
             ) : (
               <div className="text-sm">
                 <span
                   className={`font-semibold ${
-                    msg.senderId === userId
-                      ? theme === "dark"
-                        ? "text-purple-400"
-                        : "text-purple-600"
-                      : theme === "dark"
-                        ? "text-gray-300"
-                        : "text-purple-700"
+                    msg.senderId === userId ? "text-[#0084d1]" : "text-[#0084d1]/90"
                   }`}
                 >
                   {msg.senderId === userId ? "You" : "Stranger"}:
                 </span>{" "}
                 {msg.senderId === userId ? (
-                  <span className={theme === "dark" ? "text-gray-200" : "text-purple-900"}>
-                    {msg.message}
-                  </span>
+                  <span className="text-gray-800">{msg.message}</span>
                 ) : (
                   <EncryptedText
                     text={msg.message}
                     className="inline"
                     revealDelayMs={30}
                     flipDelayMs={30}
-                    encryptedClassName={theme === "dark" ? "text-gray-500" : "text-purple-400"}
-                    revealedClassName={theme === "dark" ? "text-gray-200" : "text-purple-900"}
+                    encryptedClassName="text-[#0084d1]/50"
+                    revealedClassName="text-gray-800"
                   />
                 )}
               </div>
@@ -218,11 +172,7 @@ export default function ChatWindow({
       </div>
 
       {/* Input area */}
-      <div
-        className={`border-t p-3 flex-shrink-0 transition-colors duration-300 ${
-          theme === "dark" ? "bg-black border-purple-900/50" : "bg-white border-purple-200"
-        }`}
-      >
+      <div className="border-t p-3 flex-shrink-0 transition-colors duration-300 bg-white border-[#0084d1]/20">
         <form onSubmit={handleSend} className="flex items-center gap-2">
           <input
             type="text"
@@ -230,23 +180,23 @@ export default function ChatWindow({
             onChange={handleInputChange}
             placeholder={isConnected ? "Type a message..." : "Connect to start chatting"}
             disabled={!isConnected}
-            className={`flex-1 px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 text-sm shadow-sm transition-colors duration-300 ${
-              theme === "dark"
-                ? "border-gray-700 focus:ring-purple-600 focus:border-transparent text-gray-200 disabled:bg-gray-800 disabled:cursor-not-allowed placeholder:text-gray-500 bg-gray-800"
-                : "border-purple-300 focus:ring-purple-500 focus:border-transparent text-purple-900 disabled:bg-purple-50 disabled:cursor-not-allowed placeholder:text-purple-400 bg-white"
-            }`}
+            className="flex-1 px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 text-sm shadow-sm transition-colors duration-300 border-[#0084d1]/30 focus:ring-[#0084d1] focus:border-transparent text-gray-800 disabled:bg-[#0084d1]/5 disabled:cursor-not-allowed placeholder:text-[#0084d1]/50 bg-white"
             autoComplete="off"
           />
           <button
             type="submit"
             disabled={!isConnected || !inputMessage.trim()}
-            className={`px-5 py-2.5 rounded-xl transition-all font-semibold text-sm whitespace-nowrap shadow-md hover:shadow-lg ${
-              theme === "dark"
-                ? "bg-purple-600 text-white hover:bg-purple-700 disabled:bg-gray-800 disabled:cursor-not-allowed"
-                : "bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 disabled:from-purple-200 disabled:to-indigo-200 disabled:cursor-not-allowed"
-            }`}
+            className="p-3 rounded-xl transition-all shadow-md hover:shadow-lg bg-[#0084d1] text-white hover:bg-[#0084d1]/90 disabled:bg-[#0084d1]/30 disabled:cursor-not-allowed hover:scale-105"
+            title="Send message"
           >
-            Send
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="w-5 h-5"
+            >
+              <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
+            </svg>
           </button>
         </form>
       </div>

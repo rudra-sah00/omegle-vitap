@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useTheme } from "@/contexts/ThemeContext";
 import ChatWindow from "./_components/ChatWindow";
 import VideoPanel from "./_components/VideoPanel";
 import VideoControls from "./_components/VideoControls";
@@ -23,7 +22,6 @@ import { useToast } from "@/hooks/useToast";
 
 export default function HomePage() {
   const router = useRouter();
-  const { theme, toggleTheme } = useTheme();
   const { toasts, removeToast, error: showError, warning: _warning } = useToast();
 
   // Validate user info on mount - redirect to form if incomplete
@@ -537,19 +535,9 @@ export default function HomePage() {
   };
 
   return (
-    <div
-      className={`flex flex-col md:flex-row h-screen overflow-hidden transition-colors duration-300 ${
-        theme === "dark"
-          ? "bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900"
-          : "bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50"
-      }`}
-    >
+    <div className="flex flex-col md:flex-row h-screen overflow-hidden transition-colors duration-300 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Video panels - full height on mobile, 65% width on desktop */}
-      <div
-        className={`flex flex-col gap-3 md:gap-4 p-3 md:p-6 w-full md:w-[65%] h-full transition-colors duration-300 ${
-          theme === "dark" ? "bg-slate-900/50" : "bg-white/30 backdrop-blur-sm"
-        }`}
-      >
+      <div className="flex flex-col gap-3 md:gap-4 p-3 md:p-6 w-full md:w-[65%] h-full transition-colors duration-300 bg-white/30 backdrop-blur-sm">
         {/* Stranger's video */}
         <VideoPanel
           videoRef={remoteVideoRef}
@@ -627,13 +615,7 @@ export default function HomePage() {
       </div>
 
       {/* Desktop Chat - Hidden on mobile, 35% width on desktop */}
-      <div
-        className={`hidden md:block w-[35%] h-full shadow-xl transition-colors duration-300 ${
-          theme === "dark"
-            ? "bg-black border-l border-purple-900/50"
-            : "bg-white border-l border-purple-200"
-        }`}
-      >
+      <div className="hidden md:block w-[35%] h-full shadow-xl transition-colors duration-300 bg-white border-l border-purple-200">
         <ChatWindow
           messages={messages}
           partnerTyping={partnerTyping}
@@ -642,7 +624,6 @@ export default function HomePage() {
           onTyping={handleTyping}
           isConnected={isConnected}
           userId={userId}
-          onToggleTheme={toggleTheme}
         />
       </div>
 
@@ -661,7 +642,6 @@ export default function HomePage() {
         onSendMessage={handleSendMessage}
         onTyping={handleTyping}
         userId={userId}
-        onToggleTheme={toggleTheme}
       />
 
       {/* Toast Notifications */}
