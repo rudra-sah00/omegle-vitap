@@ -339,6 +339,15 @@ export default function HomePage() {
     true
   );
 
+  // Play remote audio track when available
+  useEffect(() => {
+    if (remoteUsers.length > 0 && remoteUsers[0].audioTrack) {
+      const audioTrack = remoteUsers[0].audioTrack;
+      // Play the audio track
+      audioTrack.play();
+    }
+  }, [remoteUsers]);
+
   // Note: We don't cleanup preview tracks when connecting anymore
   // useVideoChat will publish the existing tracks from agoraService
 
