@@ -51,9 +51,8 @@ if (typeof window !== "undefined") {
         provider: new ReCaptchaV3Provider(recaptchaSiteKey),
         isTokenAutoRefreshEnabled: true,
       });
-    } catch (error) {
+    } catch (_error) {
       // App Check initialization failed, continue without it
-      console.warn("Failed to initialize Firebase App Check:", error);
     }
   }
 }
