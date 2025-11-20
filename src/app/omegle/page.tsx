@@ -196,10 +196,14 @@ export default function OmegleLanding() {
                 By continuing, you agree to our{" "}
                 <Link href="/terms" className="underline hover:text-white">
                   Terms
-                </Link>{" "}
-                &{" "}
+                </Link>
+                ,{" "}
                 <Link href="/privacy" className="underline hover:text-white">
                   Privacy
+                </Link>{" "}
+                &{" "}
+                <Link href="/community" className="underline hover:text-white">
+                  Community Guidelines
                 </Link>
               </p>
             </form>

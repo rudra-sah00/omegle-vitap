@@ -233,19 +233,19 @@ export default function PrivacyPage() {
           <div className="mt-8 flex gap-4 justify-center flex-wrap">
             <Link
               href="/"
-              className="inline-block px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl"
+              className="inline-block px-8 py-3 bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded transition-colors"
             >
               Back to Home
             </Link>
             <Link
               href="/terms"
-              className="inline-block px-8 py-3 bg-white hover:bg-gray-50 text-gray-900 font-semibold rounded-lg transition-colors border-2 border-gray-300"
+              className="inline-block px-8 py-3 bg-white hover:bg-gray-50 text-gray-900 font-semibold rounded transition-colors border-2 border-gray-300"
             >
               Terms of Service
             </Link>
             <Link
               href="/community"
-              className="inline-block px-8 py-3 bg-white hover:bg-gray-50 text-gray-900 font-semibold rounded-lg transition-colors border-2 border-gray-300"
+              className="inline-block px-8 py-3 bg-white hover:bg-gray-50 text-gray-900 font-semibold rounded transition-colors border-2 border-gray-300"
             >
               Community Guidelines
             </Link>
