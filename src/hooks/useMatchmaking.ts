@@ -44,8 +44,16 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
   const [matchData, setMatchData] = useState<MatchData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const wsRef = useRef(getWebSocketService());
+  const wsRef = useRef<WebSocketService | null>(null);
   const isJoiningRef = useRef(false);
+
+  // Initialize WebSocket service only when needed
+  const getWs = useCallback(() => {
+    if (!wsRef.current) {
+      wsRef.current = getWebSocketService();
+    }
+    return wsRef.current;
+  }, []);
 
   /**
    * Handle incoming WebSocket messages
@@ -77,6 +85,7 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
         break;
 
       case 'partner_left':
+      case 'partner_disconnected':
         console.log('[Matchmaking] Partner left the room');
         setConnectionState('connected');
         setMatchData(null);
@@ -146,7 +155,7 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
    * Join matchmaking queue
    */
   const joinQueue = useCallback((userData: UserData) => {
-    const ws = wsRef.current;
+    const ws = getWs();
 
     console.log('[Matchmaking] WebSocket ready state:', ws.getReadyState());
     console.log('[Matchmaking] WebSocket connected:', ws.isConnected());
@@ -178,13 +187,13 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
       setConnectionState('error');
       isJoiningRef.current = false;
     }
-  }, []);
+  }, [getWs]);
 
   /**
    * Leave current room
    */
   const leaveRoom = useCallback(() => {
-    const ws = wsRef.current;
+    const ws = getWs();
 
     if (!matchData) {
       // Silent return - no active room to leave (normal during initialization)
@@ -202,12 +211,13 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
     } else {
       setError('Failed to leave room');
     }
-  }, [matchData]);
+  }, [matchData, getWs]);
 
   /**
    * Manually disconnect from WebSocket
    */
   const disconnect = useCallback(() => {
+    if (!wsRef.current) return;
     const ws = wsRef.current;
     ws.disconnect();
     setConnectionState('disconnected');
@@ -219,15 +229,22 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
    * Setup WebSocket event listeners
    */
   useEffect(() => {
-    const ws = wsRef.current;
+    // Only initialize WebSocket if autoConnect is enabled
+    if (!autoConnect) {
+      console.log('[Matchmaking] AutoConnect disabled, skipping WebSocket initialization');
+      return;
+    }
+
+    console.log('[Matchmaking] AutoConnect enabled, initializing WebSocket');
+    const ws = getWs();
 
     const unsubscribeMessage = ws.onMessage(handleMessage);
     const unsubscribeOpen = ws.onOpen(handleOpen);
     const unsubscribeClose = ws.onClose(handleClose);
     const unsubscribeError = ws.onError(handleError);
 
-    // Auto-connect if enabled
-    if (autoConnect && !ws.isConnected()) {
+    // Connect if not already connected
+    if (!ws.isConnected()) {
       setConnectionState('connecting');
       ws.connect();
     }
@@ -239,7 +256,7 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
       unsubscribeClose();
       unsubscribeError();
     };
-  }, [autoConnect, handleMessage, handleOpen, handleClose, handleError]);
+  }, [autoConnect, handleMessage, handleOpen, handleClose, handleError, getWs]);
 
   /**
    * Cleanup on unmount
@@ -255,13 +272,12 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
    * Cancel search while waiting in queue
    */
   const cancelSearch = useCallback((userData: UserData) => {
-    const ws = wsRef.current;
-
-    if (!ws || connectionState !== 'waiting') {
+    if (!wsRef.current || connectionState !== 'waiting') {
       console.log('[Matchmaking] Cannot cancel: not waiting');
       return;
     }
 
+    const ws = wsRef.current;
     console.log('[Matchmaking] Cancelling search');
     ws.send({
       type: 'cancel',

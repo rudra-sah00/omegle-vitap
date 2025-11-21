@@ -85,14 +85,8 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
     try {
       await rtmServiceRef.current.sendMessage(text);
       
-      // Add to local messages
-      const message: MessageData = {
-        text,
-        senderId: currentUidRef.current,
-        senderName: 'You',
-        timestamp: Date.now(),
-      };
-      setMessages(prev => [...prev, message]);
+      // Don't add to local messages - let the RTM SDK echo it back
+      // This prevents duplicate messages
       
       console.log('[Agora RTM] Message sent:', text);
     } catch (error) {

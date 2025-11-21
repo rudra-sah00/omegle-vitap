@@ -28,10 +28,11 @@ export class WebSocketService {
   private missedPongs = 0;
   private maxMissedPongs = 2;
 
+  private visibilityHandlerSetup = false;
+
   constructor(url: string, apiKey: string) {
     this.url = url;
     this.apiKey = apiKey;
-    this.setupVisibilityHandler();
   }
 
   /**
@@ -46,6 +47,12 @@ export class WebSocketService {
     if (this.ws?.readyState === WebSocket.CONNECTING) {
       console.log('[WebSocket] Connection in progress');
       return;
+    }
+
+    // Setup visibility handler on first connect
+    if (!this.visibilityHandlerSetup) {
+      this.setupVisibilityHandler();
+      this.visibilityHandlerSetup = true;
     }
 
     this.isIntentionalClose = false;
@@ -296,7 +303,7 @@ export class WebSocketService {
 let wsInstance: WebSocketService | null = null;
 
 /**
- * Get or create WebSocket service instance
+ * Get or create WebSocket service instance (does NOT auto-connect)
  */
 export const getWebSocketService = (): WebSocketService => {
   if (!wsInstance) {
@@ -307,6 +314,7 @@ export const getWebSocketService = (): WebSocketService => {
       throw new Error('WebSocket configuration missing. Set NEXT_PUBLIC_WS_URL and NEXT_PUBLIC_API_KEY in .env.local');
     }
 
+    console.log('[WebSocket] Creating service instance (not connected yet)');
     wsInstance = new WebSocketService(wsUrl, apiKey);
   }
 
