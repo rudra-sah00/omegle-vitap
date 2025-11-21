@@ -19,7 +19,7 @@ export class WebSocketService {
   private closeHandlers: Set<CloseHandler> = new Set();
   private openHandlers: Set<OpenHandler> = new Set();
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
+  private maxReconnectAttempts = 3; // Reduced from 5 to 3
   private reconnectDelay = 2000; // Start with 2 seconds
   private reconnectTimer: NodeJS.Timeout | null = null;
   private isIntentionalClose = false;
@@ -27,6 +27,8 @@ export class WebSocketService {
   private heartbeatIntervalMs = 25000; // 25 seconds (backend timeout is likely 30s)
   private missedPongs = 0;
   private maxMissedPongs = 2;
+  private consecutiveFailures = 0;
+  private maxConsecutiveFailures = 3; // Stop after 3 consecutive connection failures
 
   private visibilityHandlerSetup = false;
 
@@ -68,10 +70,18 @@ export class WebSocketService {
       // Set a connection timeout
       const connectionTimeout = setTimeout(() => {
         if (this.ws?.readyState === WebSocket.CONNECTING) {
+          this.consecutiveFailures++;
           this.ws.close();
-          this.handleError(new Error('Backend server is not responding. Please try again later.'));
+          
+          // Stop trying if server is consistently unavailable
+          if (this.consecutiveFailures >= this.maxConsecutiveFailures) {
+            this.isIntentionalClose = true;
+            this.handleError(new Error('Backend server is unavailable. Please check if the server is running.'));
+          } else {
+            this.handleError(new Error('Backend server is not responding. Please try again later.'));
+          }
         }
-      }, 10000); // 10 second timeout
+      }, 5000); // 5 second timeout (reduced from 10)
       
       // Clear timeout on successful connection
       if (this.ws) {
@@ -169,6 +179,7 @@ export class WebSocketService {
    */
   private handleOpen(): void {
     this.reconnectAttempts = 0;
+    this.consecutiveFailures = 0; // Reset consecutive failures on successful connection
     this.reconnectDelay = 2000;
     this.startHeartbeat();
 
@@ -210,6 +221,28 @@ export class WebSocketService {
 
     this.closeHandlers.forEach(handler => handler(event));
 
+    // Check if this is an authentication error (code 1008 = policy violation, 4001 = unauthorized)
+    const isAuthError = event.code === 1008 || event.code === 4001 || event.code === 1002;
+    
+    // If authentication failed, don't reconnect
+    if (isAuthError) {
+      this.isIntentionalClose = true;
+      this.handleError(new Error('Authentication failed. Please check your API key.'));
+      return;
+    }
+
+    // Check if connection was never established (server unreachable)
+    if (event.code === 1006 && !event.wasClean) {
+      this.consecutiveFailures++;
+      
+      // Stop trying if server is consistently unreachable
+      if (this.consecutiveFailures >= this.maxConsecutiveFailures) {
+        this.isIntentionalClose = true;
+        this.handleError(new Error('Cannot connect to server. Please ensure the backend is running on localhost:8080.'));
+        return;
+      }
+    }
+
     // Attempt reconnection if not intentional
     if (!this.isIntentionalClose) {
       this.attemptReconnect();
@@ -221,6 +254,12 @@ export class WebSocketService {
    */
   private attemptReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      this.handleError(new Error('Maximum reconnection attempts reached. Please refresh the page.'));
+      return;
+    }
+
+    // Don't reconnect if it was marked as intentional close (e.g., auth error)
+    if (this.isIntentionalClose) {
       return;
     }
 

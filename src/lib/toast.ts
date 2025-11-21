@@ -13,6 +13,7 @@ export enum ErrorCode {
   BACKEND_UNAVAILABLE = 'E001',
   CONNECTION_TIMEOUT = 'E002',
   CONNECTION_LOST = 'E003',
+  AUTH_FAILED = 'E004',
   
   // Media errors
   CAMERA_PERMISSION_DENIED = 'E101',
@@ -31,11 +32,29 @@ export enum ErrorCode {
   MESSAGE_SERVICE_UNAVAILABLE = 'E302',
 }
 
+// Track currently displayed toasts to prevent duplicates
+let activeToastIds = new Set<string>();
+let lastToastMessage = '';
+let lastToastTime = 0;
+
 /**
  * Show error toast with user-friendly message
+ * Prevents duplicate toasts and ensures only one is shown at a time
  */
 export function showError(message: string, code?: ErrorCode) {
-  toast.error(message, {
+  const now = Date.now();
+  
+  // Prevent duplicate messages within 3 seconds
+  if (message === lastToastMessage && now - lastToastTime < 3000) {
+    return;
+  }
+  
+  // Dismiss all existing toasts before showing new one
+  toast.dismiss();
+  activeToastIds.clear();
+  
+  // Show new toast
+  const toastId = toast.error(message, {
     duration: 4000,
     position: 'top-center',
     style: {
@@ -45,6 +64,15 @@ export function showError(message: string, code?: ErrorCode) {
       borderRadius: '8px',
     },
   });
+  
+  activeToastIds.add(toastId);
+  lastToastMessage = message;
+  lastToastTime = now;
+  
+  // Remove from active set after duration
+  setTimeout(() => {
+    activeToastIds.delete(toastId);
+  }, 4000);
   
   // Log error code for debugging (not visible to user)
   if (code && process.env.NODE_ENV === 'development') {
@@ -56,6 +84,17 @@ export function showError(message: string, code?: ErrorCode) {
  * Show success toast
  */
 export function showSuccess(message: string) {
+  const now = Date.now();
+  
+  // Prevent duplicate messages within 3 seconds
+  if (message === lastToastMessage && now - lastToastTime < 3000) {
+    return;
+  }
+  
+  // Dismiss all existing toasts before showing new one
+  toast.dismiss();
+  activeToastIds.clear();
+  
   toast.success(message, {
     duration: 3000,
     position: 'top-center',
@@ -66,12 +105,26 @@ export function showSuccess(message: string) {
       borderRadius: '8px',
     },
   });
+  
+  lastToastMessage = message;
+  lastToastTime = now;
 }
 
 /**
  * Show info toast
  */
 export function showInfo(message: string) {
+  const now = Date.now();
+  
+  // Prevent duplicate messages within 3 seconds
+  if (message === lastToastMessage && now - lastToastTime < 3000) {
+    return;
+  }
+  
+  // Dismiss all existing toasts before showing new one
+  toast.dismiss();
+  activeToastIds.clear();
+  
   toast(message, {
     duration: 3000,
     position: 'top-center',
@@ -83,12 +136,26 @@ export function showInfo(message: string) {
       borderRadius: '8px',
     },
   });
+  
+  lastToastMessage = message;
+  lastToastTime = now;
 }
 
 /**
  * Show warning toast
  */
 export function showWarning(message: string) {
+  const now = Date.now();
+  
+  // Prevent duplicate messages within 3 seconds
+  if (message === lastToastMessage && now - lastToastTime < 3000) {
+    return;
+  }
+  
+  // Dismiss all existing toasts before showing new one
+  toast.dismiss();
+  activeToastIds.clear();
+  
   toast(message, {
     duration: 3500,
     position: 'top-center',
@@ -100,6 +167,9 @@ export function showWarning(message: string) {
       borderRadius: '8px',
     },
   });
+  
+  lastToastMessage = message;
+  lastToastTime = now;
 }
 
 /**

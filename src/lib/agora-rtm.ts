@@ -60,6 +60,12 @@ export class AgoraRTMService {
       this.client = new AgoraRTM.RTM(appId, sanitizedUid, {
         logLevel: 'error', // Only show errors
       });
+
+      // Ensure client is created before proceeding
+      if (!this.client) {
+        throw new Error('Failed to create RTM client instance');
+      }
+
       this.setupEventListeners();
     } catch (error) {
       console.error('Failed to initialize RTM client:', error);
@@ -105,7 +111,7 @@ export class AgoraRTMService {
    */
   async login(config: AgoraRTMConfig): Promise<void> {
     if (!this.client) {
-      throw new Error('RTM client not initialized');
+      throw new Error('RTM client not initialized. Call initialize() first.');
     }
 
     if (this.isLoggedIn) {
@@ -118,6 +124,11 @@ export class AgoraRTMService {
     }
 
     try {
+      // Double-check client exists before login attempt
+      if (!this.client) {
+        throw new Error('RTM client was destroyed before login');
+      }
+
       const loginTimeout = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('RTM login timeout')), 10000);
       });
@@ -128,6 +139,11 @@ export class AgoraRTMService {
       ]);
 
       this.isLoggedIn = true;
+
+      // Verify client still exists before joining channel
+      if (!this.client) {
+        throw new Error('RTM client was destroyed after login');
+      }
 
       // Join channel after login
       await this.joinChannel(config.channelName);

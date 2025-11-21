@@ -42,6 +42,11 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
         uidString
       );
 
+      // Verify service was initialized successfully
+      if (!rtmServiceRef.current) {
+        throw new Error('RTM service initialization returned null');
+      }
+
       // Setup event handlers
       rtmServiceRef.current.setOnMessageReceived((message: MessageData) => {
         setMessages(prev => [...prev, message]);
@@ -52,6 +57,9 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
         setIsPartnerTyping(isTyping);
         onTypingIndicator?.(isTyping);
       });
+
+      // Small delay to ensure client is fully ready
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Login to RTM (automatically joins channel)
       await rtmServiceRef.current.login({
@@ -64,8 +72,17 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
 
       setIsRTMInitialized(true);
     } catch (error) {
-      // Don't throw error, just mark as not initialized
+      console.error('RTM initialization failed:', error);
       setIsRTMInitialized(false);
+      // Clean up on failure
+      if (rtmServiceRef.current) {
+        try {
+          await rtmServiceRef.current.leave();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+        rtmServiceRef.current = null;
+      }
     }
   }, [onMessageReceived, onTypingIndicator]);
 

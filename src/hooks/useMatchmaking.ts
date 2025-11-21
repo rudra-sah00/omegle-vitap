@@ -47,6 +47,8 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
 
   const wsRef = useRef<WebSocketService | null>(null);
   const isJoiningRef = useRef(false);
+  const lastErrorTimeRef = useRef<number>(0);
+  const lastErrorMessageRef = useRef<string>('');
 
   // Initialize WebSocket service only when needed
   const getWs = useCallback(() => {
@@ -129,15 +131,27 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
 
     // Don't set error for normal closure
     if (event.code !== 1000) {
+      let errorMsg = '';
+      let errorCode = ErrorCode.CONNECTION_LOST;
+      
       if (event.code === 1006 || event.code >= 1011) {
         // Backend server is down or unavailable
-        const errorMsg = 'Service temporarily unavailable. Reconnecting...';
-        setError(errorMsg);
-        showError(errorMsg, ErrorCode.BACKEND_UNAVAILABLE);
+        errorMsg = 'Service temporarily unavailable. Reconnecting...';
+        errorCode = ErrorCode.BACKEND_UNAVAILABLE;
       } else {
-        const errorMsg = 'Connection lost. Reconnecting...';
+        errorMsg = 'Connection lost. Reconnecting...';
+      }
+      
+      // Throttle error messages - only show if different or 5 seconds have passed
+      const now = Date.now();
+      const timeSinceLastError = now - lastErrorTimeRef.current;
+      const isDifferentError = errorMsg !== lastErrorMessageRef.current;
+      
+      if (isDifferentError || timeSinceLastError > 5000) {
         setError(errorMsg);
-        showError(errorMsg, ErrorCode.CONNECTION_LOST);
+        showError(errorMsg, errorCode);
+        lastErrorTimeRef.current = now;
+        lastErrorMessageRef.current = errorMsg;
       }
     }
   }, []);
@@ -153,18 +167,33 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
     let errorCode = ErrorCode.CONNECTION_LOST;
     
     if (error instanceof Error) {
-      if (error.message.includes('Backend server') || error.message.includes('not responding')) {
-        errorMessage = 'Service temporarily unavailable. Please try again later.';
+      if (error.message.includes('Backend server') || error.message.includes('not responding') || error.message.includes('unavailable')) {
+        errorMessage = error.message;
         errorCode = ErrorCode.BACKEND_UNAVAILABLE;
+      } else if (error.message.includes('Authentication')) {
+        errorMessage = error.message;
+        errorCode = ErrorCode.AUTH_FAILED;
       } else if (error.message.includes('timeout')) {
         errorMessage = 'Connection timeout. Please check your internet.';
         errorCode = ErrorCode.CONNECTION_TIMEOUT;
+      } else if (error.message.includes('Cannot connect')) {
+        errorMessage = error.message;
+        errorCode = ErrorCode.BACKEND_UNAVAILABLE;
       }
     }
     
-    setError(errorMessage);
-    showError(errorMessage, errorCode);
-    onError?.('Connection error');
+    // Throttle error messages - only show if different or 5 seconds have passed
+    const now = Date.now();
+    const timeSinceLastError = now - lastErrorTimeRef.current;
+    const isDifferentError = errorMessage !== lastErrorMessageRef.current;
+    
+    if (isDifferentError || timeSinceLastError > 5000) {
+      setError(errorMessage);
+      showError(errorMessage, errorCode);
+      lastErrorTimeRef.current = now;
+      lastErrorMessageRef.current = errorMessage;
+      onError?.(errorMessage);
+    }
   }, [onError]);
 
   /**
