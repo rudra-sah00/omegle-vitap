@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -42,24 +43,19 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-@keyframes scaleIn {
+@keyframes fade-in {
   from {
-    transform: scale(0.9);
     opacity: 0;
+    transform: translateY(-20px);
   }
   to {
-    transform: scale(1);
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+.animate-fade-in {
+  animation: fade-in 1s ease-out;
 }
 
 :root {
@@ -137,14 +133,5 @@
   }
   body {
     @apply bg-background text-foreground;
-  }
-
-  /* Hide scrollbar for chat messages */
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
   }
 }

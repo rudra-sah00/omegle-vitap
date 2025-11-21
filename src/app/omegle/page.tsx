@@ -1,225 +1,170 @@
-"use client";
+'use client';
 
-import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
-// Firebase imports available if needed
-import { Toast } from "@/components/ui";
-import { useToast } from "@/hooks/useToast";
+import { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@/context/UserContext';
+import { useChatSession } from '@/hooks/useChatSession';
+import { ChatWindow } from '@/components/omegle/ChatWindow';
+import { MobileChat } from '@/components/omegle/MobileChat';
+import { VideoControls } from '@/components/omegle/VideoControls';
+import { VideoDisplay } from '@/components/omegle/VideoDisplay';
+import { LoadingState } from '@/components/omegle/LoadingState';
+import { ErrorState } from '@/components/omegle/ErrorState';
 
-export default function OmegleLanding() {
-  const [selectedYear, setSelectedYear] = useState("");
-  const [selectedGender, setSelectedGender] = useState("");
-  const [showYearDropdown, setShowYearDropdown] = useState(false);
-  const nameRef = useRef<HTMLInputElement>(null);
-  const interestsRef = useRef<HTMLTextAreaElement>(null);
+export default function OmeglePage() {
+  const { name, gender } = useUser();
   const router = useRouter();
-  const { toasts, removeToast, error: showError, warning } = useToast();
+  const [checkingStatus, setCheckingStatus] = useState(true);
+  
+  // Chat session hook (handles matchmaking, RTC, and RTM)
+  const {
+    connectionState,
+    matchData,
+    isMatched,
+    isInSession,
+    matchmakingError,
+    isCameraOn,
+    isMicOn,
+    messages,
+    isPartnerTyping,
+    startSearch,
+    stopSearch,
+    endSession,
+    findNext,
+    toggleCamera,
+    toggleMicrophone,
+    sendMessage,
+    sendTypingIndicator,
+  } = useChatSession({
+    localVideoElementId: 'local-video',
+    remoteVideoElementId: 'remote-video',
+  });
 
-  const years = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
-  const genders = ["Male", "Female", "Other"];
-
-  // Pre-fill form if user info exists (but don't auto-redirect)
+  /**
+   * Check user status on mount
+   */
   useEffect(() => {
-    try {
-      const userInfoStr = localStorage.getItem("userInfo");
-      if (userInfoStr) {
-        const userInfo = JSON.parse(userInfoStr);
-        // Pre-fill form fields if valid data exists
-        if (userInfo.name && userInfo.name.trim() !== "") {
-          if (nameRef.current) nameRef.current.value = userInfo.name;
-        }
-        if (userInfo.year) {
-          setSelectedYear(userInfo.year);
-        }
-        if (userInfo.gender) {
-          setSelectedGender(userInfo.gender);
-        }
-        if (userInfo.interests && interestsRef.current) {
-          interestsRef.current.value = userInfo.interests;
-        }
-      }
-    } catch (_error) {
-      // Invalid JSON, clear it
-      localStorage.removeItem("userInfo");
+    if (!name) {
+      router.push('/welcome');
+    } else {
+      setCheckingStatus(false);
     }
-  }, []);
+  }, [name, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const name = nameRef.current?.value?.trim() || "";
-    const interests = interestsRef.current?.value?.trim() || "";
-
-    if (!name || !selectedYear || !selectedGender) {
-      warning("Please fill in all required fields (Name, Year, and Gender)");
+  /**
+   * Handle start button click
+   */
+  const handleStart = async () => {
+    if (!name || !gender) {
+      alert('Please set your name and gender first');
+      router.push('/welcome');
       return;
     }
 
-    const userInfo = {
+    await startSearch({
       name,
-      year: selectedYear,
-      gender: selectedGender,
-      interests,
-      timestamp: Date.now(),
-    };
+      gender,
+      targetGender: undefined,
+    });
+  };
 
-    try {
-      // Only store in localStorage - don't add to Firebase until user starts searching
-      localStorage.setItem("userInfo", JSON.stringify(userInfo));
+  /**
+   * Handle stop searching
+   */
+  const handleStop = async () => {
+    await stopSearch();
+  };
 
-      router.push("/omegle/home");
-    } catch (_error) {
-      showError("Unable to save your information. Please try again.");
+  /**
+   * Handle next button (find new partner)
+   */
+  const handleNext = async () => {
+    await findNext();
+  };
+
+  /**
+   * Handle message input typing
+   */
+  const handleTyping = (isTyping: boolean) => {
+    if (isInSession) {
+      sendTypingIndicator(isTyping);
     }
   };
 
+  // Show loading while checking status or connecting
+  if (!name || checkingStatus || connectionState === 'connecting') {
+    return <LoadingState state={connectionState} />;
+  }
+
+  // Show error state
+  if (matchmakingError && connectionState === 'error') {
+    return (
+      <ErrorState
+        error={matchmakingError}
+        onGoBack={() => router.push('/welcome')}
+      />
+    );
+  }
+
+  const isSearching = connectionState === 'waiting' && !isMatched;
+
   return (
-    <div className="min-h-screen bg-[#4FC3F7] flex flex-col">
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col lg:flex-row items-center justify-center lg:justify-between px-4 sm:px-8 md:px-16 lg:px-24 py-8 lg:py-0 max-w-7xl mx-auto w-full gap-8 lg:gap-12">
-        {/* Left Side - Branding */}
-        <div className="flex-1 flex flex-col items-center justify-center w-full">
-          {/* Hero Image */}
-          <div className="relative w-full max-w-md sm:max-w-lg lg:max-w-4xl">
-            <Image
-              src="/hero.png"
-              alt="Omegle VITAP"
-              width={900}
-              height={720}
-              className="w-full h-auto object-contain"
-              priority
+    <div className="min-h-screen flex" style={{ backgroundColor: '#e8f4f8' }}>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col lg:flex-row">
+        {/* Left Side - Video Areas */}
+        <div className="flex-1 flex flex-col p-4 gap-4">
+          {/* Stranger Video */}
+          <VideoDisplay
+            id="remote-video"
+            label={matchData?.partner?.name || 'Stranger'}
+            isConnected={isMatched}
+            isSearching={isSearching}
+            showConnectionIndicator={true}
+          />
+
+          {/* Your Video */}
+          <VideoDisplay
+            id="local-video"
+            label="Your camera"
+            isConnected={isMatched}
+            isSearching={false}
+            showConnectionIndicator={false}
+          >
+            {/* Control Buttons */}
+            <VideoControls
+              isMatched={isMatched}
+              isSearching={isSearching}
+              isCameraOn={isCameraOn}
+              isMicOn={isMicOn}
+              onStart={handleStart}
+              onStop={handleStop}
+              onNext={handleNext}
+              onToggleCamera={toggleCamera}
+              onToggleMicrophone={toggleMicrophone}
+              onLeave={endSession}
             />
-          </div>
+          </VideoDisplay>
         </div>
 
-        {/* Right Side - Form Card */}
-        <div className="flex-1 flex justify-center lg:justify-end w-full">
-          <div className="bg-white/20 backdrop-blur-lg rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl border border-white/30">
-            <form className="space-y-4 sm:space-y-5" onSubmit={handleSubmit}>
-              <div>
-                <input
-                  ref={nameRef}
-                  type="text"
-                  placeholder="Your Name *"
-                  className="w-full px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl bg-white/60 backdrop-blur-sm border border-white/40 placeholder-gray-600 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
-                  required
-                />
-              </div>
-
-              {/* Custom Year Selector */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowYearDropdown(!showYearDropdown)}
-                  className="w-full px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl bg-white/60 backdrop-blur-sm border border-white/40 text-gray-600 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm text-left flex items-center justify-between"
-                >
-                  <span className={selectedYear ? "text-gray-800" : "text-gray-600"}>
-                    {selectedYear || "Select Year *"}
-                  </span>
-                  <svg
-                    className={`w-5 h-5 text-gray-600 transition-transform ${showYearDropdown ? "rotate-180" : ""}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </button>
-
-                {showYearDropdown && (
-                  <div className="absolute z-10 w-full mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
-                    {years.map((year) => (
-                      <button
-                        key={year}
-                        type="button"
-                        onClick={() => {
-                          setSelectedYear(year);
-                          setShowYearDropdown(false);
-                        }}
-                        className={`w-full px-4 sm:px-5 py-3 text-left font-medium transition-colors ${
-                          selectedYear === year
-                            ? "bg-blue-50 text-blue-600"
-                            : "text-gray-700 hover:bg-gray-50"
-                        }`}
-                      >
-                        {year}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Gender Selector */}
-              <div>
-                <div className="grid grid-cols-3 gap-3">
-                  {genders.map((gender) => (
-                    <button
-                      key={gender}
-                      type="button"
-                      onClick={() => setSelectedGender(gender)}
-                      className={`py-3 px-3 sm:px-4 rounded-xl font-medium transition-all shadow-sm ${
-                        selectedGender === gender
-                          ? "bg-blue-600 text-white ring-2 ring-blue-400"
-                          : "bg-white/60 backdrop-blur-sm border border-white/40 text-gray-700 hover:bg-white/80"
-                      }`}
-                    >
-                      {gender}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <textarea
-                  ref={interestsRef}
-                  placeholder="Interests (optional)"
-                  rows={3}
-                  className="w-full px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl bg-white/60 backdrop-blur-sm border border-white/40 placeholder-gray-600 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none shadow-sm"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 sm:py-4 rounded-lg transition-all shadow-lg"
-              >
-                Start Chatting
-              </button>
-
-              <p className="text-center text-xs sm:text-sm text-white/80">
-                By continuing, you agree to our{" "}
-                <Link href="/terms" className="underline hover:text-white">
-                  Terms
-                </Link>
-                ,{" "}
-                <Link href="/privacy" className="underline hover:text-white">
-                  Privacy
-                </Link>{" "}
-                &{" "}
-                <Link href="/community" className="underline hover:text-white">
-                  Community Guidelines
-                </Link>
-              </p>
-            </form>
-          </div>
-        </div>
-      </main>
-
-      {/* Toast Notifications */}
-      {toasts.map((toast) => (
-        <Toast
-          key={toast.id}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => removeToast(toast.id)}
+        {/* Right Side - Desktop Chat Window */}
+        <ChatWindow 
+          isConnected={isMatched} 
+          isStrangerTyping={isPartnerTyping}
+          onSendMessage={sendMessage}
+          connectionState={connectionState}
+          messages={messages}
         />
-      ))}
+
+        {/* Mobile Chat */}
+        <MobileChat 
+          isConnected={isMatched} 
+          isStrangerTyping={isPartnerTyping}
+          onSendMessage={sendMessage}
+          connectionState={connectionState}
+          messages={messages}
+        />
+      </div>
     </div>
   );
 }

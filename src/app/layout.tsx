@@ -1,6 +1,6 @@
+import { UserProvider } from "@/context/UserContext";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { AnalyticsInitializer } from "@/components/AnalyticsInitializer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,30 +13,22 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-/**
- * Root metadata configuration for the entire application
- * Includes SEO, Open Graph, and social media metadata
- */
 export const metadata: Metadata = {
-  title: "Omegle VITAP - Chat with Random Strangers",
-  description:
-    "Connect with random people worldwide through video and text chat. Anonymous, safe, and free. Start chatting now!",
-  keywords: ["omegle", "random chat", "video chat", "stranger chat", "anonymous chat", "vitap"],
-  authors: [{ name: "Omegle VITAP" }],
-  metadataBase: new URL("https://vitap.in"),
+  title: "Omegle VITAP - Connect Anonymously",
+  description: "Connect with strangers anonymously and make new friends at VITAP. Talk to fellow VITAP students in real-time.",
+  keywords: ["omegle", "vitap", "anonymous chat", "students", "vellore"],
+  authors: [{ name: "Omegle VITAP Team" }],
   openGraph: {
-    title: "Omegle VITAP - Chat with Random Strangers",
-    description:
-      "Connect with random people worldwide through video and text chat. Anonymous, safe, and free.",
-    url: "https://vitap.in",
+    title: "Omegle VITAP - Connect Anonymously",
+    description: "Connect with strangers anonymously and make new friends at VITAP. Talk to fellow VITAP students in real-time.",
+    url: "https://omegle-vitap.vercel.app",
     siteName: "Omegle VITAP",
     images: [
       {
-        url: "https://vitap.in/public_brand.png",
+        url: "/public_brand.png",
         width: 1200,
         height: 630,
-        alt: "Omegle VITAP - Random Video Chat",
-        type: "image/png",
+        alt: "Omegle VITAP - Talk to strangers",
       },
     ],
     locale: "en_US",
@@ -44,17 +36,15 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Omegle VITAP - Chat with Random Strangers",
-    description:
-      "Connect with random people worldwide through video and text chat. Anonymous, safe, and free.",
-    images: ["https://vitap.in/public_brand.png"],
-    creator: "@omeaglevitap",
+    title: "Omegle VITAP - Connect Anonymously",
+    description: "Connect with strangers anonymously and make new friends at VITAP. Talk to fellow VITAP students in real-time.",
+    images: ["/public_brand.png"],
+    creator: "@omeglevitap",
   },
   icons: {
     icon: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
+    apple: "/hero.png",
   },
-  manifest: "/site.webmanifest",
   robots: {
     index: true,
     follow: true,
@@ -75,19 +65,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <meta property="og:image" content="https://vitap.in/public_brand.png" />
-        <meta property="og:image:secure_url" content="https://vitap.in/public_brand.png" />
-        <meta property="og:image:type" content="image/png" />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="Omegle VITAP - Random Video Chat" />
-        <meta name="twitter:image" content="https://vitap.in/public_brand.png" />
-        <link rel="canonical" href="https://vitap.in" />
-      </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white`}>
-        <AnalyticsInitializer />
-        {children}
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <UserProvider>
+          {children}
+        </UserProvider>
       </body>
     </html>
   );

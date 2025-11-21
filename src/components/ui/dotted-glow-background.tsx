@@ -66,9 +66,14 @@ export const DottedGlowBackground = ({
   const [resolvedGlowColor, setResolvedGlowColor] = useState<string>(glowColor);
 
   // Resolve CSS variable value from the container or root
-  const resolveCssVariable = (el: Element, variableName?: string): string | null => {
+  const resolveCssVariable = (
+    el: Element,
+    variableName?: string,
+  ): string | null => {
     if (!variableName) return null;
-    const normalized = variableName.startsWith("--") ? variableName : `--${variableName}`;
+    const normalized = variableName.startsWith("--")
+      ? variableName
+      : `--${variableName}`;
     const fromEl = getComputedStyle(el as Element)
       .getPropertyValue(normalized)
       .trim();
@@ -82,7 +87,10 @@ export const DottedGlowBackground = ({
     const root = document.documentElement;
     if (root.classList.contains("dark")) return true;
     if (root.classList.contains("light")) return false;
-    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return (
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+    );
   };
 
   // Keep resolved colors in sync with theme changes and prop updates
@@ -113,7 +121,9 @@ export const DottedGlowBackground = ({
 
     compute();
 
-    const mql = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+    const mql = window.matchMedia
+      ? window.matchMedia("(prefers-color-scheme: dark)")
+      : null;
     const handleMql = () => compute();
     mql?.addEventListener?.("change", handleMql);
 
@@ -197,7 +207,7 @@ export const DottedGlowBackground = ({
 
     const draw = (now: number) => {
       if (stopped) return;
-      const _dt = (now - last) / 1000; // seconds
+      const dt = (now - last) / 1000; // seconds
       last = now;
       const { width, height } = container.getBoundingClientRect();
 
@@ -212,10 +222,13 @@ export const DottedGlowBackground = ({
           Math.min(width, height) * 0.1,
           width * 0.5,
           height * 0.5,
-          Math.max(width, height) * 0.7
+          Math.max(width, height) * 0.7,
         );
         grad.addColorStop(0, "rgba(0,0,0,0)");
-        grad.addColorStop(1, `rgba(0,0,0,${Math.min(Math.max(backgroundOpacity, 0), 1)})`);
+        grad.addColorStop(
+          1,
+          `rgba(0,0,0,${Math.min(Math.max(backgroundOpacity, 0), 1)})`,
+        );
         ctx.fillStyle = grad as unknown as CanvasGradient;
         ctx.fillRect(0, 0, width, height);
       }
@@ -279,8 +292,15 @@ export const DottedGlowBackground = ({
   ]);
 
   return (
-    <div ref={containerRef} className={className} style={{ position: "absolute", inset: 0 }}>
-      <canvas ref={canvasRef} style={{ display: "block", width: "100%", height: "100%" }} />
+    <div
+      ref={containerRef}
+      className={className}
+      style={{ position: "absolute", inset: 0 }}
+    >
+      <canvas
+        ref={canvasRef}
+        style={{ display: "block", width: "100%", height: "100%" }}
+      />
     </div>
   );
 };
