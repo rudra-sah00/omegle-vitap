@@ -3,6 +3,7 @@
  */
 
 import { useRef, useState, useCallback } from 'react';
+import { showError, ErrorCode } from '@/lib/toast';
 import type { MatchData } from '@/types/matchmaking';
 import type { MessageData } from '@/lib/agora-rtm';
 
@@ -31,8 +32,6 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
       // Dynamically import Agora RTM (client-side only)
       const { AgoraRTMService } = await import('@/lib/agora-rtm');
 
-      console.log('[Agora RTM] Initializing...');
-
       // Convert UID to string and ensure it's valid for RTM
       const uidString = typeof uid === 'number' ? uid.toString() : uid;
       
@@ -45,13 +44,11 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
 
       // Setup event handlers
       rtmServiceRef.current.setOnMessageReceived((message: MessageData) => {
-        console.log('[Agora RTM] Message received:', message);
         setMessages(prev => [...prev, message]);
         onMessageReceived?.(message);
       });
 
       rtmServiceRef.current.setOnTypingIndicator((isTyping: boolean) => {
-        console.log('[Agora RTM] Partner typing:', isTyping);
         setIsPartnerTyping(isTyping);
         onTypingIndicator?.(isTyping);
       });
@@ -66,11 +63,7 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
       currentUidRef.current = typeof uid === 'number' ? uid.toString() : uid;
 
       setIsRTMInitialized(true);
-      console.log('✅ RTM initialized successfully');
     } catch (error) {
-      console.error('❌ Failed to initialize RTM:', error);
-      console.warn('⚠️ RTM is not enabled in Agora Console. Please enable RTM service or messaging will not work.');
-      console.warn('⚠️ Go to Agora Console → Your Project → Enable RTM (Real-Time Messaging)');
       // Don't throw error, just mark as not initialized
       setIsRTMInitialized(false);
     }
@@ -87,10 +80,8 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
       
       // Don't add to local messages - let the RTM SDK echo it back
       // This prevents duplicate messages
-      
-      console.log('[Agora RTM] Message sent:', text);
     } catch (error) {
-      console.error('❌ Error sending message:', error);
+      showError('Failed to send message. Please try again.', ErrorCode.MESSAGE_SEND_FAILED);
     }
   }, []);
 
@@ -103,7 +94,6 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
     try {
       await rtmServiceRef.current.sendTypingIndicator(isTyping);
     } catch (error) {
-      console.error('❌ Error sending typing indicator:', error);
     }
   }, []);
 
@@ -118,9 +108,7 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
       setIsRTMInitialized(false);
       setMessages([]);
       setIsPartnerTyping(false);
-      console.log('✅ RTM cleaned up');
     } catch (error) {
-      console.error('❌ Error leaving RTM:', error);
     }
   }, []);
 

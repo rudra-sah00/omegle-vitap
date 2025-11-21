@@ -40,12 +40,10 @@ export class WebSocketService {
    */
   connect(): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
-      console.log('[WebSocket] Already connected');
       return;
     }
 
     if (this.ws?.readyState === WebSocket.CONNECTING) {
-      console.log('[WebSocket] Connection in progress');
       return;
     }
 
@@ -67,10 +65,25 @@ export class WebSocketService {
       this.ws.onerror = this.handleError.bind(this);
       this.ws.onclose = this.handleClose.bind(this);
 
-      console.log('[WebSocket] Connecting to:', this.url);
+      // Set a connection timeout
+      const connectionTimeout = setTimeout(() => {
+        if (this.ws?.readyState === WebSocket.CONNECTING) {
+          this.ws.close();
+          this.handleError(new Error('Backend server is not responding. Please try again later.'));
+        }
+      }, 10000); // 10 second timeout
+      
+      // Clear timeout on successful connection
+      if (this.ws) {
+        const ws = this.ws; // Store in local variable
+        const originalOnOpen = ws.onopen;
+        ws.onopen = (event) => {
+          clearTimeout(connectionTimeout);
+          originalOnOpen?.call(ws, event);
+        };
+      }
     } catch (error) {
-      console.error('[WebSocket] Connection failed:', error);
-      this.handleError(error as Error);
+      this.handleError(new Error('Unable to connect to backend server. Please check if the server is running.'));
     }
   }
 
@@ -86,8 +99,6 @@ export class WebSocketService {
       this.ws.close(1000, 'Client disconnected');
       this.ws = null;
     }
-
-    console.log('[WebSocket] Disconnected');
   }
 
   /**
@@ -95,17 +106,14 @@ export class WebSocketService {
    */
   send(message: ClientMessage): boolean {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.error('[WebSocket] Cannot send message: not connected');
       return false;
     }
 
     try {
       const jsonMessage = JSON.stringify(message);
       this.ws.send(jsonMessage);
-      console.log('[WebSocket] Sent:', message.type, message.data);
       return true;
     } catch (error) {
-      console.error('[WebSocket] Send failed:', error);
       return false;
     }
   }
@@ -160,7 +168,6 @@ export class WebSocketService {
    * Handle WebSocket open event
    */
   private handleOpen(): void {
-    console.log('[WebSocket] Connected successfully');
     this.reconnectAttempts = 0;
     this.reconnectDelay = 2000;
     this.startHeartbeat();
@@ -177,17 +184,14 @@ export class WebSocketService {
       
       // Handle pong response (has type but no data field)
       if (data.type === 'pong' || (data.type === 'response' && data.data?.status === 'pong')) {
-        console.log('[WebSocket] Pong received ✓');
         this.missedPongs = 0; // Reset missed pongs counter
         return;
       }
       
       const message = data as ServerMessage;
-      console.log('[WebSocket] Received:', message.data?.status || message.type, message.data);
 
       this.messageHandlers.forEach(handler => handler(message));
     } catch (error) {
-      console.error('[WebSocket] Failed to parse message:', error);
     }
   }
 
@@ -195,7 +199,6 @@ export class WebSocketService {
    * Handle WebSocket errors
    */
   private handleError(error: Event | Error): void {
-    console.error('[WebSocket] Error:', error);
     this.errorHandlers.forEach(handler => handler(error));
   }
 
@@ -203,7 +206,6 @@ export class WebSocketService {
    * Handle WebSocket close event
    */
   private handleClose(event: CloseEvent): void {
-    console.log('[WebSocket] Connection closed:', event.code, event.reason);
     this.clearHeartbeat();
 
     this.closeHandlers.forEach(handler => handler(event));
@@ -219,14 +221,11 @@ export class WebSocketService {
    */
   private attemptReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('[WebSocket] Max reconnection attempts reached');
       return;
     }
 
     this.reconnectAttempts++;
     const delay = Math.min(this.reconnectDelay * Math.pow(1.5, this.reconnectAttempts - 1), 30000);
-
-    console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
     this.reconnectTimer = setTimeout(() => {
       this.connect();
@@ -253,7 +252,6 @@ export class WebSocketService {
     this.heartbeatInterval = setInterval(() => {
       if (this.isConnected()) {
         this.send({ type: 'ping', data: {} });
-        console.log('[WebSocket] Ping sent');
       }
     }, this.heartbeatIntervalMs);
   }
@@ -277,12 +275,9 @@ export class WebSocketService {
 
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        console.log('[WebSocket] Page hidden, keeping connection alive');
       } else {
-        console.log('[WebSocket] Page visible again');
         // Check if connection is still alive
         if (!this.isConnected() && !this.isIntentionalClose) {
-          console.log('[WebSocket] Reconnecting after visibility change');
           this.connect();
         }
       }
@@ -314,7 +309,6 @@ export const getWebSocketService = (): WebSocketService => {
       throw new Error('WebSocket configuration missing. Set NEXT_PUBLIC_WS_URL and NEXT_PUBLIC_API_KEY in .env.local');
     }
 
-    console.log('[WebSocket] Creating service instance (not connected yet)');
     wsInstance = new WebSocketService(wsUrl, apiKey);
   }
 

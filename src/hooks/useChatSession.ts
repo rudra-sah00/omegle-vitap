@@ -7,6 +7,7 @@ import { useCallback, useRef, useState, useEffect } from 'react';
 import { useMatchmaking } from './useMatchmaking';
 import { useAgoraRTC } from './useAgoraRTC';
 import { useAgoraRTM } from './useAgoraRTM';
+import { showError, showInfo, ErrorCode } from '@/lib/toast';
 import type { MatchData } from '@/types/matchmaking';
 
 interface UseChatSessionOptions {
@@ -21,6 +22,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
   const currentUidRef = useRef<string>('');
   const currentMatchRef = useRef<MatchData | null>(null);
   const userDataRef = useRef<{ name: string; gender: 'male' | 'female' | 'other' } | null>(null);
+  const isLeavingRef = useRef(false);
 
   // State
   const [isInSession, setIsInSession] = useState(false);
@@ -50,13 +52,16 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     initializeRTC,
     toggleCamera,
     toggleMicrophone,
+    switchCamera,
+    switchMicrophone,
+    getCurrentDevices,
     leaveRTC,
   } = useAgoraRTC({
-    onRemoteVideoReady: (userId) => {
-      console.log('🎥 Remote video ready:', userId);
+    onRemoteVideoReady: () => {
+      // Remote video ready
     },
-    onRemoteUserLeft: (userId) => {
-      console.log('👋 Remote user left:', userId);
+    onRemoteUserLeft: () => {
+      // Remote user left
     },
   });
 
@@ -70,11 +75,11 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     sendTypingIndicator,
     leaveRTM,
   } = useAgoraRTM({
-    onMessageReceived: (message) => {
-      console.log('💬 Message received:', message.text);
+    onMessageReceived: () => {
+      // Message received
     },
-    onTypingIndicator: (isTyping) => {
-      console.log('✍️ Partner typing:', isTyping);
+    onTypingIndicator: () => {
+      // Partner typing indicator
     },
   });
 
@@ -82,7 +87,10 @@ export const useChatSession = (options: UseChatSessionOptions) => {
    * Handle successful match
    */
   async function handleMatched(matchData: MatchData) {
-    console.log('🎉 Match found!', matchData);
+    if (isLeavingRef.current || isInSession) {
+      return;
+    }
+    
     currentMatchRef.current = matchData;
 
     try {
@@ -97,22 +105,24 @@ export const useChatSession = (options: UseChatSessionOptions) => {
 
       // Check if RTC initialized successfully (RTM is optional)
       if (rtcResult.status === 'rejected') {
-        throw new Error('Failed to initialize video/audio (RTC)');
+        throw new Error('Failed to initialize video/audio');
       }
 
       setIsInSession(true);
-      console.log('✅ Session started (RTC working, RTM may be disabled)');
+      showInfo('Connected! Say hi to your new chat partner.');
     } catch (error) {
-      console.error('❌ Failed to initialize Agora:', error);
-      // TODO: Show error to user
+      showError('Failed to join video call. Please try again.', ErrorCode.CHANNEL_JOIN_FAILED);
+      await endSession();
     }
   }
 
   /**
-   * Handle partner leaving
+   * Handle partner leaving - force cleanup for both users
    */
   async function handlePartnerLeft() {
-    console.log('👋 Partner left the chat');
+    if (isLeavingRef.current) return;
+    
+    showInfo('Your chat partner has disconnected.');
     await endSession();
   }
 
@@ -120,8 +130,11 @@ export const useChatSession = (options: UseChatSessionOptions) => {
    * Handle matchmaking errors
    */
   function handleMatchmakingError(error: string) {
-    console.error('❌ Matchmaking error:', error);
-    // TODO: Show error to user
+    if (error.toLowerCase().includes('backend') || error.toLowerCase().includes('unavailable')) {
+      showError('Service temporarily unavailable. Please try again.', ErrorCode.BACKEND_UNAVAILABLE);
+    } else {
+      showError('Connection error. Please check your internet.', ErrorCode.CONNECTION_LOST);
+    }
   }
 
   /**
@@ -150,7 +163,6 @@ export const useChatSession = (options: UseChatSessionOptions) => {
       gender: formattedData.gender,
     };
 
-    console.log('🔍 Starting search with:', formattedData);
     await joinQueue(formattedData);
   }, [joinQueue]);
 
@@ -158,8 +170,6 @@ export const useChatSession = (options: UseChatSessionOptions) => {
    * Stop searching (cancel while waiting)
    */
   const stopSearch = useCallback(async () => {
-    console.log('⏹️ Stopping search');
-    
     // Cancel search if we have a current UID and user data
     if (currentUidRef.current && userDataRef.current) {
       cancelSearch({
@@ -167,36 +177,43 @@ export const useChatSession = (options: UseChatSessionOptions) => {
         name: userDataRef.current.name,
         gender: userDataRef.current.gender,
       });
-    } else {
-      console.warn('⚠️ Cannot cancel search: missing UID or user data');
     }
   }, [cancelSearch]);
 
   /**
-   * End current session and cleanup
+   * End current session and cleanup - ensure both users leave channel
    */
   const endSession = useCallback(async () => {
-    console.log('🔚 Ending session');
+    if (isLeavingRef.current) {
+      return;
+    }
+    
+    isLeavingRef.current = true;
     
     setIsInSession(false);
     currentMatchRef.current = null;
 
-    // Cleanup Agora connections
+    // Cleanup Agora connections - this forces channel leave
     await Promise.all([
       leaveRTC(),
       leaveRTM(),
     ]);
 
-    // Leave room but keep WebSocket connected for next match
+    // Notify server we're leaving the room
     await leaveRoom();
-    console.log('✅ Session ended, WebSocket still connected');
+    
+    isLeavingRef.current = false;
   }, [leaveRTC, leaveRTM, leaveRoom]);
 
   /**
    * Next - find new partner (keeps camera/mic state)
    */
   const findNext = useCallback(async () => {
-    console.log('⏭️ Finding next partner');
+    if (isLeavingRef.current) {
+      return;
+    }
+    
+    isLeavingRef.current = true;
     
     // End current session
     setIsInSession(false);
@@ -207,6 +224,9 @@ export const useChatSession = (options: UseChatSessionOptions) => {
       leaveRTC(),
       leaveRTM(),
     ]);
+    
+    // Wait a moment for Agora to fully disconnect
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Generate new UID for next session
     const uid = Math.floor(Math.random() * 1000000);
@@ -221,8 +241,9 @@ export const useChatSession = (options: UseChatSessionOptions) => {
       };
       
       await joinQueue(lastUserData);
+      isLeavingRef.current = false;
     } else {
-      console.error('❌ Cannot find next: missing user data');
+      isLeavingRef.current = false;
     }
   }, [leaveRTC, leaveRTM, joinQueue]);
 
@@ -258,6 +279,9 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     findNext,
     toggleCamera,
     toggleMicrophone,
+    switchCamera,
+    switchMicrophone,
+    getCurrentDevices,
     sendMessage,
     sendTypingIndicator,
   };

@@ -10,8 +10,10 @@ import { VideoControls } from '@/components/omegle/VideoControls';
 import { VideoDisplay } from '@/components/omegle/VideoDisplay';
 import { LoadingState } from '@/components/omegle/LoadingState';
 import { ErrorState } from '@/components/omegle/ErrorState';
+import { OmegleErrorBoundary } from '@/components/omegle/OmegleErrorBoundary';
+import { showError, showWarning, ErrorCode } from '@/lib/toast';
 
-export default function OmeglePage() {
+function OmeglePageContent() {
   const { name, gender } = useUser();
   const router = useRouter();
   const [checkingStatus, setCheckingStatus] = useState(true);
@@ -33,12 +35,36 @@ export default function OmeglePage() {
     findNext,
     toggleCamera,
     toggleMicrophone,
+    switchCamera,
+    switchMicrophone,
+    getCurrentDevices,
     sendMessage,
     sendTypingIndicator,
   } = useChatSession({
     localVideoElementId: 'local-video',
     remoteVideoElementId: 'remote-video',
   });
+  
+  const devices = getCurrentDevices();
+
+  /**
+   * Check browser compatibility
+   */
+  useEffect(() => {
+    // Check for required APIs
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showError('Your browser does not support video/audio. Please use Chrome, Firefox, or Safari.', ErrorCode.MEDIA_DEVICE_NOT_FOUND);
+      setTimeout(() => router.push('/welcome'), 3000);
+      return;
+    }
+
+    // Check for WebRTC support
+    if (!window.RTCPeerConnection) {
+      showError('Your browser does not support WebRTC. Please update your browser.', ErrorCode.MEDIA_DEVICE_NOT_FOUND);
+      setTimeout(() => router.push('/welcome'), 3000);
+      return;
+    }
+  }, [router]);
 
   /**
    * Check user status on mount
@@ -52,34 +78,144 @@ export default function OmeglePage() {
   }, [name, router]);
 
   /**
+   * Monitor network status
+   */
+  useEffect(() => {
+    const handleOnline = () => {
+      if (isInSession) {
+        showWarning('Connection restored. You may need to reconnect.');
+      }
+    };
+
+    const handleOffline = () => {
+      showError('Lost internet connection. Please check your network.', ErrorCode.CONNECTION_LOST);
+      if (isInSession) {
+        endSession();
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [isInSession, endSession]);
+
+  /**
+   * Handle page visibility changes (tab switching)
+   */
+  useEffect(() => {
+    let wasHidden = false;
+    
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        wasHidden = true;
+      } else if (wasHidden && isInSession) {
+        // User came back to tab during active session
+        showWarning('Welcome back! Check your connection.');
+        wasHidden = false;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isInSession]);
+
+  /**
+   * Prevent accidental page close during active session
+   */
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isInSession) {
+        e.preventDefault();
+        e.returnValue = 'You are in an active chat. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isInSession]);
+
+  /**
    * Handle start button click
    */
   const handleStart = async () => {
-    if (!name || !gender) {
-      alert('Please set your name and gender first');
-      router.push('/welcome');
-      return;
-    }
+    try {
+      // Validate user data
+      if (!name || !gender) {
+        showError('Please set your name and gender first', ErrorCode.CONNECTION_LOST);
+        router.push('/welcome');
+        return;
+      }
 
-    await startSearch({
-      name,
-      gender,
-      targetGender: undefined,
-    });
+      // Check if already searching or in session
+      if (connectionState === 'waiting' || isInSession) {
+        showWarning('Already searching or in a session');
+        return;
+      }
+
+      // Check network connectivity
+      if (!navigator.onLine) {
+        showError('No internet connection. Please check your network.', ErrorCode.CONNECTION_LOST);
+        return;
+      }
+
+      // Show privacy reminder if neither camera nor mic is enabled
+      if (!isCameraOn && !isMicOn) {
+        const proceed = confirm(
+          '⚠️ Privacy Notice\n\n' +
+          'Your camera and microphone are currently OFF.\n\n' +
+          'You can start without them, but you won\'t be able to see or hear your partner.\n\n' +
+          'Click the camera or microphone buttons below to enable them.\n\n' +
+          'Continue without camera and mic?'
+        );
+        if (!proceed) return;
+      }
+
+      await startSearch({
+        name,
+        gender,
+        targetGender: undefined,
+      });
+    } catch (error) {
+      showError('Failed to start search. Please try again.', ErrorCode.CONNECTION_LOST);
+    }
   };
 
   /**
    * Handle stop searching
    */
   const handleStop = async () => {
-    await stopSearch();
+    try {
+      await stopSearch();
+    } catch (error) {
+      showError('Failed to stop search. Refreshing...', ErrorCode.CONNECTION_LOST);
+      setTimeout(() => window.location.reload(), 1000);
+    }
   };
 
   /**
    * Handle next button (find new partner)
    */
   const handleNext = async () => {
-    await findNext();
+    try {
+      if (!navigator.onLine) {
+        showError('No internet connection. Please check your network.', ErrorCode.CONNECTION_LOST);
+        return;
+      }
+      await findNext();
+    } catch (error) {
+      showError('Failed to find next partner. Please try again.', ErrorCode.CONNECTION_LOST);
+    }
   };
 
   /**
@@ -102,6 +238,7 @@ export default function OmeglePage() {
       <ErrorState
         error={matchmakingError}
         onGoBack={() => router.push('/welcome')}
+        onRetry={() => window.location.reload()}
       />
     );
   }
@@ -130,6 +267,7 @@ export default function OmeglePage() {
             isConnected={isMatched}
             isSearching={false}
             showConnectionIndicator={false}
+            isCameraOn={isCameraOn}
           >
             {/* Control Buttons */}
             <VideoControls
@@ -137,11 +275,15 @@ export default function OmeglePage() {
               isSearching={isSearching}
               isCameraOn={isCameraOn}
               isMicOn={isMicOn}
+              currentCameraId={devices.cameraId}
+              currentMicId={devices.micId}
               onStart={handleStart}
               onStop={handleStop}
               onNext={handleNext}
               onToggleCamera={toggleCamera}
               onToggleMicrophone={toggleMicrophone}
+              onSwitchCamera={switchCamera}
+              onSwitchMicrophone={switchMicrophone}
               onLeave={endSession}
             />
           </VideoDisplay>
@@ -168,5 +310,13 @@ export default function OmeglePage() {
         />
       </div>
     </div>
+  );
+}
+
+export default function OmeglePage() {
+  return (
+    <OmegleErrorBoundary>
+      <OmeglePageContent />
+    </OmegleErrorBoundary>
   );
 }

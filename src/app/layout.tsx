@@ -1,6 +1,7 @@
 import { UserProvider } from "@/context/UserContext";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,6 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://omegle-vitap.vercel.app'),
   title: "Omegle VITAP - Connect Anonymously",
   description: "Connect with strangers anonymously and make new friends at VITAP. Talk to fellow VITAP students in real-time.",
   keywords: ["omegle", "vitap", "anonymous chat", "students", "vellore"],
@@ -68,6 +70,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <Toaster />
         <UserProvider>
           {children}
         </UserProvider>

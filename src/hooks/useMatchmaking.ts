@@ -4,7 +4,8 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { getWebSocketService, destroyWebSocketService } from '@/lib/websocket';
+import { getWebSocketService, destroyWebSocketService, WebSocketService } from '@/lib/websocket';
+import { showError, ErrorCode } from '@/lib/toast';
 import type {
   ConnectionState,
   MatchData,
@@ -63,13 +64,11 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
 
     switch (data.status) {
       case 'waiting':
-        console.log('[Matchmaking] Waiting for match...');
         setConnectionState('waiting');
         setError(null);
         break;
 
       case 'matched':
-        console.log('[Matchmaking] Match found!', data);
         setConnectionState('matched');
         setMatchData(data);
         setError(null);
@@ -78,7 +77,6 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
         break;
 
       case 'left':
-        console.log('[Matchmaking] Left room successfully');
         setConnectionState('connected');
         setMatchData(null);
         setError(null);
@@ -86,7 +84,6 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
 
       case 'partner_left':
       case 'partner_disconnected':
-        console.log('[Matchmaking] Partner left the room');
         setConnectionState('connected');
         setMatchData(null);
         setError(null);
@@ -94,7 +91,6 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
         break;
 
       case 'cancelled':
-        console.log('[Matchmaking] Search cancelled successfully');
         setConnectionState('connected');
         setMatchData(null);
         setError(null);
@@ -102,7 +98,6 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
         break;
 
       case 'error':
-        console.error('[Matchmaking] Error:', data.message);
         setConnectionState('error');
         setError(data.message);
         isJoiningRef.current = false;
@@ -114,7 +109,6 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
         break;
 
       default:
-        console.warn('[Matchmaking] Unknown status:', data);
     }
   }, [onMatched, onPartnerLeft, onError]);
 
@@ -122,7 +116,6 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
    * Handle WebSocket open event
    */
   const handleOpen = useCallback(() => {
-    console.log('[Matchmaking] WebSocket connected');
     setConnectionState('connected');
     setError(null);
   }, []);
@@ -131,13 +124,21 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
    * Handle WebSocket close event
    */
   const handleClose = useCallback((event: CloseEvent) => {
-    console.log('[Matchmaking] WebSocket closed:', event.code);
     setConnectionState('disconnected');
     setMatchData(null);
 
     // Don't set error for normal closure
     if (event.code !== 1000) {
-      setError('Connection lost. Reconnecting...');
+      if (event.code === 1006 || event.code >= 1011) {
+        // Backend server is down or unavailable
+        const errorMsg = 'Service temporarily unavailable. Reconnecting...';
+        setError(errorMsg);
+        showError(errorMsg, ErrorCode.BACKEND_UNAVAILABLE);
+      } else {
+        const errorMsg = 'Connection lost. Reconnecting...';
+        setError(errorMsg);
+        showError(errorMsg, ErrorCode.CONNECTION_LOST);
+      }
     }
   }, []);
 
@@ -145,9 +146,24 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
    * Handle WebSocket error
    */
   const handleError = useCallback((error: Event | Error) => {
-    console.error('[Matchmaking] WebSocket error:', error);
     setConnectionState('error');
-    setError('Connection error. Please check your network.');
+    
+    // Provide user-friendly error messages
+    let errorMessage = 'Connection error. Please check your network.';
+    let errorCode = ErrorCode.CONNECTION_LOST;
+    
+    if (error instanceof Error) {
+      if (error.message.includes('Backend server') || error.message.includes('not responding')) {
+        errorMessage = 'Service temporarily unavailable. Please try again later.';
+        errorCode = ErrorCode.BACKEND_UNAVAILABLE;
+      } else if (error.message.includes('timeout')) {
+        errorMessage = 'Connection timeout. Please check your internet.';
+        errorCode = ErrorCode.CONNECTION_TIMEOUT;
+      }
+    }
+    
+    setError(errorMessage);
+    showError(errorMessage, errorCode);
     onError?.('Connection error');
   }, [onError]);
 
@@ -157,25 +173,20 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
   const joinQueue = useCallback((userData: UserData) => {
     const ws = getWs();
 
-    console.log('[Matchmaking] WebSocket ready state:', ws.getReadyState());
-    console.log('[Matchmaking] WebSocket connected:', ws.isConnected());
-
     if (!ws.isConnected()) {
-      console.error('[Matchmaking] Cannot join: not connected');
-      setError('Not connected to server. Please wait and try again.');
+      const errorMsg = 'Not connected to server. Please wait and try again.';
+      setError(errorMsg);
+      showError(errorMsg, ErrorCode.CONNECTION_LOST);
       return;
     }
 
     if (isJoiningRef.current) {
-      console.warn('[Matchmaking] Already joining queue');
       return;
     }
 
     isJoiningRef.current = true;
     setConnectionState('waiting');
     setError(null);
-
-    console.log('[Matchmaking] Sending join request with data:', JSON.stringify(userData, null, 2));
 
     const success = ws.send({
       type: 'join',
@@ -231,11 +242,9 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
   useEffect(() => {
     // Only initialize WebSocket if autoConnect is enabled
     if (!autoConnect) {
-      console.log('[Matchmaking] AutoConnect disabled, skipping WebSocket initialization');
       return;
     }
 
-    console.log('[Matchmaking] AutoConnect enabled, initializing WebSocket');
     const ws = getWs();
 
     const unsubscribeMessage = ws.onMessage(handleMessage);
@@ -273,12 +282,10 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
    */
   const cancelSearch = useCallback((userData: UserData) => {
     if (!wsRef.current || connectionState !== 'waiting') {
-      console.log('[Matchmaking] Cannot cancel: not waiting');
       return;
     }
 
     const ws = wsRef.current;
-    console.log('[Matchmaking] Cancelling search');
     ws.send({
       type: 'cancel',
       data: userData,

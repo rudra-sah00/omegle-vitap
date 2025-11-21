@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { ChatHeader } from './ChatHeader';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
@@ -16,31 +17,73 @@ interface MobileChatProps {
 }
 
 export const MobileChat = ({ isConnected, isStrangerTyping = false, onSendMessage, onTyping, connectionState = 'disconnected', messages = [] }: MobileChatProps) => {
+  const [unreadCount, setUnreadCount] = React.useState(0);
+  const [isChatOpen, setIsChatOpen] = React.useState(false);
+  const lastMessageCountRef = React.useRef(0);
+
+  // Track new messages and update unread count
+  React.useEffect(() => {
+    // Count only messages from stranger (not from 'You')
+    const strangerMessages = messages.filter(msg => msg.senderId !== 'local');
+    const newMessageCount = strangerMessages.length;
+    
+    if (newMessageCount > lastMessageCountRef.current && !isChatOpen) {
+      // New message received while chat is closed
+      setUnreadCount(prev => prev + (newMessageCount - lastMessageCountRef.current));
+    }
+    
+    lastMessageCountRef.current = newMessageCount;
+  }, [messages, isChatOpen]);
+
+  // Reset unread count when chat is opened
+  React.useEffect(() => {
+    if (isChatOpen) {
+      setUnreadCount(0);
+    }
+  }, [isChatOpen]);
+
   const handleClose = () => {
     const chatPanel = document.getElementById('mobile-chat');
     if (chatPanel) {
       chatPanel.classList.add('hidden');
+      setIsChatOpen(false);
+    }
+  };
+
+  const handleOpen = () => {
+    const chatPanel = document.getElementById('mobile-chat');
+    if (chatPanel) {
+      const isCurrentlyHidden = chatPanel.classList.contains('hidden');
+      chatPanel.classList.toggle('hidden');
+      setIsChatOpen(isCurrentlyHidden);
+      if (isCurrentlyHidden) {
+        setUnreadCount(0);
+      }
     }
   };
 
   return (
     <>
       {/* Mobile Chat Toggle Button */}
-      <button 
-        className="lg:hidden fixed bottom-6 right-6 w-16 h-16 rounded-full shadow-2xl flex items-center justify-center text-white z-20 hover:scale-110 active:scale-95 transition-transform"
-        style={{ backgroundColor: '#0084d1' }}
-        onClick={() => {
-          const chatPanel = document.getElementById('mobile-chat');
-          if (chatPanel) {
-            chatPanel.classList.toggle('hidden');
-          }
-        }}
-        title="Open Chat"
-      >
-        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-        </svg>
-      </button>
+      <div className="lg:hidden fixed bottom-6 right-6 z-20">
+        <button 
+          className="relative w-16 h-16 rounded-full shadow-2xl flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-transform"
+          style={{ backgroundColor: '#0084d1' }}
+          onClick={handleOpen}
+          title="Open Chat"
+        >
+          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          
+          {/* Unread Message Count Badge */}
+          {unreadCount > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
+      </div>
 
       {/* Mobile Chat Panel */}
       <div 

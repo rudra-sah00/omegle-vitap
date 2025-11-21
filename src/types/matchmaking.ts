@@ -7,7 +7,7 @@
 export type MessageType = 'join' | 'leave' | 'cancel' | 'ping' | 'response';
 
 // Status Types
-export type MatchStatus = 'waiting' | 'matched' | 'left' | 'partner_left' | 'cancelled' | 'error' | 'pong';
+export type MatchStatus = 'waiting' | 'matched' | 'left' | 'partner_left' | 'partner_disconnected' | 'cancelled' | 'error' | 'pong';
 
 // User Data
 export interface UserData {
@@ -51,6 +51,12 @@ export interface PartnerLeftResponse {
   message: string;
 }
 
+// Partner Disconnected Response
+export interface PartnerDisconnectedResponse {
+  status: 'partner_disconnected';
+  message: string;
+}
+
 // Error Response
 export interface ErrorResponse {
   status: 'error';
@@ -75,6 +81,7 @@ export type ResponseData =
   | WaitingResponse
   | LeftResponse
   | PartnerLeftResponse
+  | PartnerDisconnectedResponse
   | CancelledResponse
   | ErrorResponse
   | PongResponse;

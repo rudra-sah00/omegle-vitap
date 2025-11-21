@@ -36,16 +36,13 @@ export class AgoraRTMService {
     try {
       // UID must be alphanumeric, max 64 characters, no special characters except underscore
       const sanitizedUid = uid.toString().replace(/[^a-zA-Z0-9_]/g, '');
-      console.log('[Agora RTM] Initializing with UID:', sanitizedUid);
       
       this.currentUserId = sanitizedUid;
       this.client = new AgoraRTM.RTM(appId, sanitizedUid, {
         logLevel: 'error', // Only show errors
       });
-      console.log('[Agora RTM] Client initialized with UID:', sanitizedUid);
       this.setupEventListeners();
     } catch (error) {
-      console.error('[Agora RTM] Failed to initialize:', error);
       throw error;
     }
   }
@@ -58,12 +55,10 @@ export class AgoraRTMService {
 
     // Connection state changed
     this.client.on('ConnectionStateChanged', (newState: any, reason: any) => {
-      console.log('[Agora RTM] Connection state:', newState, 'reason:', reason);
     });
 
     // Token expired
     this.client.on('TokenExpired', () => {
-      console.warn('[Agora RTM] Token expired');
     });
   }
 
@@ -76,7 +71,6 @@ export class AgoraRTMService {
     }
 
     if (this.isLoggedIn) {
-      console.warn('[Agora RTM] Already logged in');
       return;
     }
 
@@ -85,13 +79,11 @@ export class AgoraRTMService {
         token: config.token,
       });
 
-      console.log('[Agora RTM] Logged in successfully');
       this.isLoggedIn = true;
 
       // Join channel after login
       await this.joinChannel(config.channelName);
     } catch (error) {
-      console.error('[Agora RTM] Login failed:', error);
       throw error;
     }
   }
@@ -105,7 +97,6 @@ export class AgoraRTMService {
     }
 
     if (this.isChannelJoined) {
-      console.warn('[Agora RTM] Already joined channel');
       return;
     }
 
@@ -123,7 +114,6 @@ export class AgoraRTMService {
       // Setup message listener
       this.client.addEventListener('message', (event: any) => {
         if (event.channelName === channelName && event.message) {
-          console.log('[Agora RTM] Message received from channel:', event);
           this.handleChannelMessage(event.message, event.publisher);
         }
       });
@@ -131,7 +121,6 @@ export class AgoraRTMService {
       // Setup presence listener
       this.client.addEventListener('presence', (event: any) => {
         if (event.channelName === channelName) {
-          console.log('[Agora RTM] Presence event:', event);
           if (event.eventType === 'REMOTE_JOIN') {
             this.onMemberJoined?.(event.publisher);
           } else if (event.eventType === 'REMOTE_LEAVE') {
@@ -142,9 +131,7 @@ export class AgoraRTMService {
 
       this.channel = channelName;
       this.isChannelJoined = true;
-      console.log('[Agora RTM] Subscribed to channel:', channelName);
     } catch (error) {
-      console.error('[Agora RTM] Failed to join channel:', error);
       throw error;
     }
   }
@@ -174,7 +161,6 @@ export class AgoraRTMService {
       timestamp: Date.now(),
     };
 
-    console.log('[Agora RTM] Parsed message:', messageData);
     this.onMessageReceived?.(messageData);
   }
 
@@ -189,9 +175,7 @@ export class AgoraRTMService {
     try {
       // Use publish method with the new SDK API
       await this.client.publish(this.channel, text);
-      console.log('[Agora RTM] Message sent:', text);
     } catch (error) {
-      console.error('[Agora RTM] Failed to send message:', error);
       throw error;
     }
   }
@@ -206,7 +190,6 @@ export class AgoraRTMService {
       const text = isTyping ? '__TYPING__START__' : '__TYPING__STOP__';
       await this.client.publish(this.channel, text);
     } catch (error) {
-      console.error('[Agora RTM] Failed to send typing indicator:', error);
     }
   }
 
@@ -218,16 +201,13 @@ export class AgoraRTMService {
       if (this.channel && this.isChannelJoined) {
         await this.client.unsubscribe(this.channel);
         this.isChannelJoined = false;
-        console.log('[Agora RTM] Unsubscribed from channel');
       }
 
       if (this.client && this.isLoggedIn) {
         await this.client.logout();
         this.isLoggedIn = false;
-        console.log('[Agora RTM] Logged out');
       }
     } catch (error) {
-      console.error('[Agora RTM] Error during leave:', error);
       throw error;
     }
   }
