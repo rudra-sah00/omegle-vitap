@@ -33,9 +33,28 @@ export class AgoraRTMService {
    * Initialize RTM client
    */
   async initialize(appId: string, uid: string): Promise<void> {
+    // Prevent re-initialization if already initialized
+    if (this.client && this.isLoggedIn) {
+      console.warn('RTM client already initialized');
+      return;
+    }
+
     try {
+      // Validate inputs
+      if (!appId || !uid) {
+        throw new Error('Invalid RTM configuration: missing appId or uid');
+      }
+
       // UID must be alphanumeric, max 64 characters, no special characters except underscore
       const sanitizedUid = uid.toString().replace(/[^a-zA-Z0-9_]/g, '');
+      
+      if (!sanitizedUid || sanitizedUid.length === 0) {
+        throw new Error('Invalid UID: cannot be empty after sanitization');
+      }
+
+      if (sanitizedUid.length > 64) {
+        throw new Error('Invalid UID: exceeds 64 characters');
+      }
       
       this.currentUserId = sanitizedUid;
       this.client = new AgoraRTM.RTM(appId, sanitizedUid, {
@@ -43,7 +62,10 @@ export class AgoraRTMService {
       });
       this.setupEventListeners();
     } catch (error) {
-      throw error;
+      console.error('Failed to initialize RTM client:', error);
+      this.client = null;
+      this.currentUserId = null;
+      throw new Error('Failed to initialize messaging service');
     }
   }
 
@@ -53,13 +75,29 @@ export class AgoraRTMService {
   private setupEventListeners(): void {
     if (!this.client) return;
 
-    // Connection state changed
-    this.client.on('ConnectionStateChanged', (newState: any, reason: any) => {
-    });
+    try {
+      // Connection state changed
+      this.client.on('ConnectionStateChanged', (newState: any, reason: any) => {
+        if (newState === 'DISCONNECTED' || newState === 'FAILED') {
+          console.warn('RTM connection state changed:', newState, 'Reason:', reason);
+          this.isLoggedIn = false;
+          this.isChannelJoined = false;
+        }
+      });
 
-    // Token expired
-    this.client.on('TokenExpired', () => {
-    });
+      // Token expired
+      this.client.on('TokenExpired', () => {
+        console.warn('RTM token expired');
+        this.isLoggedIn = false;
+      });
+
+      // Error events
+      this.client.on('error', (error: any) => {
+        console.error('RTM error:', error);
+      });
+    } catch (error) {
+      console.error('Error setting up RTM event listeners:', error);
+    }
   }
 
   /**
@@ -71,20 +109,35 @@ export class AgoraRTMService {
     }
 
     if (this.isLoggedIn) {
+      console.warn('RTM already logged in');
       return;
     }
 
+    if (!config.token || !config.channelName) {
+      throw new Error('Invalid RTM configuration: missing token or channelName');
+    }
+
     try {
-      await this.client.login({
-        token: config.token,
+      const loginTimeout = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('RTM login timeout')), 10000);
       });
+
+      await Promise.race([
+        this.client.login({ token: config.token }),
+        loginTimeout
+      ]);
 
       this.isLoggedIn = true;
 
       // Join channel after login
       await this.joinChannel(config.channelName);
-    } catch (error) {
-      throw error;
+    } catch (error: any) {
+      this.isLoggedIn = false;
+      console.error('RTM login failed:', error);
+      if (error.message?.includes('token') || error.code === -10005) {
+        throw new Error('Invalid or expired messaging token');
+      }
+      throw new Error('Failed to login to messaging service');
     }
   }
 
@@ -97,7 +150,12 @@ export class AgoraRTMService {
     }
 
     if (this.isChannelJoined) {
+      console.warn('Already joined to RTM channel');
       return;
+    }
+
+    if (!channelName || channelName.trim().length === 0) {
+      throw new Error('Invalid channel name');
     }
 
     try {
@@ -109,23 +167,38 @@ export class AgoraRTMService {
         withLock: false,
       };
 
-      await this.client.subscribe(channelName, subscribeOptions);
+      const subscribeTimeout = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('RTM channel subscribe timeout')), 10000);
+      });
+
+      await Promise.race([
+        this.client.subscribe(channelName, subscribeOptions),
+        subscribeTimeout
+      ]);
       
       // Setup message listener
       this.client.addEventListener('message', (event: any) => {
-        if (event.channelName === channelName && event.message) {
-          this.handleChannelMessage(event.message, event.publisher);
+        try {
+          if (event.channelName === channelName && event.message) {
+            this.handleChannelMessage(event.message, event.publisher);
+          }
+        } catch (error) {
+          console.error('Error handling RTM message:', error);
         }
       });
 
       // Setup presence listener
       this.client.addEventListener('presence', (event: any) => {
-        if (event.channelName === channelName) {
-          if (event.eventType === 'REMOTE_JOIN') {
-            this.onMemberJoined?.(event.publisher);
-          } else if (event.eventType === 'REMOTE_LEAVE') {
-            this.onMemberLeft?.(event.publisher);
+        try {
+          if (event.channelName === channelName) {
+            if (event.eventType === 'REMOTE_JOIN') {
+              this.onMemberJoined?.(event.publisher);
+            } else if (event.eventType === 'REMOTE_LEAVE') {
+              this.onMemberLeft?.(event.publisher);
+            }
           }
+        } catch (error) {
+          console.error('Error handling RTM presence:', error);
         }
       });
 
@@ -168,15 +241,34 @@ export class AgoraRTMService {
    * Send a text message to the channel
    */
   async sendMessage(text: string): Promise<void> {
+    if (!this.client || !this.isLoggedIn) {
+      throw new Error('Not logged in to messaging service');
+    }
+
     if (!this.channel || !this.isChannelJoined) {
       throw new Error('Not joined to any channel');
     }
 
+    if (!text || text.trim().length === 0) {
+      throw new Error('Message cannot be empty');
+    }
+
+    if (text.length > 32000) {
+      throw new Error('Message too long (max 32KB)');
+    }
+
     try {
-      // Use publish method with the new SDK API
-      await this.client.publish(this.channel, text);
-    } catch (error) {
-      throw error;
+      const publishTimeout = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Message send timeout')), 5000);
+      });
+
+      await Promise.race([
+        this.client.publish(this.channel, text),
+        publishTimeout
+      ]);
+    } catch (error: any) {
+      console.error('Failed to send RTM message:', error);
+      throw new Error('Failed to send message');
     }
   }
 
@@ -197,17 +289,45 @@ export class AgoraRTMService {
    * Leave channel and logout
    */
   async leave(): Promise<void> {
+    const errors: Error[] = [];
+
     try {
-      if (this.channel && this.isChannelJoined) {
-        await this.client.unsubscribe(this.channel);
+      if (this.channel && this.isChannelJoined && this.client) {
+        try {
+          await this.client.unsubscribe(this.channel);
+        } catch (error: any) {
+          console.error('Error unsubscribing from RTM channel:', error);
+          errors.push(error);
+        }
         this.isChannelJoined = false;
+        this.channel = null;
       }
 
       if (this.client && this.isLoggedIn) {
-        await this.client.logout();
+        try {
+          await this.client.logout();
+        } catch (error: any) {
+          console.error('Error logging out from RTM:', error);
+          errors.push(error);
+        }
         this.isLoggedIn = false;
       }
-    } catch (error) {
+
+      // Clean up references
+      this.client = null;
+      this.currentUserId = null;
+
+      // If there were critical errors, throw them
+      if (errors.length > 0 && errors.some(e => e.message.includes('timeout'))) {
+        throw new Error('Timeout while leaving messaging service');
+      }
+    } catch (error: any) {
+      // Ensure state is reset even on error
+      this.isChannelJoined = false;
+      this.isLoggedIn = false;
+      this.channel = null;
+      this.client = null;
+      this.currentUserId = null;
       throw error;
     }
   }

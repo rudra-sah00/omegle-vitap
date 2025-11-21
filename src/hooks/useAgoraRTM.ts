@@ -105,10 +105,19 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
 
     try {
       await rtmServiceRef.current.leave();
+      // Set to null to force recreation on next join (fixes token issues)
+      rtmServiceRef.current = null;
+      currentUidRef.current = '';
       setIsRTMInitialized(false);
       setMessages([]);
       setIsPartnerTyping(false);
     } catch (error) {
+      // Reset state even on error
+      rtmServiceRef.current = null;
+      currentUidRef.current = '';
+      setIsRTMInitialized(false);
+      setMessages([]);
+      setIsPartnerTyping(false);
     }
   }, []);
 

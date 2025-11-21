@@ -116,18 +116,10 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
     const newState = !isCameraOn;
     setIsCameraOn(newState);
     
-    // If already in a call, toggle the track and publish/unpublish
+    // If already in a call, toggle the track (it handles publish/unpublish internally)
     if (isRTCInitialized && rtcServiceRef.current) {
       try {
         await rtcServiceRef.current.toggleCamera(newState);
-        
-        // If turning on camera, publish the track
-        if (newState) {
-          await rtcServiceRef.current.publishVideoTrack();
-        } else {
-          // If turning off camera, unpublish the track
-          await rtcServiceRef.current.unpublishVideoTrack();
-        }
       } catch (error) {
         const { message, code } = parseMediaError(error);
         showError(message, code);
@@ -168,20 +160,12 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
     const newState = !isMicOn;
     setIsMicOn(newState);
     
-    // If already in a call, toggle the track and publish/unpublish
+    // If already in a call, toggle the track (it handles publish/unpublish internally)
     if (isRTCInitialized && rtcServiceRef.current) {
       try {
         await rtcServiceRef.current.toggleMicrophone(newState);
-        
-        // If turning on mic, publish the track
-        if (newState) {
-          await rtcServiceRef.current.publishAudioTrack();
-        } else {
-          // If turning off mic, unpublish the track
-          await rtcServiceRef.current.unpublishAudioTrack();
-        }
       } catch (error) {
-        setIsCameraOn(!newState); // Revert on error
+        setIsMicOn(!newState); // Revert on error
       }
     } else {
       // Not in a call, create/update preview only if needed
@@ -209,7 +193,7 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
 
     try {
       await rtcServiceRef.current.leave();
-      rtcServiceRef.current = null; // Reset service to allow reinitialization
+      // Don't set to null - the service recreates the client internally
       hasPreviewRef.current = false;
       setIsRTCInitialized(false);
       
@@ -217,6 +201,10 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
       setIsCameraOn(false);
       setIsMicOn(false);
     } catch (error) {
+      // Reset state even on error
+      setIsRTCInitialized(false);
+      setIsCameraOn(false);
+      setIsMicOn(false);
     }
   }, []);
 

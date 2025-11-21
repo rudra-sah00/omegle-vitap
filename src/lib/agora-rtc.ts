@@ -25,6 +25,10 @@ export class AgoraRTCService {
   private isLeaving = false;
   private isPreviewMode = false; // Track if we're in preview mode (before joining)
   
+  // Track operation flags to prevent race conditions
+  private isTogglingCamera = false;
+  private isTogglingMic = false;
+  
   // Current device IDs
   private currentCameraId?: string;
   private currentMicId?: string;
@@ -36,11 +40,16 @@ export class AgoraRTCService {
   private onUserLeft?: (user: IAgoraRTCRemoteUser) => void;
 
   constructor() {
-    // Disable Agora RTC SDK logs (only show errors)
-    AgoraRTC.setLogLevel(4); // 0=DEBUG, 1=INFO, 2=WARNING, 3=ERROR, 4=NONE
-    
-    this.client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-    this.setupEventListeners();
+    try {
+      // Disable Agora RTC SDK logs (only show errors)
+      AgoraRTC.setLogLevel(4); // 0=DEBUG, 1=INFO, 2=WARNING, 3=ERROR, 4=NONE
+      
+      this.client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+      this.setupEventListeners();
+    } catch (error) {
+      console.error('Failed to initialize Agora RTC client:', error);
+      throw new Error('Failed to initialize video service');
+    }
   }
 
   /**
@@ -50,32 +59,60 @@ export class AgoraRTCService {
     if (!this.client) return;
 
     this.client.on('user-published', async (user, mediaType) => {
-      
-      if (mediaType === 'audio' || mediaType === 'video') {
-        await this.client?.subscribe(user, mediaType);
-        
-        if (mediaType === 'video') {
-        }
-        if (mediaType === 'audio') {
-          user.audioTrack?.play();
-        }
+      try {
+        if (mediaType === 'audio' || mediaType === 'video') {
+          await this.client?.subscribe(user, mediaType);
+          
+          if (mediaType === 'video') {
+            // Video track available
+          }
+          if (mediaType === 'audio') {
+            user.audioTrack?.play();
+          }
 
-        this.onUserPublished?.(user, mediaType);
+          this.onUserPublished?.(user, mediaType);
+        }
+      } catch (error) {
+        console.error('Error handling user-published event:', error);
       }
     });
 
     this.client.on('user-unpublished', (user, mediaType) => {
-      if (mediaType === 'audio' || mediaType === 'video') {
-        this.onUserUnpublished?.(user, mediaType);
+      try {
+        if (mediaType === 'audio' || mediaType === 'video') {
+          this.onUserUnpublished?.(user, mediaType);
+        }
+      } catch (error) {
+        console.error('Error handling user-unpublished event:', error);
       }
     });
 
     this.client.on('user-joined', (user) => {
-      this.onUserJoined?.(user);
+      try {
+        this.onUserJoined?.(user);
+      } catch (error) {
+        console.error('Error handling user-joined event:', error);
+      }
     });
 
     this.client.on('user-left', (user) => {
-      this.onUserLeft?.(user);
+      try {
+        this.onUserLeft?.(user);
+      } catch (error) {
+        console.error('Error handling user-left event:', error);
+      }
+    });
+
+    // Handle connection state changes
+    this.client.on('connection-state-change', (curState, prevState, reason) => {
+      if (curState === 'DISCONNECTED' || curState === 'DISCONNECTING') {
+        console.warn('Connection state changed:', curState, 'Reason:', reason);
+      }
+    });
+
+    // Handle exceptions
+    this.client.on('exception', (event) => {
+      console.error('Agora RTC exception:', event);
     });
   }
 
@@ -88,17 +125,30 @@ export class AgoraRTCService {
       throw new Error('Browser does not support media devices');
     }
 
+    // Prevent creating preview if already in a call
+    if (this.isJoined) {
+      return;
+    }
+
     try {
       // If tracks already exist, just update their state and replay
       if (this.localVideoTrack && this.localAudioTrack) {
-        await this.localVideoTrack.setEnabled(cameraOn);
-        await this.localAudioTrack.setEnabled(micOn);
-        
-        // Replay video if camera is on
-        if (cameraOn) {
-          this.localVideoTrack.play('local-video');
+        try {
+          await this.localVideoTrack.setEnabled(cameraOn);
+          await this.localAudioTrack.setEnabled(micOn);
+          
+          // Replay video if camera is on
+          if (cameraOn) {
+            this.localVideoTrack.play('local-video');
+          }
+          return;
+        } catch (error) {
+          // If setting enabled fails, clean up and recreate
+          this.localVideoTrack?.close();
+          this.localAudioTrack?.close();
+          this.localVideoTrack = null;
+          this.localAudioTrack = null;
         }
-        return;
       }
 
       // Check available devices before creating tracks
@@ -158,12 +208,21 @@ export class AgoraRTCService {
     }
 
     if (this.isJoined) {
+      console.warn('Already joined to a channel');
       return;
+    }
+
+    if (this.isLeaving) {
+      throw new Error('Cannot join while leaving another channel');
     }
 
     // Validate config
     if (!config.appId || !config.channelName) {
       throw new Error('Invalid Agora configuration: missing appId or channelName');
+    }
+
+    if (!config.uid) {
+      throw new Error('Invalid Agora configuration: missing uid');
     }
 
     // Check network connectivity
@@ -208,26 +267,31 @@ export class AgoraRTCService {
    * Create local video and audio tracks and publish them
    */
   private async createAndPublishTracks(cameraOn: boolean = true, micOn: boolean = true): Promise<void> {
-    if (!this.client) return;
+    if (!this.client) {
+      throw new Error('Client not initialized');
+    }
     
     // Check if we're disconnecting
     if (this.isLeaving) {
-      return;
+      throw new Error('Cannot create tracks while leaving');
     }
     
     // Check connection state
     if (this.client.connectionState !== 'CONNECTED') {
-      return;
+      throw new Error('Not connected to channel');
     }
 
     try {
       // Set track creation timeout
-      const trackTimeout = setTimeout(() => {
-        throw new Error('Track creation timeout: Could not access camera or microphone');
-      }, 15000); // 15 second timeout
+      let timeoutId: NodeJS.Timeout | null = null;
+      const trackTimeout = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('Track creation timeout: Could not access camera or microphone'));
+        }, 15000);
+      });
 
-      // Create microphone and camera tracks
-      [this.localAudioTrack, this.localVideoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
+      // Create microphone and camera tracks with race condition against timeout
+      const tracksPromise = AgoraRTC.createMicrophoneAndCameraTracks(
         {
           // Audio config
           AEC: true, // Acoustic Echo Cancellation
@@ -249,7 +313,12 @@ export class AgoraRTCService {
         }
       );
 
-      clearTimeout(trackTimeout);
+      [this.localAudioTrack, this.localVideoTrack] = await Promise.race([
+        tracksPromise,
+        trackTimeout
+      ]) as [IMicrophoneAudioTrack, ICameraVideoTrack];
+
+      if (timeoutId) clearTimeout(timeoutId);
 
       // Set enabled state
       await this.localVideoTrack.setEnabled(cameraOn);
@@ -382,9 +451,11 @@ export class AgoraRTCService {
    * Toggle local camera on/off - PROPERLY closes/reopens hardware
    */
   async toggleCamera(enabled: boolean): Promise<void> {
-    if (this.isLeaving) {
+    if (this.isLeaving || this.isTogglingCamera) {
       return;
     }
+    
+    this.isTogglingCamera = true;
     
     try {
       if (enabled) {
@@ -447,6 +518,8 @@ export class AgoraRTCService {
         this.localVideoTrack = null;
       }
       throw error;
+    } finally {
+      this.isTogglingCamera = false;
     }
   }
 
@@ -454,9 +527,11 @@ export class AgoraRTCService {
    * Toggle local microphone on/off - PROPERLY closes/reopens hardware
    */
   async toggleMicrophone(enabled: boolean): Promise<void> {
-    if (this.isLeaving) {
+    if (this.isLeaving || this.isTogglingMic) {
       return;
     }
+    
+    this.isTogglingMic = true;
     
     try {
       if (enabled) {
@@ -516,6 +591,8 @@ export class AgoraRTCService {
         this.localAudioTrack = null;
       }
       throw error;
+    } finally {
+      this.isTogglingMic = false;
     }
   }
   
@@ -621,6 +698,20 @@ export class AgoraRTCService {
     this.isLeaving = true;
 
     try {
+      // Unpublish tracks first if in a call
+      if (this.client && this.isJoined) {
+        try {
+          const tracksToUnpublish = [];
+          if (this.localVideoTrack) tracksToUnpublish.push(this.localVideoTrack);
+          if (this.localAudioTrack) tracksToUnpublish.push(this.localAudioTrack);
+          if (tracksToUnpublish.length > 0) {
+            await this.client.unpublish(tracksToUnpublish);
+          }
+        } catch (unpublishError) {
+          // Ignore unpublish errors
+        }
+      }
+
       // Stop and close local tracks
       if (this.localAudioTrack) {
         this.localAudioTrack.stop();
@@ -638,11 +729,22 @@ export class AgoraRTCService {
       if (this.client) {
         await this.client.leave();
         this.isJoined = false;
+        
+        // Remove all event listeners
+        this.client.removeAllListeners();
+        
+        // Recreate client for next session to avoid stale connection issues
+        this.client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+        this.setupEventListeners();
       }
 
+      // Reset state
+      this.isPreviewMode = false;
       this.isLeaving = false;
     } catch (error) {
       this.isLeaving = false;
+      // Reset state even on error
+      this.isJoined = false;
       throw error;
     }
   }

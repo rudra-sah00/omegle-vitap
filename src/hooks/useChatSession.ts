@@ -87,7 +87,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
    * Handle successful match
    */
   async function handleMatched(matchData: MatchData) {
-    if (isLeavingRef.current || isInSession) {
+    if (isLeavingRef.current || isInSession || isRTCInitialized) {
       return;
     }
     

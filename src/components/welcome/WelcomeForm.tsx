@@ -37,7 +37,6 @@ export const WelcomeForm = () => {
 
   const handleJoin = () => {
     if (!name.trim()) {
-      alert('Please enter your name');
       return;
     }
     // Navigate to the main chat page

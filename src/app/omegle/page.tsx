@@ -169,18 +169,6 @@ function OmeglePageContent() {
         return;
       }
 
-      // Show privacy reminder if neither camera nor mic is enabled
-      if (!isCameraOn && !isMicOn) {
-        const proceed = confirm(
-          '⚠️ Privacy Notice\n\n' +
-          'Your camera and microphone are currently OFF.\n\n' +
-          'You can start without them, but you won\'t be able to see or hear your partner.\n\n' +
-          'Click the camera or microphone buttons below to enable them.\n\n' +
-          'Continue without camera and mic?'
-        );
-        if (!proceed) return;
-      }
-
       await startSearch({
         name,
         gender,
