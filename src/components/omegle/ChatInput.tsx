@@ -1,21 +1,69 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface ChatInputProps {
   isConnected: boolean;
   onSend?: (message: string) => void;
+  onTyping?: (isTyping: boolean) => void;
 }
 
-export const ChatInput = ({ isConnected, onSend }: ChatInputProps) => {
+export const ChatInput = ({ isConnected, onSend, onTyping }: ChatInputProps) => {
   const [message, setMessage] = useState('');
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleSend = () => {
     if (message.trim() && isConnected) {
+      // Clear typing timeout and send stop typing
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      onTyping?.(false);
+      
       onSend?.(message);
       setMessage('');
     }
   };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setMessage(newValue);
+
+    if (!isConnected) return;
+
+    // Send typing indicator
+    if (newValue.length > 0) {
+      onTyping?.(true);
+      
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      
+      // Set new timeout to stop typing after 2 seconds of inactivity
+      typingTimeoutRef.current = setTimeout(() => {
+        onTyping?.(false);
+        typingTimeoutRef.current = null;
+      }, 2000);
+    } else {
+      // User cleared the input
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      onTyping?.(false);
+    }
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -30,7 +78,7 @@ export const ChatInput = ({ isConnected, onSend }: ChatInputProps) => {
         <input
           type="text"
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={handleChange}
           onKeyPress={handleKeyPress}
           placeholder={isConnected ? "Type your message..." : "Connect to start chatting"}
           disabled={!isConnected}

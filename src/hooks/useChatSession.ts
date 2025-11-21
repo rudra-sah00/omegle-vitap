@@ -20,6 +20,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
   // Refs
   const currentUidRef = useRef<string>('');
   const currentMatchRef = useRef<MatchData | null>(null);
+  const userDataRef = useRef<{ name: string; gender: 'male' | 'female' | 'other' } | null>(null);
 
   // State
   const [isInSession, setIsInSession] = useState(false);
@@ -88,12 +89,19 @@ export const useChatSession = (options: UseChatSessionOptions) => {
       // Initialize both RTC and RTM with the same UID
       const uid = currentUidRef.current;
       
-      await Promise.all([
+      // Initialize RTC (required) and RTM (optional - may fail if not enabled)
+      const [rtcResult] = await Promise.allSettled([
         initializeRTC(matchData, uid, localVideoElementId, remoteVideoElementId),
         initializeRTM(matchData, uid),
       ]);
 
+      // Check if RTC initialized successfully (RTM is optional)
+      if (rtcResult.status === 'rejected') {
+        throw new Error('Failed to initialize video/audio (RTC)');
+      }
+
       setIsInSession(true);
+      console.log('✅ Session started (RTC working, RTM may be disabled)');
     } catch (error) {
       console.error('❌ Failed to initialize Agora:', error);
       // TODO: Show error to user
@@ -136,6 +144,12 @@ export const useChatSession = (options: UseChatSessionOptions) => {
       targetGender: userData.targetGender?.toLowerCase() as 'male' | 'female' | 'other' | undefined,
     };
 
+    // Store user data for later use (cancel, findNext)
+    userDataRef.current = {
+      name: formattedData.name,
+      gender: formattedData.gender,
+    };
+
     console.log('🔍 Starting search with:', formattedData);
     await joinQueue(formattedData);
   }, [joinQueue]);
@@ -146,13 +160,15 @@ export const useChatSession = (options: UseChatSessionOptions) => {
   const stopSearch = useCallback(async () => {
     console.log('⏹️ Stopping search');
     
-    // Cancel search if we have a current UID
-    if (currentUidRef.current) {
+    // Cancel search if we have a current UID and user data
+    if (currentUidRef.current && userDataRef.current) {
       cancelSearch({
         uid: parseInt(currentUidRef.current),
-        name: 'User', // TODO: Get from user context
-        gender: 'male', // TODO: Get from user context
+        name: userDataRef.current.name,
+        gender: userDataRef.current.gender,
       });
+    } else {
+      console.warn('⚠️ Cannot cancel search: missing UID or user data');
     }
   }, [cancelSearch]);
 
@@ -197,13 +213,17 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     currentUidRef.current = uid.toString();
 
     // Rejoin queue (camera/mic state is preserved in useAgoraRTC hook)
-    const lastUserData = {
-      uid, // Send as number
-      name: 'User', // TODO: Get from user context
-      gender: 'male' as const, // TODO: Get from user context
-    };
-    
-    await joinQueue(lastUserData);
+    if (userDataRef.current) {
+      const lastUserData = {
+        uid, // Send as number
+        name: userDataRef.current.name,
+        gender: userDataRef.current.gender,
+      };
+      
+      await joinQueue(lastUserData);
+    } else {
+      console.error('❌ Cannot find next: missing user data');
+    }
   }, [leaveRTC, leaveRTM, joinQueue]);
 
   // Cleanup on unmount

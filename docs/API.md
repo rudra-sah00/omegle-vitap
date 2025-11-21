@@ -11,6 +11,8 @@ Real-time WebSocket-based matchmaking API for video chat application with Agora 
   - [Connection](#connection)
   - [Message Types](#message-types)
   - [Message Flow](#message-flow)
+  - [User States](#user-states)
+  - [Disconnect Behavior](#disconnect-behavior)
 - [REST Endpoints](#rest-endpoints)
   - [Health Check](#health-check)
 - [Error Handling](#error-handling)
@@ -426,6 +428,203 @@ sequenceDiagram
     
     CA->>CA: Clean up Agora connection
     CB->>CB: Clean up Agora connection
+```
+
+---
+
+### User States
+
+The server tracks each connected user in one of three states:
+
+#### State Definitions
+
+| State | Description | Triggers |
+|-------|-------------|----------|
+| **idle** | User is connected but not searching or in a call | Initial connection, after leaving room, after canceling search |
+| **queue** | User is actively searching for a match | Sending `join` message |
+| **active** | User is in an active video call | Successfully matched with partner |
+
+#### State Transitions
+
+```mermaid
+stateDiagram-v2
+    [*] --> idle: WebSocket Connect
+    idle --> queue: Send join message
+    queue --> active: Match found
+    queue --> idle: Send cancel message
+    active --> idle: Send leave message
+    active --> idle: Partner leaves
+    idle --> [*]: Disconnect
+    queue --> [*]: Disconnect (removed from queue)
+    active --> [*]: Disconnect (partner notified)
+```
+
+#### State Behavior
+
+**idle State:**
+- User has an active WebSocket connection
+- Not searching for matches
+- Not in any room
+- Can send `join` to start searching
+
+**queue State:**
+- User is in the matchmaking queue
+- Server is actively looking for a partner
+- Can send `cancel` to stop searching
+- Automatically transitioned to `active` when match is found
+
+**active State:**
+- User is in an active room with a partner
+- Has valid Agora tokens (RTC + RTM)
+- Can send `leave` to exit the room
+- Receives `partner_left` notification if partner disconnects
+- Both users return to `idle` state after room ends
+
+#### Checking Current State
+
+The server does not expose a "get current state" API. Your frontend should track the state locally:
+
+```javascript
+let userState = 'idle';  // Start with idle
+
+function handleJoin() {
+  ws.send(JSON.stringify({ type: 'join', data: { uid, name, gender } }));
+  userState = 'queue';
+  showSearchingUI();
+}
+
+ws.onmessage = (event) => {
+  const msg = JSON.parse(event.data);
+  
+  if (msg.data.status === 'matched') {
+    userState = 'active';
+    showVideoCallUI(msg.data);
+  } else if (msg.data.status === 'cancelled') {
+    userState = 'idle';
+    showIdleUI();
+  } else if (msg.data.status === 'left' || msg.data.status === 'partner_left') {
+    userState = 'idle';
+    showIdleUI();
+  }
+};
+```
+
+---
+
+### Disconnect Behavior
+
+The server automatically cleans up resources when a user disconnects, with different actions based on the user's state.
+
+#### Disconnect in idle State
+
+**What Happens:**
+- WebSocket connection is closed
+- User is removed from active connections
+- No other cleanup needed
+
+**Impact:**
+- None (user was not searching or in a call)
+
+#### Disconnect in queue State
+
+**What Happens:**
+1. User is removed from matchmaking queue
+2. WebSocket connection is closed
+3. User is removed from active connections
+
+**Impact:**
+- User will not be matched with anyone
+- Other users in queue are unaffected
+
+**Example:**
+```
+User A: Searching... (queue state)
+[Network drops, WebSocket closes]
+→ Server removes User A from queue
+→ User A cannot be matched anymore
+```
+
+#### Disconnect in active State
+
+**What Happens:**
+1. Partner is notified with `partner_left` message
+2. Room is removed from Redis
+3. Partner's state is updated to `idle`
+4. User is removed from active connections
+
+**Impact:**
+- Partner receives notification that you left
+- Partner should clean up their Agora connection
+- Room becomes invalid (cannot rejoin)
+
+**Server → Partner (on disconnect):**
+```json
+{
+  "type": "response",
+  "data": {
+    "status": "partner_left",
+    "message": "Your partner left the room"
+  }
+}
+```
+
+**Example:**
+```
+User A & User B: In video call (active state)
+[User A's browser crashes]
+→ Server detects disconnect
+→ User B receives partner_left message
+→ User B's state changes to idle
+→ User B should clean up Agora connection
+```
+
+#### Best Practices for Disconnect Handling
+
+**Frontend Implementation:**
+```javascript
+ws.onclose = () => {
+  console.log('WebSocket disconnected');
+  
+  // Clean up based on last known state
+  if (userState === 'active') {
+    // Clean up Agora RTC/RTM connections
+    agoraClient.leave();
+    rtmClient.logout();
+    showDisconnectedUI('Connection lost during call');
+  } else if (userState === 'queue') {
+    showDisconnectedUI('Connection lost while searching');
+  }
+  
+  // Reset state
+  userState = 'idle';
+  
+  // Optionally: attempt reconnection
+  setTimeout(reconnect, 3000);
+};
+```
+
+**Reconnection Strategy:**
+- On disconnect, user loses their place in queue or active room
+- Must send new `join` message to search again
+- Cannot rejoin previous room (new tokens required)
+- Implement exponential backoff for reconnection attempts
+
+**Graceful Shutdown:**
+Always send `leave` or `cancel` before closing WebSocket:
+```javascript
+function gracefulDisconnect() {
+  if (userState === 'active') {
+    ws.send(JSON.stringify({ type: 'leave', data: {} }));
+  } else if (userState === 'queue') {
+    ws.send(JSON.stringify({ type: 'cancel', data: { uid, gender } }));
+  }
+  
+  // Wait a moment for server to process
+  setTimeout(() => ws.close(), 100);
+}
+
+// Handle page unload
+window.addEventListener('beforeunload', gracefulDisconnect);
 ```
 
 ---

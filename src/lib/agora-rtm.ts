@@ -5,10 +5,8 @@
 import AgoraRTM from 'agora-rtm-sdk';
 
 export interface AgoraRTMConfig {
-  appId: string;
   channelName: string;
   token: string;
-  uid: string;
 }
 
 export interface MessageData {
@@ -20,9 +18,10 @@ export interface MessageData {
 
 export class AgoraRTMService {
   private client: any = null;
-  private channel: any = null;
+  private channel: string | null = null;
   private isLoggedIn = false;
   private isChannelJoined = false;
+  private currentUserId: string | null = null;
 
   // Callbacks
   private onMessageReceived?: (message: MessageData) => void;
@@ -33,12 +32,17 @@ export class AgoraRTMService {
   /**
    * Initialize RTM client
    */
-  async initialize(appId: string): Promise<void> {
+  async initialize(appId: string, uid: string): Promise<void> {
     try {
-      this.client = new AgoraRTM.RTM(appId, '', {
+      // UID must be alphanumeric, max 64 characters, no special characters except underscore
+      const sanitizedUid = uid.toString().replace(/[^a-zA-Z0-9_]/g, '');
+      console.log('[Agora RTM] Initializing with UID:', sanitizedUid);
+      
+      this.currentUserId = sanitizedUid;
+      this.client = new AgoraRTM.RTM(appId, sanitizedUid, {
         logLevel: 'error', // Only show errors
       });
-      console.log('[Agora RTM] Client initialized');
+      console.log('[Agora RTM] Client initialized with UID:', sanitizedUid);
       this.setupEventListeners();
     } catch (error) {
       console.error('[Agora RTM] Failed to initialize:', error);
@@ -78,11 +82,10 @@ export class AgoraRTMService {
 
     try {
       await this.client.login({
-        uid: config.uid,
         token: config.token,
       });
 
-      console.log('[Agora RTM] Logged in as:', config.uid);
+      console.log('[Agora RTM] Logged in successfully');
       this.isLoggedIn = true;
 
       // Join channel after login
@@ -107,27 +110,39 @@ export class AgoraRTMService {
     }
 
     try {
-      this.channel = this.client.createChannel(channelName);
+      // Subscribe to channel (new SDK API)
+      const subscribeOptions = {
+        withMessage: true,
+        withPresence: true,
+        withMetadata: false,
+        withLock: false,
+      };
+
+      await this.client.subscribe(channelName, subscribeOptions);
       
-      // Setup channel event listeners
-      this.channel.on('ChannelMessage', (message: any, memberId: any) => {
-        console.log('[Agora RTM] Message from:', memberId);
-        this.handleChannelMessage(message, memberId);
+      // Setup message listener
+      this.client.addEventListener('message', (event: any) => {
+        if (event.channelName === channelName && event.message) {
+          console.log('[Agora RTM] Message received from channel:', event);
+          this.handleChannelMessage(event.message, event.publisher);
+        }
       });
 
-      this.channel.on('MemberJoined', (memberId: any) => {
-        console.log('[Agora RTM] Member joined:', memberId);
-        this.onMemberJoined?.(memberId);
+      // Setup presence listener
+      this.client.addEventListener('presence', (event: any) => {
+        if (event.channelName === channelName) {
+          console.log('[Agora RTM] Presence event:', event);
+          if (event.eventType === 'REMOTE_JOIN') {
+            this.onMemberJoined?.(event.publisher);
+          } else if (event.eventType === 'REMOTE_LEAVE') {
+            this.onMemberLeft?.(event.publisher);
+          }
+        }
       });
 
-      this.channel.on('MemberLeft', (memberId: any) => {
-        console.log('[Agora RTM] Member left:', memberId);
-        this.onMemberLeft?.(memberId);
-      });
-
-      await this.channel.join();
+      this.channel = channelName;
       this.isChannelJoined = true;
-      console.log('[Agora RTM] Joined channel:', channelName);
+      console.log('[Agora RTM] Subscribed to channel:', channelName);
     } catch (error) {
       console.error('[Agora RTM] Failed to join channel:', error);
       throw error;
@@ -138,26 +153,29 @@ export class AgoraRTMService {
    * Handle incoming channel message
    */
   private handleChannelMessage(message: any, memberId: string): void {
-    if (message.messageType === 'TEXT') {
-      const text = message.text;
+    // New SDK sends message as plain string
+    const text = typeof message === 'string' ? message : message.text || message;
 
-      // Check if it's a typing indicator
-      if (text.startsWith('__TYPING__')) {
-        const isTyping = text === '__TYPING__START__';
-        this.onTypingIndicator?.(isTyping, memberId);
-        return;
-      }
-
-      // Regular message
-      const messageData: MessageData = {
-        text,
-        senderId: memberId,
-        senderName: 'Stranger', // We don't have name in RTM, use partner name from match
-        timestamp: Date.now(),
-      };
-
-      this.onMessageReceived?.(messageData);
+    // Check if it's a typing indicator
+    if (text.startsWith('__TYPING__')) {
+      const isTyping = text === '__TYPING__START__';
+      this.onTypingIndicator?.(isTyping, memberId);
+      return;
     }
+
+    // Determine if this message is from the current user or stranger
+    const isCurrentUser = memberId === this.currentUserId;
+
+    // Regular message
+    const messageData: MessageData = {
+      text,
+      senderId: memberId,
+      senderName: isCurrentUser ? 'You' : 'Stranger',
+      timestamp: Date.now(),
+    };
+
+    console.log('[Agora RTM] Parsed message:', messageData);
+    this.onMessageReceived?.(messageData);
   }
 
   /**
@@ -169,7 +187,8 @@ export class AgoraRTMService {
     }
 
     try {
-      await this.channel.sendMessage({ text });
+      // Use publish method with the new SDK API
+      await this.client.publish(this.channel, text);
       console.log('[Agora RTM] Message sent:', text);
     } catch (error) {
       console.error('[Agora RTM] Failed to send message:', error);
@@ -185,7 +204,7 @@ export class AgoraRTMService {
 
     try {
       const text = isTyping ? '__TYPING__START__' : '__TYPING__STOP__';
-      await this.channel.sendMessage({ text });
+      await this.client.publish(this.channel, text);
     } catch (error) {
       console.error('[Agora RTM] Failed to send typing indicator:', error);
     }
@@ -197,9 +216,9 @@ export class AgoraRTMService {
   async leave(): Promise<void> {
     try {
       if (this.channel && this.isChannelJoined) {
-        await this.channel.leave();
+        await this.client.unsubscribe(this.channel);
         this.isChannelJoined = false;
-        console.log('[Agora RTM] Left channel');
+        console.log('[Agora RTM] Unsubscribed from channel');
       }
 
       if (this.client && this.isLoggedIn) {

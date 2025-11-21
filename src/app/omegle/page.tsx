@@ -152,6 +152,7 @@ export default function OmeglePage() {
           isConnected={isMatched} 
           isStrangerTyping={isPartnerTyping}
           onSendMessage={sendMessage}
+          onTyping={handleTyping}
           connectionState={connectionState}
           messages={messages}
         />
@@ -161,6 +162,7 @@ export default function OmeglePage() {
           isConnected={isMatched} 
           isStrangerTyping={isPartnerTyping}
           onSendMessage={sendMessage}
+          onTyping={handleTyping}
           connectionState={connectionState}
           messages={messages}
         />

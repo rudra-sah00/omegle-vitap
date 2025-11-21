@@ -7,9 +7,11 @@ Complete documentation for the WebSocket-based matchmaking backend.
 ### Core Documentation
 
 1. **[API.md](API.md)** - WebSocket API Reference
-   - Connection authentication
-   - Message types (join, leave, ping)
+   - Connection authentication (header + query param)
+   - Message types (join, leave, cancel, ping)
    - Message flows with diagrams
+   - User states (idle, queue, active)
+   - Disconnect behavior and cleanup
    - Error handling
    - Integration examples
    - Best practices
@@ -17,6 +19,7 @@ Complete documentation for the WebSocket-based matchmaking backend.
 2. **[ARCHITECTURE.md](ARCHITECTURE.md)** - System Architecture
    - System overview with architecture diagram
    - Core components (WebSocket, Matchmaking, Room, Token services)
+   - User state management (idle, queue, active lifecycle)
    - Data flow diagrams (matchmaking, leave)
    - Redis data model with visualization
    - Agora integration (RTC + RTM)
@@ -142,6 +145,14 @@ View diagrams on GitHub or with [Mermaid Preview](https://mermaid.live/).
 
 **Understand authentication**
 → [API.md](API.md) → Authentication (Header vs Query Parameter)
+
+**Understand user states (idle, queue, active)**
+→ [API.md](API.md) → User States
+→ [ARCHITECTURE.md](ARCHITECTURE.md) → User State Management
+
+**Handle disconnects and cleanup**
+→ [API.md](API.md) → Disconnect Behavior
+→ [ARCHITECTURE.md](ARCHITECTURE.md) → Cleanup Logic
 
 **Scale the system**
 → [ARCHITECTURE.md](ARCHITECTURE.md) → Scalability

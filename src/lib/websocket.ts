@@ -24,11 +24,14 @@ export class WebSocketService {
   private reconnectTimer: NodeJS.Timeout | null = null;
   private isIntentionalClose = false;
   private heartbeatInterval: NodeJS.Timeout | null = null;
-  private heartbeatIntervalMs = 30000; // 30 seconds
+  private heartbeatIntervalMs = 25000; // 25 seconds (backend timeout is likely 30s)
+  private missedPongs = 0;
+  private maxMissedPongs = 2;
 
   constructor(url: string, apiKey: string) {
     this.url = url;
     this.apiKey = apiKey;
+    this.setupVisibilityHandler();
   }
 
   /**
@@ -166,8 +169,9 @@ export class WebSocketService {
       const data = JSON.parse(event.data);
       
       // Handle pong response (has type but no data field)
-      if (data.type === 'pong') {
-        console.log('[WebSocket] Pong received');
+      if (data.type === 'pong' || (data.type === 'response' && data.data?.status === 'pong')) {
+        console.log('[WebSocket] Pong received ✓');
+        this.missedPongs = 0; // Reset missed pongs counter
         return;
       }
       
@@ -237,10 +241,12 @@ export class WebSocketService {
    */
   private startHeartbeat(): void {
     this.clearHeartbeat();
+    this.missedPongs = 0;
     
     this.heartbeatInterval = setInterval(() => {
       if (this.isConnected()) {
         this.send({ type: 'ping', data: {} });
+        console.log('[WebSocket] Ping sent');
       }
     }, this.heartbeatIntervalMs);
   }
@@ -253,6 +259,27 @@ export class WebSocketService {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
     }
+    this.missedPongs = 0;
+  }
+
+  /**
+   * Setup page visibility handler to reconnect when page becomes visible
+   */
+  private setupVisibilityHandler(): void {
+    if (typeof document === 'undefined') return;
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        console.log('[WebSocket] Page hidden, keeping connection alive');
+      } else {
+        console.log('[WebSocket] Page visible again');
+        // Check if connection is still alive
+        if (!this.isConnected() && !this.isIntentionalClose) {
+          console.log('[WebSocket] Reconnecting after visibility change');
+          this.connect();
+        }
+      }
+    });
   }
 
   /**

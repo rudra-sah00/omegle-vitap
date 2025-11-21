@@ -33,9 +33,15 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
 
       console.log('[Agora RTM] Initializing...');
 
-      // Initialize service
+      // Convert UID to string and ensure it's valid for RTM
+      const uidString = typeof uid === 'number' ? uid.toString() : uid;
+      
+      // Initialize service with App ID and UID
       rtmServiceRef.current = new AgoraRTMService();
-      await rtmServiceRef.current.initialize(process.env.NEXT_PUBLIC_AGORA_APP_ID!);
+      await rtmServiceRef.current.initialize(
+        process.env.NEXT_PUBLIC_AGORA_APP_ID!,
+        uidString
+      );
 
       // Setup event handlers
       rtmServiceRef.current.setOnMessageReceived((message: MessageData) => {
@@ -52,10 +58,8 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
 
       // Login to RTM (automatically joins channel)
       await rtmServiceRef.current.login({
-        appId: process.env.NEXT_PUBLIC_AGORA_APP_ID!,
         channelName: matchData.channelName,
         token: matchData.rtmToken,
-        uid: typeof uid === 'number' ? uid.toString() : uid,
       });
 
       // Store UID for message sending
@@ -65,7 +69,10 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
       console.log('✅ RTM initialized successfully');
     } catch (error) {
       console.error('❌ Failed to initialize RTM:', error);
-      throw error;
+      console.warn('⚠️ RTM is not enabled in Agora Console. Please enable RTM service or messaging will not work.');
+      console.warn('⚠️ Go to Agora Console → Your Project → Enable RTM (Real-Time Messaging)');
+      // Don't throw error, just mark as not initialized
+      setIsRTMInitialized(false);
     }
   }, [onMessageReceived, onTypingIndicator]);
 

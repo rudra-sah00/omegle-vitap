@@ -10,11 +10,12 @@ interface MobileChatProps {
   isConnected: boolean;
   isStrangerTyping?: boolean;
   onSendMessage?: (message: string) => void;
+  onTyping?: (isTyping: boolean) => void;
   connectionState?: ConnectionState;
   messages?: MessageData[];
 }
 
-export const MobileChat = ({ isConnected, isStrangerTyping = false, onSendMessage, connectionState = 'disconnected', messages = [] }: MobileChatProps) => {
+export const MobileChat = ({ isConnected, isStrangerTyping = false, onSendMessage, onTyping, connectionState = 'disconnected', messages = [] }: MobileChatProps) => {
   const handleClose = () => {
     const chatPanel = document.getElementById('mobile-chat');
     if (chatPanel) {
@@ -68,7 +69,7 @@ export const MobileChat = ({ isConnected, isStrangerTyping = false, onSendMessag
           </div>
 
           <ChatMessages isConnected={isConnected} isStrangerTyping={isStrangerTyping} messages={messages} />
-          <ChatInput isConnected={isConnected} onSend={onSendMessage} />
+          <ChatInput isConnected={isConnected} onSend={onSendMessage} onTyping={onTyping} />
         </div>
       </div>
     </>

@@ -1,6 +1,7 @@
 'use client';
 
 import { TypingIndicator } from './TypingIndicator';
+import { EncryptedText } from '@/components/ui/encrypted-text';
 import type { MessageData } from '@/lib/agora-rtm';
 
 interface ChatMessagesProps {
@@ -29,33 +30,36 @@ export const ChatMessages = ({ isConnected, isStrangerTyping = false, messages =
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
-          {messages.map((message, index) => (
-            <div 
-              key={`${message.timestamp}-${index}`} 
-              className={`flex ${message.senderName === 'You' ? 'justify-end' : 'justify-start'}`}
-            >
+        <div className="space-y-2">
+          {messages.map((message, index) => {
+            const isYou = message.senderName === 'You';
+            
+            return (
               <div 
-                className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
-                  message.senderName === 'You' 
-                    ? 'bg-[#0084d1] text-white' 
-                    : 'bg-slate-100 text-slate-800'
-                }`}
+                key={`${message.timestamp}-${index}`} 
+                className="flex items-start gap-2"
               >
-                <p className="text-sm break-words">{message.text}</p>
-                <p className={`text-xs mt-1 ${
-                  message.senderName === 'You' ? 'text-blue-100' : 'text-slate-500'
+                <span className={`text-sm font-semibold min-w-[70px] ${
+                  isYou ? 'text-blue-600' : 'text-slate-600'
                 }`}>
-                  {new Date(message.timestamp).toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                  })}
-                </p>
+                  {isYou ? 'You:' : 'Stranger:'}
+                </span>
+                <div className="flex-1">
+                  <EncryptedText 
+                    text={message.text}
+                    className="text-sm text-slate-800 break-words"
+                    revealDelayMs={30}
+                    flipDelayMs={30}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {isStrangerTyping && (
-            <div className="flex justify-start">
+            <div className="flex items-start gap-2">
+              <span className="text-sm font-semibold min-w-[70px] text-slate-600">
+                Stranger:
+              </span>
               <TypingIndicator />
             </div>
           )}

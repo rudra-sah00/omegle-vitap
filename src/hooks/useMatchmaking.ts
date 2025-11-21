@@ -270,6 +270,7 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
 
     setConnectionState('connected');
     setMatchData(null);
+    isJoiningRef.current = false; // Reset joining flag
   }, [connectionState]);
 
   return {

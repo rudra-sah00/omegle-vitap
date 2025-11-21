@@ -6,6 +6,7 @@ Comprehensive technical documentation for the WebSocket-based matchmaking system
 - [System Overview](#system-overview)
 - [Architecture Diagram](#architecture-diagram)
 - [Core Components](#core-components)
+- [User State Management](#user-state-management)
 - [Data Flow](#data-flow)
 - [Technology Stack](#technology-stack)
 - [Redis Design](#redis-design)
@@ -97,27 +98,49 @@ graph TB
 
 **Responsibilities:**
 - Accept WebSocket connections with API key validation
-- Parse incoming messages (join, leave, ping)
+- Track user state (idle, queue, active)
+- Parse incoming messages (join, leave, cancel, ping)
 - Route messages to appropriate services
 - Send responses back to clients
 - Handle connection lifecycle (open, close, error)
+- Automatic cleanup on disconnect based on user state
 
 **Key Methods:**
-- `HandleWebSocketWithAuth()` - API key authentication wrapper
-- `HandleWebSocket()` - Main WebSocket connection handler
-- `handleJoin()` - Process join requests and matchmaking
-- `handleLeave()` - Process leave requests and cleanup
+- `HandleWebSocketWithAuth()` - API key authentication wrapper (header + query param)
+- `HandleWebSocket()` - Main WebSocket connection handler with state tracking
+- `handleJoin()` - Process join requests, add to queue, set state to queue
+- `handleLeave()` - Process leave requests, cleanup, set both users to idle
+- `handleCancel()` - Cancel search, remove from queue, set state to idle
 - `pollForMatch()` - Background polling for match (2s interval, 5min timeout)
-- `createAndNotifyMatch()` - Generate tokens and notify both users
+- `createAndNotifyMatch()` - Generate tokens, notify both users, set state to active
+- `cleanupUserOnDisconnect()` - State-based cleanup on disconnect
 
 **Connection Flow:**
 ```go
-1. Client connects with API key
+1. Client connects with API key (X-API-Key header or apiKey query param)
 2. Validate API key
 3. Upgrade HTTP to WebSocket
-4. Start message loop
-5. Read messages → Parse → Route
-6. On close: cleanup resources
+4. Create UserConnection (state=idle)
+5. Start message loop
+6. Read messages → Parse → Route → Update state
+7. On close: cleanup based on state (idle/queue/active)
+```
+
+**User State Tracking:**
+```go
+type UserState string
+const (
+    StateIdle   UserState = "idle"   // Connected, not searching
+    StateQueue  UserState = "queue"  // In matchmaking queue
+    StateActive UserState = "active" // In active call
+)
+
+type UserConnection struct {
+    Conn   *websocket.Conn
+    UID    uint32
+    Gender string
+    State  UserState
+}
 ```
 
 ### 2. Matchmaking Service (`src/services/matchmaking/service.go`)
@@ -231,6 +254,205 @@ Token: ATZhAAIncDI2YTZjOWJhMTgzMGQ0ZDlhOTUwYmFmOTdiNTY4NTJhOXAyMTM5MjE
 Max Retries: 3
 Pool Size: 10
 ```
+
+---
+
+## User State Management
+
+The backend tracks each connected user through three distinct states to ensure proper resource cleanup and consistent behavior.
+
+### State Definitions
+
+Each user exists in exactly one state at any given time:
+
+| State | Description | Redis Data | Memory Data |
+|-------|-------------|------------|-------------|
+| **idle** | Connected but inactive | None | Connection only |
+| **queue** | Searching for match | In queue:all | Connection + state |
+| **active** | In active call | In room:{id}, user:{uid} | Connection + state + room |
+
+### State Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> idle: WebSocket Connect
+    
+    idle --> queue: handleJoin()
+    Note right of queue: Added to queue:all
+    
+    queue --> active: Match Found
+    Note right of active: Room created in Redis
+    
+    queue --> idle: handleCancel()
+    Note left of queue: Removed from queue:all
+    
+    active --> idle: handleLeave()
+    Note left of active: Room deleted, both users idle
+    
+    active --> idle: Partner Leaves
+    Note left of active: Notified partner_left
+    
+    idle --> [*]: Disconnect
+    Note right of idle: No cleanup needed
+    
+    queue --> [*]: Disconnect
+    Note right of queue: Remove from queue:all
+    
+    active --> [*]: Disconnect
+    Note right of active: Notify partner, delete room
+```
+
+### State Transitions
+
+#### Connect → idle
+```go
+// When WebSocket connects
+conn.UserConnection = &UserConnection{
+    Conn:   websocket,
+    UID:    0,         // Not set yet
+    Gender: "",        // Not set yet
+    State:  StateIdle,
+}
+```
+
+#### idle → queue
+```go
+// When user sends "join" message
+h.connections[uid] = &UserConnection{
+    Conn:   conn,
+    UID:    uid,
+    Gender: gender,
+    State:  StateQueue,  // ← State change
+}
+matchmakingService.AddToQueue(uid, name, gender)
+```
+
+#### queue → active
+```go
+// When match found
+userConn1.State = StateActive  // ← State change
+userConn2.State = StateActive  // ← State change
+roomService.CreateRoom(roomID, user1, user2)
+// Notify both users with tokens
+```
+
+#### active → idle (Leave)
+```go
+// When user sends "leave" message
+partnerConn.State = StateIdle  // ← State change
+userConn.State = StateIdle     // ← State change
+roomService.RemoveUserFromRoom(uid)
+// Notify partner
+```
+
+#### queue → idle (Cancel)
+```go
+// When user sends "cancel" message
+userConn.State = StateIdle  // ← State change
+matchmakingService.RemoveFromQueue(uid, gender)
+```
+
+### Cleanup Logic
+
+Different cleanup actions are taken based on the user's state when disconnecting:
+
+#### Cleanup for idle State
+```go
+func cleanupUserOnDisconnect(uid uint32) {
+    case StateIdle:
+        // Just remove connection
+        delete(h.connections, uid)
+        log.Printf("🧹 [CLEANUP] UID %d (idle): Connection removed", uid)
+}
+```
+
+**Impact:** None. User was not searching or in a call.
+
+#### Cleanup for queue State
+```go
+func cleanupUserOnDisconnect(uid uint32) {
+    case StateQueue:
+        // Remove from matchmaking queue
+        h.matchmakingService.RemoveFromQueue(uid, userConn.Gender)
+        delete(h.connections, uid)
+        log.Printf("🧹 [CLEANUP] UID %d (queue): Removed from queue", uid)
+}
+```
+
+**Impact:** User removed from matchmaking queue. Cannot be matched anymore.
+
+#### Cleanup for active State
+```go
+func cleanupUserOnDisconnect(uid uint32) {
+    case StateActive:
+        // Get partner UID
+        partnerUID := h.roomService.GetRoomByUserID(uid)
+        
+        // Notify partner
+        if partnerConn, exists := h.connections[partnerUID]; exists {
+            partnerConn.WriteJSON(map[string]interface{}{
+                "type": "response",
+                "data": map[string]interface{}{
+                    "status":  "partner_left",
+                    "message": "Your partner left the room",
+                },
+            })
+            
+            // Update partner state to idle
+            partnerConn.State = StateIdle
+        }
+        
+        // Remove room
+        h.roomService.RemoveUserFromRoom(uid)
+        delete(h.connections, uid)
+        
+        log.Printf("🧹 [CLEANUP] UID %d (active): Room removed, partner notified", uid)
+}
+```
+
+**Impact:** Partner notified. Room deleted. Partner returned to idle state.
+
+### State Tracking Benefits
+
+1. **Proper Resource Cleanup**: Different actions for different states
+2. **Consistent Behavior**: Clear rules for state transitions
+3. **Debugging**: Logs show which state user was in
+4. **Prevention of Race Conditions**: State changes are sequential
+5. **Memory Efficiency**: Cleanup only happens when needed
+
+### Monitoring User States
+
+**Get Queue Size:**
+```bash
+redis-cli -u $REDIS_URL LLEN queue:all
+```
+
+**Get Active Rooms:**
+```bash
+redis-cli -u $REDIS_URL KEYS room:*
+```
+
+**Get User's Room:**
+```bash
+redis-cli -u $REDIS_URL GET user:12345
+```
+
+**Check Connection Count (in-memory):**
+```go
+// In handler
+log.Printf("Active connections: %d", len(h.connections))
+```
+
+### Edge Cases Handled
+
+| Scenario | State | Handling |
+|----------|-------|----------|
+| User disconnects while searching | queue | Remove from queue, no notification |
+| User disconnects during call | active | Notify partner, delete room, partner → idle |
+| Both users disconnect simultaneously | active | Both cleaned up independently |
+| User sends "join" while in queue | queue | Rejected with error |
+| User sends "leave" while idle | idle | Rejected with error |
+| User sends "cancel" while active | active | Rejected with error (must "leave" first) |
 
 ---
 
