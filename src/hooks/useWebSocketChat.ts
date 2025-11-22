@@ -7,6 +7,7 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import type { WebSocketService } from '@/lib/websocket';
 
 export interface MessageData {
+  id: string; // Unique message ID
   text: string;
   senderId: string;
   senderName: string;
@@ -37,6 +38,7 @@ export const useWebSocketChat = (options: UseWebSocketChatOptions) => {
       if (msg.type === 'message') {
         // Incoming message from partner
         const messageData: MessageData = {
+          id: `${msg.data.from}-${msg.data.timestamp}-${Math.random()}`,
           text: msg.data.text,
           senderId: msg.data.from.toString(),
           senderName: 'Stranger',
@@ -89,27 +91,53 @@ export const useWebSocketChat = (options: UseWebSocketChatOptions) => {
 
     if (sent) {
       // Add to local messages immediately (optimistic update)
+      const timestamp = Date.now();
       const messageData: MessageData = {
+        id: `self-${timestamp}-${Math.random()}`,
         text: trimmedText,
         senderId: 'self',
         senderName: 'You',
-        timestamp: Date.now(),
+        timestamp,
       };
       
       setMessages((prev) => [...prev, messageData]);
     }
   }, [ws, isInSession]);
 
+  // Debounce timer for typing indicator
+  const typingDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTypingStateRef = useRef<boolean>(false);
+
   /**
-   * Send typing indicator to partner
+   * Send typing indicator to partner (debounced)
    */
   const sendTypingIndicator = useCallback((isTyping: boolean) => {
     if (!ws || !isInSession) return;
 
-    ws.send({ 
-      type: 'typing', 
-      data: { isTyping } 
-    });
+    // Clear existing debounce timer
+    if (typingDebounceRef.current) {
+      clearTimeout(typingDebounceRef.current);
+    }
+
+    if (isTyping) {
+      // Send "typing" immediately on first keystroke
+      if (!lastTypingStateRef.current) {
+        ws.send({ 
+          type: 'typing', 
+          data: { isTyping: true } 
+        });
+        lastTypingStateRef.current = true;
+      }
+    } else {
+      // Debounce "stopped typing" signal by 300ms
+      typingDebounceRef.current = setTimeout(() => {
+        ws.send({ 
+          type: 'typing', 
+          data: { isTyping: false } 
+        });
+        lastTypingStateRef.current = false;
+      }, 300);
+    }
   }, [ws, isInSession]);
 
   /**
@@ -122,6 +150,11 @@ export const useWebSocketChat = (options: UseWebSocketChatOptions) => {
       clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = null;
     }
+    if (typingDebounceRef.current) {
+      clearTimeout(typingDebounceRef.current);
+      typingDebounceRef.current = null;
+    }
+    lastTypingStateRef.current = false;
   }, []);
 
   return {

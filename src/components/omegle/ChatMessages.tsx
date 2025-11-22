@@ -32,12 +32,12 @@ export const ChatMessages = ({ isConnected, isStrangerTyping = false, messages =
         </div>
       ) : (
         <div className="space-y-2">
-          {messages.map((message, index) => {
+          {messages.map((message) => {
             const isYou = message.senderName === 'You';
             
             return (
               <div 
-                key={`${message.timestamp}-${index}`} 
+                key={message.id} 
                 className="flex items-start gap-2"
               >
                 <span className={`text-sm font-semibold min-w-[70px] ${

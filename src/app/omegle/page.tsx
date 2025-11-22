@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
 import { useChatSession } from '@/hooks/useChatSession';
@@ -48,7 +48,8 @@ function OmeglePageContent() {
     remoteVideoElementId: 'remote-video',
   });
   
-  const devices = getCurrentDevices();
+  // Memoize devices to prevent re-renders on every component update
+  const devices = useMemo(() => getCurrentDevices(), [getCurrentDevices]);
 
   /**
    * Check browser compatibility

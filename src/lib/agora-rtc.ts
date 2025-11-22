@@ -273,7 +273,7 @@ export class AgoraRTCService {
   }
 
   /**
-   * Create local video and audio tracks and publish them
+   * Create local video and audio tracks and publish them (with retry logic)
    */
   private async createAndPublishTracks(cameraOn: boolean = true, micOn: boolean = true): Promise<void> {
     if (!this.client) {
@@ -290,6 +290,43 @@ export class AgoraRTCService {
       throw new Error('Not connected to channel');
     }
 
+    // Retry logic with exponential backoff
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        await this.attemptCreateAndPublishTracks(cameraOn, micOn);
+        return; // Success, exit retry loop
+      } catch (error) {
+        lastError = error as Error;
+        
+        // Don't retry on device not found errors
+        if (lastError.message.includes('DEVICE_NOT_FOUND')) {
+          throw lastError;
+        }
+
+        // Don't retry on intentional cancellation
+        if (this.isLeaving) {
+          throw lastError;
+        }
+
+        // If not last attempt, wait before retry (exponential backoff)
+        if (attempt < maxRetries - 1) {
+          const delay = Math.min(1000 * Math.pow(2, attempt), 4000); // 1s, 2s, 4s
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    // All retries failed
+    throw lastError || new Error('Failed to create tracks after multiple attempts');
+  }
+
+  /**
+   * Single attempt to create and publish tracks
+   */
+  private async attemptCreateAndPublishTracks(cameraOn: boolean = true, micOn: boolean = true): Promise<void> {
     try {
       // Set track creation timeout
       let timeoutId: NodeJS.Timeout | null = null;
@@ -415,7 +452,7 @@ export class AgoraRTCService {
 
         try {
           await Promise.race([
-            this.client.publish(tracksToPublish),
+            this.client!.publish(tracksToPublish),
             publishTimeout
           ]);
         } finally {

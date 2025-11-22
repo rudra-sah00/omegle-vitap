@@ -227,49 +227,67 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     
     isLeavingRef.current = true;
     
-    // End current session
-    setIsInSession(false);
-    currentMatchRef.current = null;
+    try {
+      // End current session
+      setIsInSession(false);
+      currentMatchRef.current = null;
 
-    // Clear chat messages
-    clearMessages();
+      // Clear chat messages
+      clearMessages();
 
-    // Leave the backend room first
-    await leaveRoom();
-
-    // Cleanup RTC connection
-    await leaveRTC();
-    
-    // Wait a moment for backend and Agora to fully disconnect
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Use same UID from context (no new UID generation)
-    const uid = parseInt(currentUidRef.current, 10);
-
-    // Rejoin queue (camera/mic state is preserved in useAgoraRTC hook)
-    if (userDataRef.current) {
-      const authData = {
-        uid, // Same UID for all searches until page reload
-        name: userDataRef.current.name,
-        gender: userDataRef.current.gender,
-      };
+      // Sequential cleanup to prevent race conditions
+      // Step 1: Leave backend room and wait for confirmation
+      await leaveRoom();
       
-      // Join matchmaking queue with new UID
-      join(authData);
-      isLeavingRef.current = false;
-    } else {
+      // Step 2: Ensure backend cleanup is complete (small delay)
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Step 3: Cleanup RTC connection
+      await leaveRTC();
+      
+      // Step 4: Wait for RTC cleanup to complete
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Use same UID from context (no new UID generation)
+      const uid = parseInt(currentUidRef.current, 10);
+
+      // Rejoin queue (camera/mic state is preserved in useAgoraRTC hook)
+      if (userDataRef.current) {
+        const authData = {
+          uid, // Same UID for all searches until page reload
+          name: userDataRef.current.name,
+          gender: userDataRef.current.gender,
+        };
+        
+        // Join matchmaking queue with new UID
+        join(authData);
+      }
+    } catch (error) {
+      // Silently handle errors and reset state
+    } finally {
       isLeavingRef.current = false;
     }
   }, [leaveRoom, leaveRTC, join, clearMessages]);
 
   // Cleanup on unmount only (not on endSession changes)
   useEffect(() => {
+    const cleanupRef = { cancelled: false };
+    
     return () => {
-      // Call cleanup directly to avoid dependency issues
-      clearMessages();
-      leaveRTC().then(() => {
-        leaveRoom();
-      });
+      cleanupRef.cancelled = true;
+      
+      // Proper async cleanup with error handling
+      (async () => {
+        try {
+          clearMessages();
+          await leaveRTC();
+          if (!cleanupRef.cancelled) {
+            await leaveRoom();
+          }
+        } catch (error) {
+          // Silently handle cleanup errors
+        }
+      })();
     };
   }, []); // Empty deps - only run on mount/unmount
 
