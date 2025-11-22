@@ -203,7 +203,7 @@ describe('OmeglePage', () => {
       render(<OmeglePage />);
 
       // Should not crash or show error
-      expect(screen.getByTestId('error-boundary')).toBeInTheDocument();
+      expect(screen.getByTestId('error-boundary')).toBeTruthy();
     });
   });
 
@@ -246,8 +246,8 @@ describe('OmeglePage', () => {
 
       render(<OmeglePage />);
 
-      expect(screen.getByTestId('loading-state')).toBeInTheDocument();
-      expect(screen.getByText(/Loading: connecting/)).toBeInTheDocument();
+      expect(screen.getByTestId('loading-state')).toBeTruthy();
+      expect(screen.getByText(/Loading: connecting/)).toBeTruthy();
     });
 
     it('should handle navigation errors silently during status check', async () => {
@@ -768,11 +768,11 @@ describe('OmeglePage', () => {
     it('should render main chat UI when ready', () => {
       render(<OmeglePage />);
 
-      expect(screen.getByTestId('video-display-remote-video')).toBeInTheDocument();
-      expect(screen.getByTestId('video-display-local-video')).toBeInTheDocument();
-      expect(screen.getByTestId('video-controls')).toBeInTheDocument();
-      expect(screen.getByTestId('chat-window')).toBeInTheDocument();
-      expect(screen.getByTestId('mobile-chat')).toBeInTheDocument();
+      expect(screen.getByTestId('video-display-remote-video')).toBeTruthy();
+      expect(screen.getByTestId('video-display-local-video')).toBeTruthy();
+      expect(screen.getByTestId('video-controls')).toBeTruthy();
+      expect(screen.getByTestId('chat-window')).toBeTruthy();
+      expect(screen.getByTestId('mobile-chat')).toBeTruthy();
     });
 
     it('should render error state when matchmaking error occurs', () => {
@@ -781,8 +781,8 @@ describe('OmeglePage', () => {
 
       render(<OmeglePage />);
 
-      expect(screen.getByTestId('error-state')).toBeInTheDocument();
-      expect(screen.getByText(/Error: Connection failed/)).toBeInTheDocument();
+      expect(screen.getByTestId('error-state')).toBeTruthy();
+      expect(screen.getByText(/Error: Connection failed/)).toBeTruthy();
     });
 
     it('should handle error state go back button', () => {
@@ -819,7 +819,7 @@ describe('OmeglePage', () => {
 
       render(<OmeglePage />);
 
-      expect(screen.getByText('Matched')).toBeInTheDocument();
+      expect(screen.getByText('Matched')).toBeTruthy();
     });
 
     it('should show searching status in video controls', () => {
@@ -828,7 +828,7 @@ describe('OmeglePage', () => {
 
       render(<OmeglePage />);
 
-      expect(screen.getByText('Searching')).toBeInTheDocument();
+      expect(screen.getByText('Searching')).toBeTruthy();
     });
 
     it('should display partner name when matched', () => {
@@ -837,7 +837,7 @@ describe('OmeglePage', () => {
 
       render(<OmeglePage />);
 
-      expect(screen.getByText(/Alice/)).toBeInTheDocument();
+      expect(screen.getByText(/Alice/)).toBeTruthy();
     });
 
     it('should display stranger as default partner name', () => {
@@ -846,7 +846,7 @@ describe('OmeglePage', () => {
 
       render(<OmeglePage />);
 
-      expect(screen.getByText(/Stranger/)).toBeInTheDocument();
+      expect(screen.getByText(/Stranger/)).toBeTruthy();
     });
 
     it('should display camera and mic status', () => {
@@ -856,7 +856,7 @@ describe('OmeglePage', () => {
       render(<OmeglePage />);
 
       const localVideo = screen.getByTestId('video-display-local-video');
-      expect(localVideo).toHaveTextContent('Camera: On');
+      expect(localVideo.textContent).toContain('Camera: On');
     });
 
     it('should display remote camera and mic status', () => {
@@ -866,7 +866,7 @@ describe('OmeglePage', () => {
       render(<OmeglePage />);
 
       const remoteVideo = screen.getByTestId('video-display-remote-video');
-      expect(remoteVideo).toHaveTextContent('Camera: On');
+      expect(remoteVideo.textContent).toContain('Camera: On');
     });
 
     it('should pass messages to chat window', () => {
@@ -878,14 +878,14 @@ describe('OmeglePage', () => {
       render(<OmeglePage />);
 
       const chatWindow = screen.getByTestId('chat-window');
-      expect(chatWindow).toHaveTextContent('Hello');
-      expect(chatWindow).toHaveTextContent('Hi');
+      expect(chatWindow.textContent).toContain('Hello');
+      expect(chatWindow.textContent).toContain('Hi');
     });
 
     it('should render within error boundary', () => {
       render(<OmeglePage />);
 
-      expect(screen.getByTestId('error-boundary')).toBeInTheDocument();
+      expect(screen.getByTestId('error-boundary')).toBeTruthy();
     });
 
     it('should memoize devices to prevent unnecessary re-renders', () => {
