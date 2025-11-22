@@ -239,21 +239,40 @@ export class AgoraRTCService {
       throw new Error('No internet connection');
     }
 
+    // Quick connection quality check (non-blocking)
     try {
-      // Set connection timeout
-      const joinTimeout = setTimeout(() => {
-        throw new Error('Connection timeout: Could not join channel');
-      }, 10000); // 10 second timeout
+      const networkInfo = (navigator as any).connection;
+      if (networkInfo?.effectiveType === 'slow-2g' || networkInfo?.effectiveType === '2g') {
+        // Very slow connection detected, but still try
+      }
+    } catch {
+      // Ignore if Network Information API not available
+    }
 
-      // Join the channel
-      await this.client.join(
-        config.appId, // App ID is required
-        config.channelName,
-        config.token,
-        config.uid
-      );
+    try {
+      // Set connection timeout with Promise.race for proper error handling
+      let timeoutId: NodeJS.Timeout | null = null;
+      const joinTimeout = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('Connection timeout: Could not join channel'));
+        }, 20000); // 20 second timeout (increased for slow networks and retries)
+      });
 
-      clearTimeout(joinTimeout);
+      try {
+        // Join the channel with timeout
+        await Promise.race([
+          this.client.join(
+            config.appId, // App ID is required
+            config.channelName,
+            config.token,
+            config.uid
+          ),
+          joinTimeout
+        ]);
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+      }
+
       this.isJoined = true;
 
       // Create and publish local tracks with initial state

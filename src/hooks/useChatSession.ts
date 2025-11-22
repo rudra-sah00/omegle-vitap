@@ -106,17 +106,44 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     
     currentMatchRef.current = matchData;
 
-    try {
-      // Initialize RTC only (chat uses existing WebSocket connection)
-      const uid = currentUidRef.current;
-      
-      await initializeRTC(matchData, uid, localVideoElementId, remoteVideoElementId);
+    // Retry logic with exponential backoff
+    const maxRetries = 2;
+    let lastError: any = null;
 
-      setIsInSession(true);
-    } catch (error) {
-      showError('Failed to join video call. Please try again.', ErrorCode.CHANNEL_JOIN_FAILED);
-      await endSession();
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // Initialize RTC only (chat uses existing WebSocket connection)
+        const uid = currentUidRef.current;
+        
+        await initializeRTC(matchData, uid, localVideoElementId, remoteVideoElementId);
+
+        setIsInSession(true);
+        return; // Success!
+      } catch (error) {
+        lastError = error;
+        
+        // Don't retry if leaving
+        if (isLeavingRef.current) {
+          break;
+        }
+
+        // Wait before retry (exponential backoff)
+        if (attempt < maxRetries - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        }
+      }
     }
+
+    // All retries failed
+    const errorMsg = lastError?.message || 'Unknown error';
+    if (errorMsg.includes('timeout')) {
+      showError('Connection timeout. Please check your internet and try again.', ErrorCode.CONNECTION_LOST);
+    } else if (errorMsg.includes('permission')) {
+      showError('Camera/microphone permission denied. Please allow access.', ErrorCode.MEDIA_DEVICE_NOT_FOUND);
+    } else {
+      showError('Failed to connect. Please try again.', ErrorCode.CHANNEL_JOIN_FAILED);
+    }
+    await endSession();
   }
 
   /**
