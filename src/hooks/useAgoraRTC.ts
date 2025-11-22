@@ -18,6 +18,8 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
   const [isCameraOn, setIsCameraOn] = useState(false); // Start with camera OFF
   const [isMicOn, setIsMicOn] = useState(false); // Start with mic OFF
   const [isRTCInitialized, setIsRTCInitialized] = useState(false);
+  const [isRemoteCameraOn, setIsRemoteCameraOn] = useState(true); // Track remote user's camera
+  const [isRemoteMicOn, setIsRemoteMicOn] = useState(true); // Track remote user's mic
   const hasPreviewRef = useRef(false); // Track if preview is active
 
   /**
@@ -56,15 +58,28 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
       // Setup event handlers
       rtcServiceRef.current.setOnUserPublished(async (user: any, mediaType: 'audio' | 'video') => {
         if (mediaType === 'video') {
+          setIsRemoteCameraOn(true);
           const remoteElement = document.getElementById(remoteVideoElementId);
           if (remoteElement) {
             rtcServiceRef.current?.playRemoteVideo(user, remoteVideoElementId);
             onRemoteVideoReady?.(user.uid);
           }
+        } else if (mediaType === 'audio') {
+          setIsRemoteMicOn(true);
+        }
+      });
+
+      rtcServiceRef.current.setOnUserUnpublished((user: any, mediaType: 'audio' | 'video') => {
+        if (mediaType === 'video') {
+          setIsRemoteCameraOn(false);
+        } else if (mediaType === 'audio') {
+          setIsRemoteMicOn(false);
         }
       });
 
       rtcServiceRef.current.setOnUserLeft((user: any) => {
+        setIsRemoteCameraOn(true); // Reset to default
+        setIsRemoteMicOn(true); // Reset to default
         onRemoteUserLeft?.(user.uid);
       });
 
@@ -279,6 +294,8 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
     isCameraOn,
     isMicOn,
     isRTCInitialized,
+    isRemoteCameraOn,
+    isRemoteMicOn,
 
     // Methods
     initializeRTC,

@@ -28,6 +28,8 @@ function OmeglePageContent() {
     matchmakingError,
     isCameraOn,
     isMicOn,
+    isRemoteCameraOn,
+    isRemoteMicOn,
     messages,
     isPartnerTyping,
     startSearch,
@@ -237,10 +239,12 @@ function OmeglePageContent() {
           {/* Stranger Video */}
           <VideoDisplay
             id="remote-video"
-            label={matchData?.partner?.name || 'Stranger'}
+            label="Stranger"
             isConnected={isMatched}
             isSearching={isSearching}
             showConnectionIndicator={true}
+            isCameraOn={isRemoteCameraOn}
+            isMicOn={isRemoteMicOn}
           />
 
           {/* Your Video */}
@@ -248,10 +252,10 @@ function OmeglePageContent() {
             id="local-video"
             label="Your camera"
             isConnected={isMatched}
-            isSearching={false}
-            showConnectionIndicator={false}
             isCameraOn={isCameraOn}
             isMicOn={isMicOn}
+            isSearching={false}
+            showConnectionIndicator={false}
           >
             {/* Control Buttons */}
             <VideoControls

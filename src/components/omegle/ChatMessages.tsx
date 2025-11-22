@@ -2,7 +2,7 @@
 
 import { TypingIndicator } from './TypingIndicator';
 import { EncryptedText } from '@/components/ui/encrypted-text';
-import type { MessageData } from '@/lib/agora-rtm';
+import type { MessageData } from '@/hooks/useWebSocketChat';
 
 interface ChatMessagesProps {
   isConnected: boolean;

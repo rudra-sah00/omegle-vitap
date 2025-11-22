@@ -5,10 +5,10 @@
  */
 
 // Message Types
-export type MessageType = 'join' | 'leave' | 'cancel' | 'message' | 'signal' | 'ping';
+export type MessageType = 'join' | 'leave' | 'cancel' | 'message' | 'typing' | 'signal' | 'ping';
 
 // Server Message Types
-export type ServerMessageType = 'match' | 'reconnected' | 'session_expired' | 'leave' | 'cancel' | 'partner_left' | 'error' | 'message' | 'signal' | 'pong';
+export type ServerMessageType = 'match' | 'reconnected' | 'session_expired' | 'leave' | 'cancel' | 'partner_left' | 'error' | 'message' | 'typing' | 'signal' | 'pong';
 
 // Status Types
 export type MatchStatus = 'idle' | 'searching' | 'active';
@@ -161,11 +161,19 @@ export interface PingMessage {
   data: Record<string, never>; // empty object
 }
 
+export interface TypingIndicatorMessage {
+  type: 'typing';
+  data: {
+    isTyping: boolean;
+  };
+}
+
 export type ClientMessage = 
   | JoinMessage 
   | LeaveMessage 
   | CancelMessage 
   | ChatMessage
+  | TypingIndicatorMessage
   | SignalMessage
   | PingMessage;
 
@@ -220,6 +228,13 @@ export interface PongMessage {
   data: Record<string, never>;
 }
 
+export interface IncomingTypingIndicatorMessage {
+  type: 'typing';
+  data: {
+    isTyping: boolean;
+  };
+}
+
 export type ServerMessage = 
   | MatchMessage
   | ReconnectedMessage
@@ -229,6 +244,7 @@ export type ServerMessage =
   | PartnerLeftMessage
   | ErrorMessage
   | IncomingChatMessage
+  | IncomingTypingIndicatorMessage
   | IncomingSignalMessage
   | PongMessage;
 

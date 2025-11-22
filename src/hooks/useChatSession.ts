@@ -1,12 +1,13 @@
 /**
  * Hook to manage the complete chat session lifecycle
- * Integrates matchmaking, RTC, and RTM
+ * Integrates matchmaking, RTC, and WebSocket chat
  */
 
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { useMatchmaking } from './useMatchmaking';
 import { useAgoraRTC } from './useAgoraRTC';
-import { useAgoraRTM } from './useAgoraRTM';
+import { useWebSocketChat } from './useWebSocketChat';
+import { getWebSocketService } from '@/lib/websocket';
 import { showError, showInfo, ErrorCode } from '@/lib/toast';
 import { useUser } from '@/context/UserContext';
 import type { MatchData, MatchDataMatched } from '@/types/matchmaking';
@@ -46,7 +47,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     disconnect,
   } = useMatchmaking({
     autoConnect: true,
-    onMatched: handleMatched,
+    onMatched: handleMatched as any, // Type cast needed due to union type
     onPartnerLeft: () => {
       handlePartnerLeftRef.current?.();
     },
@@ -58,6 +59,8 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     isCameraOn,
     isMicOn,
     isRTCInitialized,
+    isRemoteCameraOn,
+    isRemoteMicOn,
     initializeRTC,
     toggleCamera,
     toggleMicrophone,
@@ -75,16 +78,16 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     },
   });
 
-  // Agora RTM (Messaging)
+  // WebSocket Chat (replaces Agora RTM)
   const {
-    isRTMInitialized,
     messages,
     isPartnerTyping,
-    initializeRTM,
     sendMessage,
     sendTypingIndicator,
-    leaveRTM,
-  } = useAgoraRTM({
+    clearMessages,
+  } = useWebSocketChat({
+    ws: getWebSocketService(),
+    isInSession,
     onMessageReceived: () => {
       // Message received
     },
@@ -104,24 +107,13 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     currentMatchRef.current = matchData;
 
     try {
-      // Initialize both RTC and RTM with the same UID
+      // Initialize RTC only (chat uses existing WebSocket connection)
       const uid = currentUidRef.current;
       
-      // Initialize RTC (required) and RTM (optional - may fail if not enabled)
-      const [rtcResult, rtmResult] = await Promise.allSettled([
-        initializeRTC(matchData, uid, localVideoElementId, remoteVideoElementId),
-        initializeRTM(matchData, uid),
-      ]);
-
-      // Check if RTC initialized successfully (RTM is optional)
-      if (rtcResult.status === 'rejected') {
-        console.error('❌ RTC failed:', rtcResult.reason);
-        throw new Error('Failed to initialize video/audio');
-      }
+      await initializeRTC(matchData, uid, localVideoElementId, remoteVideoElementId);
 
       setIsInSession(true);
     } catch (error) {
-      console.error('❌ handleMatched error:', error);
       showError('Failed to join video call. Please try again.', ErrorCode.CHANNEL_JOIN_FAILED);
       await endSession();
     }
@@ -198,17 +190,17 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     setIsInSession(false);
     currentMatchRef.current = null;
 
-    // Cleanup Agora connections - this forces channel leave
-    await Promise.all([
-      leaveRTC(),
-      leaveRTM(),
-    ]);
+    // Clear chat messages
+    clearMessages();
+
+    // Cleanup RTC connection
+    await leaveRTC();
 
     // Notify server we're leaving the room
     await leaveRoom();
     
     isLeavingRef.current = false;
-  }, [leaveRTC, leaveRTM, leaveRoom]);
+  }, [leaveRTC, leaveRoom, clearMessages]);
 
   /**
    * Handle partner leaving - force cleanup for both users
@@ -239,11 +231,11 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     setIsInSession(false);
     currentMatchRef.current = null;
 
-    // Cleanup Agora connections
-    await Promise.all([
-      leaveRTC(),
-      leaveRTM(),
-    ]);
+    // Clear chat messages
+    clearMessages();
+
+    // Cleanup RTC connection
+    await leaveRTC();
     
     // Wait a moment for Agora to fully disconnect
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -265,17 +257,14 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     } else {
       isLeavingRef.current = false;
     }
-  }, [leaveRTC, leaveRTM, join]);
+  }, [leaveRTC, join, clearMessages]);
 
-  // Cleanup on unmount
   // Cleanup on unmount only (not on endSession changes)
   useEffect(() => {
     return () => {
       // Call cleanup directly to avoid dependency issues
-      Promise.all([
-        leaveRTC(),
-        leaveRTM(),
-      ]).then(() => {
+      clearMessages();
+      leaveRTC().then(() => {
         leaveRoom();
       });
     };
@@ -293,7 +282,8 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     isCameraOn,
     isMicOn,
     isRTCInitialized,
-    isRTMInitialized,
+    isRemoteCameraOn,
+    isRemoteMicOn,
 
     // Messages
     messages,
