@@ -8,9 +8,10 @@ interface ChatMessagesProps {
   isConnected: boolean;
   isStrangerTyping?: boolean;
   messages?: MessageData[];
+  partnerName?: string;
 }
 
-export const ChatMessages = ({ isConnected, isStrangerTyping = false, messages = [] }: ChatMessagesProps) => {
+export const ChatMessages = ({ isConnected, isStrangerTyping = false, messages = [], partnerName }: ChatMessagesProps) => {
   return (
     <div className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-white to-slate-50/30">
       {!isConnected ? (
@@ -42,7 +43,7 @@ export const ChatMessages = ({ isConnected, isStrangerTyping = false, messages =
                 <span className={`text-sm font-semibold min-w-[70px] ${
                   isYou ? 'text-blue-600' : 'text-slate-600'
                 }`}>
-                  {isYou ? 'You:' : 'Stranger:'}
+                  {isYou ? 'You:' : `${partnerName || 'Stranger'}:`}
                 </span>
                 <div className="flex-1">
                   <EncryptedText 
@@ -58,7 +59,7 @@ export const ChatMessages = ({ isConnected, isStrangerTyping = false, messages =
           {isStrangerTyping && (
             <div className="flex items-start gap-2">
               <span className="text-sm font-semibold min-w-[70px] text-slate-600">
-                Stranger:
+                {partnerName || 'Stranger'}:
               </span>
               <TypingIndicator />
             </div>

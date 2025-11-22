@@ -10,6 +10,7 @@ import { useUser } from '@/context/UserContext';
 export const WelcomeForm = () => {
   const { name, setName, gender, setGender } = useUser();
   const [isOnline, setIsOnline] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -36,11 +37,17 @@ export const WelcomeForm = () => {
   }, []);
 
   const handleJoin = () => {
-    if (!name.trim()) {
+    if (!name.trim() || isLoading) {
       return;
     }
-    // Navigate to the main chat page
-    router.push('/omegle');
+    try {
+      setIsLoading(true);
+      // Navigate to the main chat page
+      router.push('/omegle');
+    } catch (error) {
+      setIsLoading(false);
+      // Silently handle navigation errors
+    }
   };
 
   return (
@@ -127,7 +134,7 @@ export const WelcomeForm = () => {
             <JoinButton 
               isOnline={isOnline} 
               onClick={handleJoin}
-              disabled={!name.trim()}
+              disabled={!name.trim() || isLoading}
             />
           </div>
 

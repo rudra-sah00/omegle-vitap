@@ -13,13 +13,14 @@ interface ChatWindowProps {
   onTyping?: (isTyping: boolean) => void;
   connectionState?: ConnectionState;
   messages?: MessageData[];
+  partnerName?: string;
 }
 
-export const ChatWindow = ({ isConnected, isStrangerTyping = false, onSendMessage, onTyping, connectionState = 'disconnected', messages = [] }: ChatWindowProps) => {
+export const ChatWindow = ({ isConnected, isStrangerTyping = false, onSendMessage, onTyping, connectionState = 'disconnected', messages = [], partnerName }: ChatWindowProps) => {
   return (
     <div className="hidden lg:flex flex-col bg-white border-l border-slate-300 w-full lg:w-[440px] h-screen shadow-xl">
       <ChatHeader isConnected={isConnected} />
-      <ChatMessages isConnected={isConnected} isStrangerTyping={isStrangerTyping} messages={messages} />
+      <ChatMessages isConnected={isConnected} isStrangerTyping={isStrangerTyping} messages={messages} partnerName={partnerName} />
       <ChatInput isConnected={isConnected} onSend={onSendMessage} onTyping={onTyping} />
     </div>
   );

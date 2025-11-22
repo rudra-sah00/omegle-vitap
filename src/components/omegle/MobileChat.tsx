@@ -14,9 +14,10 @@ interface MobileChatProps {
   onTyping?: (isTyping: boolean) => void;
   connectionState?: ConnectionState;
   messages?: MessageData[];
+  partnerName?: string;
 }
 
-export const MobileChat = ({ isConnected, isStrangerTyping = false, onSendMessage, onTyping, connectionState = 'disconnected', messages = [] }: MobileChatProps) => {
+export const MobileChat = ({ isConnected, isStrangerTyping = false, onSendMessage, onTyping, connectionState = 'disconnected', messages = [], partnerName }: MobileChatProps) => {
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [isChatOpen, setIsChatOpen] = React.useState(false);
   const lastMessageCountRef = React.useRef(0);
@@ -111,7 +112,7 @@ export const MobileChat = ({ isConnected, isStrangerTyping = false, onSendMessag
             </button>
           </div>
 
-          <ChatMessages isConnected={isConnected} isStrangerTyping={isStrangerTyping} messages={messages} />
+          <ChatMessages isConnected={isConnected} isStrangerTyping={isStrangerTyping} messages={messages} partnerName={partnerName} />
           <ChatInput isConnected={isConnected} onSend={onSendMessage} onTyping={onTyping} />
         </div>
       </div>

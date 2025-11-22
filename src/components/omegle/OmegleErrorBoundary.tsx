@@ -34,10 +34,7 @@ export class OmegleErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log error for debugging in development
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Omegle Error Boundary caught an error:', error, errorInfo);
-    }
+    // Silently handle error in production
 
     this.setState({
       error,

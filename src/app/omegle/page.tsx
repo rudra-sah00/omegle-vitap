@@ -55,11 +55,15 @@ function OmeglePageContent() {
    * Note: Browser polyfills are already initialized in root layout
    */
   useEffect(() => {
-    // Check if browser is supported
-    if (!isBrowserSupported()) {
-      showError('Your browser does not support video/audio. Please use Chrome, Firefox, or Safari 11+.', ErrorCode.MEDIA_DEVICE_NOT_FOUND);
-      setTimeout(() => router.push('/welcome'), 3000);
-      return;
+    try {
+      // Check if browser is supported
+      if (!isBrowserSupported()) {
+        showError('Your browser does not support video/audio. Please use Chrome, Firefox, or Safari 11+.', ErrorCode.MEDIA_DEVICE_NOT_FOUND);
+        setTimeout(() => router.push('/welcome'), 3000);
+        return;
+      }
+    } catch (error) {
+      // Silently handle browser check errors
     }
   }, [router]);
 
@@ -67,9 +71,14 @@ function OmeglePageContent() {
    * Check user status on mount
    */
   useEffect(() => {
-    if (!name) {
-      router.push('/welcome');
-    } else {
+    try {
+      if (!name) {
+        router.push('/welcome');
+      } else {
+        setCheckingStatus(false);
+      }
+    } catch (error) {
+      // Silently handle navigation errors
       setCheckingStatus(false);
     }
   }, [name, router]);
@@ -239,7 +248,7 @@ function OmeglePageContent() {
           {/* Stranger Video */}
           <VideoDisplay
             id="remote-video"
-            label="Stranger"
+            label={matchData?.partnerName || "Stranger"}
             isConnected={isMatched}
             isSearching={isSearching}
             showConnectionIndicator={true}
@@ -285,6 +294,7 @@ function OmeglePageContent() {
           onTyping={handleTyping}
           connectionState={connectionState}
           messages={messages}
+          partnerName={matchData?.partnerName}
         />
 
         {/* Mobile Chat */}
@@ -295,6 +305,7 @@ function OmeglePageContent() {
           onTyping={handleTyping}
           connectionState={connectionState}
           messages={messages}
+          partnerName={matchData?.partnerName}
         />
       </div>
     </div>

@@ -53,7 +53,7 @@ export class AgoraRTCService {
       this.client = AgoraRTC.createClient({ mode: 'rtc', codec });
       this.setupEventListeners();
     } catch (error) {
-      console.error('Failed to initialize Agora RTC client:', error);
+      // Silently handle initialization error
       throw new Error('Failed to initialize video service');
     }
   }
@@ -293,14 +293,14 @@ export class AgoraRTCService {
     try {
       // Set track creation timeout
       let timeoutId: NodeJS.Timeout | null = null;
-      const trackTimeout = new Promise((_, reject) => {
+      const trackTimeout = new Promise<never>((_, reject) => {
         timeoutId = setTimeout(() => {
           reject(new Error('Track creation timeout: Could not access camera or microphone'));
         }, 15000);
       });
 
       // Check if devices are available
-      const devices = await AgoraRTC.getDevices();
+      const devices = await AgoraRTC.getDevices().catch(() => []);
       const hasMicrophone = devices.some(d => d.kind === 'audioinput');
       const hasCamera = devices.some(d => d.kind === 'videoinput');
 
@@ -337,37 +337,52 @@ export class AgoraRTCService {
           }
         );
 
-        [this.localAudioTrack, this.localVideoTrack] = await Promise.race([
-          tracksPromise,
-          trackTimeout
-        ]) as [IMicrophoneAudioTrack, ICameraVideoTrack];
+        try {
+          [this.localAudioTrack, this.localVideoTrack] = await Promise.race([
+            tracksPromise,
+            trackTimeout
+          ]) as [IMicrophoneAudioTrack, ICameraVideoTrack];
+        } catch (error) {
+          if (timeoutId) clearTimeout(timeoutId);
+          throw error;
+        }
       } else if (needsAudioTrack) {
         // Audio only
-        this.localAudioTrack = await Promise.race([
-          AgoraRTC.createMicrophoneAudioTrack({
-            AEC: true,
-            ANS: true,
-            AGC: true,
-            microphoneId: this.currentMicId || undefined,
-          }),
-          trackTimeout
-        ]) as IMicrophoneAudioTrack;
+        try {
+          this.localAudioTrack = await Promise.race([
+            AgoraRTC.createMicrophoneAudioTrack({
+              AEC: true,
+              ANS: true,
+              AGC: true,
+              microphoneId: this.currentMicId || undefined,
+            }),
+            trackTimeout
+          ]) as IMicrophoneAudioTrack;
+        } catch (error) {
+          if (timeoutId) clearTimeout(timeoutId);
+          throw error;
+        }
       } else if (needsVideoTrack) {
         // Video only
-        this.localVideoTrack = await Promise.race([
-          AgoraRTC.createCameraVideoTrack({
-            encoderConfig: {
-              width: 640,
-              height: 480,
-              frameRate: 30,
-              bitrateMin: 400,
-              bitrateMax: 1000,
-            },
-            optimizationMode: 'detail',
-            cameraId: this.currentCameraId || undefined,
-          }),
-          trackTimeout
-        ]) as ICameraVideoTrack;
+        try {
+          this.localVideoTrack = await Promise.race([
+            AgoraRTC.createCameraVideoTrack({
+              encoderConfig: {
+                width: 640,
+                height: 480,
+                frameRate: 30,
+                bitrateMin: 400,
+                bitrateMax: 1000,
+              },
+              optimizationMode: 'detail',
+              cameraId: this.currentCameraId || undefined,
+            }),
+            trackTimeout
+          ]) as ICameraVideoTrack;
+        } catch (error) {
+          if (timeoutId) clearTimeout(timeoutId);
+          throw error;
+        }
       }
 
       if (timeoutId) clearTimeout(timeoutId);
@@ -391,12 +406,21 @@ export class AgoraRTCService {
 
       if (tracksToPublish.length > 0) {
         // Set publish timeout
-        const publishTimeout = setTimeout(() => {
-          throw new Error('Publish timeout: Could not publish tracks to channel');
-        }, 10000); // 10 second timeout
+        let publishTimeoutId: NodeJS.Timeout | null = null;
+        const publishTimeout = new Promise<never>((_, reject) => {
+          publishTimeoutId = setTimeout(() => {
+            reject(new Error('Publish timeout: Could not publish tracks to channel'));
+          }, 10000); // 10 second timeout
+        });
 
-        await this.client.publish(tracksToPublish);
-        clearTimeout(publishTimeout);
+        try {
+          await Promise.race([
+            this.client.publish(tracksToPublish),
+            publishTimeout
+          ]);
+        } finally {
+          if (publishTimeoutId) clearTimeout(publishTimeoutId);
+        }
       }
     } catch (error) {
       // Clean up tracks on error
