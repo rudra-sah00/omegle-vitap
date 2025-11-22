@@ -8,7 +8,8 @@ import { useMatchmaking } from './useMatchmaking';
 import { useAgoraRTC } from './useAgoraRTC';
 import { useAgoraRTM } from './useAgoraRTM';
 import { showError, showInfo, ErrorCode } from '@/lib/toast';
-import type { MatchData } from '@/types/matchmaking';
+import { useUser } from '@/context/UserContext';
+import type { MatchData, MatchDataMatched } from '@/types/matchmaking';
 
 interface UseChatSessionOptions {
   localVideoElementId: string;
@@ -17,12 +18,17 @@ interface UseChatSessionOptions {
 
 export const useChatSession = (options: UseChatSessionOptions) => {
   const { localVideoElementId, remoteVideoElementId } = options;
+  
+  // Get persistent UID from context (generated once per session)
+  const { uid: contextUID } = useUser();
 
   // Refs
-  const currentUidRef = useRef<string>('');
+  const currentUidRef = useRef<string>(contextUID.toString());
   const currentMatchRef = useRef<MatchData | null>(null);
   const userDataRef = useRef<{ name: string; gender: 'male' | 'female' | 'other' } | null>(null);
   const isLeavingRef = useRef(false);
+  const pendingSearchGenderRef = useRef<'male' | 'female' | 'other' | 'any' | null>(null);
+  const handlePartnerLeftRef = useRef<(() => Promise<void>) | null>(null);
 
   // State
   const [isInSession, setIsInSession] = useState(false);
@@ -33,14 +39,20 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     matchData,
     error: matchmakingError,
     isMatched,
-    joinQueue,
+    isAuthenticated,
+    join,
     leaveRoom,
     cancelSearch,
     disconnect,
   } = useMatchmaking({
     autoConnect: true,
+    onAuthenticated: () => {
+      console.log('✅ Joined matchmaking queue, waiting for match...');
+    },
     onMatched: handleMatched,
-    onPartnerLeft: handlePartnerLeft,
+    onPartnerLeft: () => {
+      handlePartnerLeftRef.current?.();
+    },
     onError: handleMatchmakingError,
   });
 
@@ -61,7 +73,8 @@ export const useChatSession = (options: UseChatSessionOptions) => {
       // Remote video ready
     },
     onRemoteUserLeft: () => {
-      // Remote user left
+      // Remote user left - trigger partner left handler
+      handlePartnerLeftRef.current?.();
     },
   });
 
@@ -86,8 +99,11 @@ export const useChatSession = (options: UseChatSessionOptions) => {
   /**
    * Handle successful match
    */
-  async function handleMatched(matchData: MatchData) {
+  async function handleMatched(matchData: MatchDataMatched) {
+    console.log('🎯 handleMatched called', { isLeavingRef: isLeavingRef.current, isInSession, isRTCInitialized });
+    
     if (isLeavingRef.current || isInSession || isRTCInitialized) {
+      console.log('⚠️ Skipping match - already in session or leaving');
       return;
     }
     
@@ -97,33 +113,31 @@ export const useChatSession = (options: UseChatSessionOptions) => {
       // Initialize both RTC and RTM with the same UID
       const uid = currentUidRef.current;
       
+      console.log('🚀 Starting RTC and RTM initialization...');
       // Initialize RTC (required) and RTM (optional - may fail if not enabled)
-      const [rtcResult] = await Promise.allSettled([
+      const [rtcResult, rtmResult] = await Promise.allSettled([
         initializeRTC(matchData, uid, localVideoElementId, remoteVideoElementId),
         initializeRTM(matchData, uid),
       ]);
 
+      console.log('📊 Initialization results:', {
+        rtc: rtcResult.status,
+        rtm: rtmResult.status
+      });
+
       // Check if RTC initialized successfully (RTM is optional)
       if (rtcResult.status === 'rejected') {
+        console.error('❌ RTC failed:', rtcResult.reason);
         throw new Error('Failed to initialize video/audio');
       }
 
+      console.log('✅ Setting isInSession = true');
       setIsInSession(true);
-      showInfo('Connected! Say hi to your new chat partner.');
     } catch (error) {
+      console.error('❌ handleMatched error:', error);
       showError('Failed to join video call. Please try again.', ErrorCode.CHANNEL_JOIN_FAILED);
       await endSession();
     }
-  }
-
-  /**
-   * Handle partner leaving - force cleanup for both users
-   */
-  async function handlePartnerLeft() {
-    if (isLeavingRef.current) return;
-    
-    showInfo('Your chat partner has disconnected.');
-    await endSession();
   }
 
   /**
@@ -140,44 +154,51 @@ export const useChatSession = (options: UseChatSessionOptions) => {
   /**
    * Start searching for a match
    */
-  const startSearch = useCallback(async (userData: {
+  const beginSearch = useCallback(async (userData: {
     name: string;
     gender: string;
     targetGender?: string;
   }) => {
-    // Generate unique UID for this session (uint32 for Agora)
-    const uid = Math.floor(Math.random() * 1000000);
-    currentUidRef.current = uid.toString();
+    // Validate user data
+    if (!userData.name || userData.name.trim().length === 0) {
+      showError('Please enter your name', ErrorCode.AUTH_FAILED);
+      return;
+    }
+
+    if (!userData.gender) {
+      showError('Please select your gender', ErrorCode.AUTH_FAILED);
+      return;
+    }
+
+    // Use UID from context (already set when entering from welcome page)
+    const uid = parseInt(currentUidRef.current, 10);
 
     // Format user data for backend
-    const formattedData = {
-      uid, // Send as number for backend
+    const authData = {
+      uid, // Use context UID (same for all searches until page reload)
       name: userData.name.trim(),
       gender: userData.gender.toLowerCase() as 'male' | 'female' | 'other',
-      targetGender: userData.targetGender?.toLowerCase() as 'male' | 'female' | 'other' | undefined,
     };
+
+    // Debug logging
+    console.log('🔐 Joining with data:', authData);
 
     // Store user data for later use (cancel, findNext)
     userDataRef.current = {
-      name: formattedData.name,
-      gender: formattedData.gender,
+      name: authData.name,
+      gender: authData.gender,
     };
 
-    await joinQueue(formattedData);
-  }, [joinQueue]);
+    // Join matchmaking queue (single call, no separate search)
+    join(authData);
+  }, [join]);
 
   /**
    * Stop searching (cancel while waiting)
    */
   const stopSearch = useCallback(async () => {
-    // Cancel search if we have a current UID and user data
-    if (currentUidRef.current && userDataRef.current) {
-      cancelSearch({
-        uid: parseInt(currentUidRef.current),
-        name: userDataRef.current.name,
-        gender: userDataRef.current.gender,
-      });
-    }
+    // Cancel search - new API doesn't require user data
+    cancelSearch();
   }, [cancelSearch]);
 
   /**
@@ -206,6 +227,21 @@ export const useChatSession = (options: UseChatSessionOptions) => {
   }, [leaveRTC, leaveRTM, leaveRoom]);
 
   /**
+   * Handle partner leaving - force cleanup for both users
+   */
+  const handlePartnerLeft = useCallback(async () => {
+    if (isLeavingRef.current) return;
+    
+    showInfo('Your chat partner has disconnected.');
+    await endSession();
+  }, [endSession]);
+
+  // Update ref whenever handlePartnerLeft changes
+  useEffect(() => {
+    handlePartnerLeftRef.current = handlePartnerLeft;
+  }, [handlePartnerLeft]);
+
+  /**
    * Next - find new partner (keeps camera/mic state)
    */
   const findNext = useCallback(async () => {
@@ -228,31 +264,38 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     // Wait a moment for Agora to fully disconnect
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Generate new UID for next session
-    const uid = Math.floor(Math.random() * 1000000);
-    currentUidRef.current = uid.toString();
+    // Use same UID from context (no new UID generation)
+    const uid = parseInt(currentUidRef.current, 10);
 
     // Rejoin queue (camera/mic state is preserved in useAgoraRTC hook)
     if (userDataRef.current) {
-      const lastUserData = {
-        uid, // Send as number
+      const authData = {
+        uid, // Same UID for all searches until page reload
         name: userDataRef.current.name,
         gender: userDataRef.current.gender,
       };
       
-      await joinQueue(lastUserData);
+      // Join matchmaking queue with new UID
+      join(authData);
       isLeavingRef.current = false;
     } else {
       isLeavingRef.current = false;
     }
-  }, [leaveRTC, leaveRTM, joinQueue]);
+  }, [leaveRTC, leaveRTM, join]);
 
   // Cleanup on unmount
+  // Cleanup on unmount only (not on endSession changes)
   useEffect(() => {
     return () => {
-      endSession();
+      // Call cleanup directly to avoid dependency issues
+      Promise.all([
+        leaveRTC(),
+        leaveRTM(),
+      ]).then(() => {
+        leaveRoom();
+      });
     };
-  }, [endSession]);
+  }, []); // Empty deps - only run on mount/unmount
 
   return {
     // Connection state
@@ -273,7 +316,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     isPartnerTyping,
 
     // Actions
-    startSearch,
+    startSearch: beginSearch, // Expose beginSearch as startSearch
     stopSearch,
     endSession,
     findNext,

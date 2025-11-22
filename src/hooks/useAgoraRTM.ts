@@ -17,6 +17,8 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
 
   const rtmServiceRef = useRef<any>(null);
   const currentUidRef = useRef<string>('');
+  const isInitializingRef = useRef(false);
+  const isCleaningUpRef = useRef(false);
   const [isRTMInitialized, setIsRTMInitialized] = useState(false);
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
@@ -25,9 +27,23 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
    * Initialize RTM with match data
    */
   const initializeRTM = useCallback(async (
-    matchData: MatchData,
+    matchData: import('@/types/matchmaking').MatchDataMatched,
     uid: string | number
   ) => {
+    // Prevent concurrent initialization
+    if (isInitializingRef.current) {
+      console.log('⚠️ RTM initialization already in progress, skipping');
+      return;
+    }
+    
+    // Don't initialize if cleanup is in progress
+    if (isCleaningUpRef.current) {
+      console.log('⚠️ RTM cleanup in progress, skipping initialization');
+      return;
+    }
+    
+    isInitializingRef.current = true;
+    
     try {
       // Dynamically import Agora RTM (client-side only)
       const { AgoraRTMService } = await import('@/lib/agora-rtm');
@@ -58,10 +74,8 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
         onTypingIndicator?.(isTyping);
       });
 
-      // Small delay to ensure client is fully ready
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Login to RTM (automatically joins channel)
+      // Login to RTM immediately (no delay to prevent race condition)
+      console.log('🔐 Logging into RTM channel:', matchData.channelName);
       await rtmServiceRef.current.login({
         channelName: matchData.channelName,
         token: matchData.rtmToken,
@@ -70,6 +84,13 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
       // Store UID for message sending
       currentUidRef.current = typeof uid === 'number' ? uid.toString() : uid;
 
+      // Final check - if cleanup happened during async operations, abort
+      if (!rtmServiceRef.current) {
+        console.warn('⚠️ RTM was cleaned up after login, aborting');
+        return;
+      }
+
+      console.log('✅ RTM initialized successfully');
       setIsRTMInitialized(true);
     } catch (error) {
       console.error('RTM initialization failed:', error);
@@ -83,6 +104,8 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
         }
         rtmServiceRef.current = null;
       }
+    } finally {
+      isInitializingRef.current = false;
     }
   }, [onMessageReceived, onTypingIndicator]);
 
@@ -90,17 +113,36 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
    * Send a text message
    */
   const sendMessage = useCallback(async (text: string) => {
-    if (!rtmServiceRef.current || !text.trim()) return;
+    console.log('📨 sendMessage called, ref status:', {
+      hasRef: !!rtmServiceRef.current,
+      isInitialized: isRTMInitialized,
+      text: text
+    });
+    
+    if (!text.trim()) {
+      console.log('⚠️ Empty message, not sending');
+      return;
+    }
+    
+    if (!rtmServiceRef.current) {
+      console.error('❌ RTM service not initialized, cannot send message');
+      console.error('Debug: isRTMInitialized state:', isRTMInitialized);
+      showError('Chat not ready. Please wait a moment.', ErrorCode.MESSAGE_SEND_FAILED);
+      return;
+    }
 
     try {
+      console.log('📤 Sending message:', text);
       await rtmServiceRef.current.sendMessage(text);
+      console.log('✅ Message sent successfully');
       
       // Don't add to local messages - let the RTM SDK echo it back
       // This prevents duplicate messages
     } catch (error) {
+      console.error('❌ Failed to send message:', error);
       showError('Failed to send message. Please try again.', ErrorCode.MESSAGE_SEND_FAILED);
     }
-  }, []);
+  }, [isRTMInitialized]);
 
   /**
    * Send typing indicator
@@ -118,7 +160,19 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
    * Leave RTM channel and cleanup
    */
   const leaveRTM = useCallback(async () => {
-    if (!rtmServiceRef.current) return;
+    isCleaningUpRef.current = true;
+    
+    // Wait for any ongoing initialization to complete (up to 2 seconds)
+    let waitCount = 0;
+    while (isInitializingRef.current && waitCount < 20) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      waitCount++;
+    }
+    
+    if (!rtmServiceRef.current) {
+      isCleaningUpRef.current = false;
+      return;
+    }
 
     try {
       await rtmServiceRef.current.leave();
@@ -135,6 +189,8 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
       setIsRTMInitialized(false);
       setMessages([]);
       setIsPartnerTyping(false);
+    } finally {
+      isCleaningUpRef.current = false;
     }
   }, []);
 

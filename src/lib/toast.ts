@@ -191,7 +191,20 @@ export function parseMediaError(error: unknown): { message: string; code: ErrorC
     };
   }
   
-  if (errorStr.includes('notfound') || errorStr.includes('no device')) {
+  if (errorStr.includes('device_not_found') || errorStr.includes('notfound') || errorStr.includes('no device') || errorStr.includes('no camera') || errorStr.includes('no microphone')) {
+    // Extract the specific device type from the error message
+    if (errorStr.includes('camera')) {
+      return {
+        message: 'No camera found. Please connect a camera and try again.',
+        code: ErrorCode.MEDIA_DEVICE_NOT_FOUND,
+      };
+    }
+    if (errorStr.includes('microphone')) {
+      return {
+        message: 'No microphone found. Please connect a microphone and try again.',
+        code: ErrorCode.MEDIA_DEVICE_NOT_FOUND,
+      };
+    }
     return {
       message: 'Camera or microphone not found. Please connect a device and try again.',
       code: ErrorCode.MEDIA_DEVICE_NOT_FOUND,

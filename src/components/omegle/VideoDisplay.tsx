@@ -8,6 +8,7 @@ interface VideoDisplayProps {
   isSearching: boolean;
   showConnectionIndicator?: boolean;
   isCameraOn?: boolean;
+  isMicOn?: boolean;
   children?: ReactNode;
 }
 
@@ -18,11 +19,12 @@ export function VideoDisplay({
   isSearching,
   showConnectionIndicator = false,
   isCameraOn = true,
+  isMicOn = true,
   children 
 }: VideoDisplayProps) {
   // For local video: show placeholder only when camera is off
-  // For remote video: show placeholder when not connected
-  const showPlaceholder = id === 'local-video' ? !isCameraOn : !isConnected;
+  // For remote video: show placeholder when not connected OR when partner's camera is off
+  const showPlaceholder = id === 'local-video' ? !isCameraOn : (!isConnected || !isCameraOn);
   
   return (
     <div className="flex-1 relative overflow-hidden rounded-lg" style={{ backgroundColor: '#c8e6f5', minHeight: '300px' }}>
@@ -90,6 +92,26 @@ export function VideoDisplay({
         <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-2 z-20">
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
           <p className="text-white text-sm font-medium">{label}</p>
+        </div>
+      )}
+
+      {/* Camera/Mic Muted Indicators */}
+      {!showPlaceholder && (
+        <div className="absolute top-4 right-4 flex gap-2 z-20">
+          {!isCameraOn && (
+            <div className="bg-red-500/90 backdrop-blur-sm p-2 rounded-full" title="Camera is off">
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A2 2 0 0017 13.5V7a2 2 0 00-3.53-1.235L10.94 8.293 3.707 2.293zM13.5 16.443l-2.121-2.121c.167.03.338.05.514.05.828 0 1.5-.448 1.5-1s-.672-1-1.5-1a1.863 1.863 0 00-.857.205L9.536 11.08C10.127 10.423 10.828 10 11.893 10c1.657 0 3 1.119 3 2.5v3.943zM4 7a2 2 0 012-2h.172l2 2H6v6a2 2 0 002 2h6.172l2 2H8a4 4 0 01-4-4V7z" clipRule="evenodd" />
+              </svg>
+            </div>
+          )}
+          {!isMicOn && (
+            <div className="bg-red-500/90 backdrop-blur-sm p-2 rounded-full" title="Microphone is off">
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </div>
+          )}
         </div>
       )}
 

@@ -24,7 +24,7 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
    * Initialize RTC with match data
    */
   const initializeRTC = useCallback(async (
-    matchData: MatchData,
+    matchData: import('@/types/matchmaking').MatchDataMatched,
     uid: string | number,
     localVideoElementId: string,
     remoteVideoElementId: string
@@ -121,16 +121,15 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
       try {
         await rtcServiceRef.current.toggleCamera(newState);
       } catch (error) {
-        const { message, code } = parseMediaError(error);
-        showError(message, code);
-        setIsCameraOn(!newState); // Revert on error
-        
-        // If permission was denied, show recovery instructions
+        // Only show error for permission issues, not for device not found
+        const { message } = parseMediaError(error);
         if (message.includes('denied') || message.includes('permission')) {
+          showError(message, ErrorCode.CAMERA_PERMISSION_DENIED);
           setTimeout(() => {
             showWarning('Please allow camera access in your browser settings and try again.');
           }, 1000);
         }
+        setIsCameraOn(!newState); // Revert on error
       }
     } else {
       // Not in a call, create/update preview only if turning ON
@@ -145,8 +144,11 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
           await rtcServiceRef.current.createLocalPreview(true, isMicOn);
           hasPreviewRef.current = true;
         } catch (error) {
-          const { message, code } = parseMediaError(error);
-          showError(message, code);
+          // Only show error for permission issues
+          const { message } = parseMediaError(error);
+          if (message.includes('denied') || message.includes('permission')) {
+            showError(message, ErrorCode.CAMERA_PERMISSION_DENIED);
+          }
           setIsCameraOn(false);
         }
       }

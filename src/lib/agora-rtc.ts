@@ -41,10 +41,16 @@ export class AgoraRTCService {
 
   constructor() {
     try {
+      // Note: Browser polyfills are initialized at root layout level
+      
       // Disable Agora RTC SDK logs (only show errors)
       AgoraRTC.setLogLevel(4); // 0=DEBUG, 1=INFO, 2=WARNING, 3=ERROR, 4=NONE
       
-      this.client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+      // Use h264 codec for better Safari compatibility, vp8 as fallback
+      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+      const codec = isSafari ? 'h264' : 'vp8';
+      
+      this.client = AgoraRTC.createClient({ mode: 'rtc', codec });
       this.setupEventListeners();
     } catch (error) {
       console.error('Failed to initialize Agora RTC client:', error);
@@ -120,8 +126,11 @@ export class AgoraRTCService {
    * Create local tracks for preview (without joining channel)
    */
   async createLocalPreview(cameraOn: boolean = true, micOn: boolean = true): Promise<void> {
-    // Validate browser support
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    // Validate browser support (check for webkit prefix for Safari)
+    const hasMediaDevices = navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+    const hasWebkitGetUserMedia = (navigator as any).webkitGetUserMedia;
+    
+    if (!hasMediaDevices && !hasWebkitGetUserMedia) {
       throw new Error('Browser does not support media devices');
     }
 
@@ -164,24 +173,27 @@ export class AgoraRTCService {
       }
 
       // Create new tracks
-      [this.localAudioTrack, this.localVideoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
-        {
-          // Audio config
-          AEC: true, // Acoustic Echo Cancellation
-          ANS: true, // Automatic Noise Suppression
-          AGC: true, // Automatic Gain Control
+      // Safari may have issues with simultaneous track creation, but Agora SDK handles it
+      const audioConfig = {
+        AEC: true, // Acoustic Echo Cancellation
+        ANS: true, // Automatic Noise Suppression
+        AGC: true, // Automatic Gain Control
+      };
+
+      const videoConfig = {
+        encoderConfig: {
+          width: 640,
+          height: 480,
+          frameRate: 30,
+          bitrateMin: 400,
+          bitrateMax: 1000,
         },
-        {
-          // Video config
-          encoderConfig: {
-            width: 640,
-            height: 480,
-            frameRate: 30,
-            bitrateMin: 400,
-            bitrateMax: 1000,
-          },
-          optimizationMode: 'detail',
-        }
+        optimizationMode: 'detail' as const,
+      };
+
+      [this.localAudioTrack, this.localVideoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
+        audioConfig,
+        videoConfig
       );
 
       // Set initial enabled state
@@ -290,39 +302,86 @@ export class AgoraRTCService {
         }, 15000);
       });
 
-      // Create microphone and camera tracks with race condition against timeout
-      const tracksPromise = AgoraRTC.createMicrophoneAndCameraTracks(
-        {
-          // Audio config
-          AEC: true, // Acoustic Echo Cancellation
-          ANS: true, // Automatic Noise Suppression
-          AGC: true, // Automatic Gain Control
-          microphoneId: this.currentMicId || undefined,
-        },
-        {
-          // Video config
-          encoderConfig: {
-            width: 640,
-            height: 480,
-            frameRate: 30,
-            bitrateMin: 400,
-            bitrateMax: 1000,
-          },
-          optimizationMode: 'detail',
-          cameraId: this.currentCameraId || undefined,
-        }
-      );
+      // Check if devices are available
+      const devices = await AgoraRTC.getDevices();
+      const hasMicrophone = devices.some(d => d.kind === 'audioinput');
+      const hasCamera = devices.some(d => d.kind === 'videoinput');
 
-      [this.localAudioTrack, this.localVideoTrack] = await Promise.race([
-        tracksPromise,
-        trackTimeout
-      ]) as [IMicrophoneAudioTrack, ICameraVideoTrack];
+      // Only throw error if no devices at all AND tracks don't already exist
+      if (!hasMicrophone && !hasCamera && !this.localAudioTrack && !this.localVideoTrack) {
+        throw new Error('DEVICE_NOT_FOUND: No camera or microphone found. Please connect a device and grant permissions.');
+      }
+
+      // Create tracks based on available devices (only if not already created)
+      const needsAudioTrack = hasMicrophone && !this.localAudioTrack;
+      const needsVideoTrack = hasCamera && !this.localVideoTrack;
+
+      if (needsAudioTrack && needsVideoTrack) {
+        // Create both tracks together (more efficient)
+        const tracksPromise = AgoraRTC.createMicrophoneAndCameraTracks(
+          {
+            // Audio config
+            AEC: true, // Acoustic Echo Cancellation
+            ANS: true, // Automatic Noise Suppression
+            AGC: true, // Automatic Gain Control
+            microphoneId: this.currentMicId || undefined,
+          },
+          {
+            // Video config
+            encoderConfig: {
+              width: 640,
+              height: 480,
+              frameRate: 30,
+              bitrateMin: 400,
+              bitrateMax: 1000,
+            },
+            optimizationMode: 'detail',
+            cameraId: this.currentCameraId || undefined,
+          }
+        );
+
+        [this.localAudioTrack, this.localVideoTrack] = await Promise.race([
+          tracksPromise,
+          trackTimeout
+        ]) as [IMicrophoneAudioTrack, ICameraVideoTrack];
+      } else if (needsAudioTrack) {
+        // Audio only
+        this.localAudioTrack = await Promise.race([
+          AgoraRTC.createMicrophoneAudioTrack({
+            AEC: true,
+            ANS: true,
+            AGC: true,
+            microphoneId: this.currentMicId || undefined,
+          }),
+          trackTimeout
+        ]) as IMicrophoneAudioTrack;
+      } else if (needsVideoTrack) {
+        // Video only
+        this.localVideoTrack = await Promise.race([
+          AgoraRTC.createCameraVideoTrack({
+            encoderConfig: {
+              width: 640,
+              height: 480,
+              frameRate: 30,
+              bitrateMin: 400,
+              bitrateMax: 1000,
+            },
+            optimizationMode: 'detail',
+            cameraId: this.currentCameraId || undefined,
+          }),
+          trackTimeout
+        ]) as ICameraVideoTrack;
+      }
 
       if (timeoutId) clearTimeout(timeoutId);
 
-      // Set enabled state
-      await this.localVideoTrack.setEnabled(cameraOn);
-      await this.localAudioTrack.setEnabled(micOn);
+      // Set enabled state for available tracks
+      if (this.localVideoTrack) {
+        await this.localVideoTrack.setEnabled(cameraOn);
+      }
+      if (this.localAudioTrack) {
+        await this.localAudioTrack.setEnabled(micOn);
+      }
 
       // Only publish enabled tracks
       const tracksToPublish = [];
@@ -461,6 +520,14 @@ export class AgoraRTCService {
       if (enabled) {
         // Create new track if it doesn't exist
         if (!this.localVideoTrack) {
+          // Check if camera is available first
+          const devices = await AgoraRTC.getDevices();
+          const hasCamera = devices.some(d => d.kind === 'videoinput');
+          
+          if (!hasCamera) {
+            throw new Error('DEVICE_NOT_FOUND: No camera found. Please connect a camera and try again.');
+          }
+
           // Set timeout for track creation
           const createTimeout = setTimeout(() => {
             throw new Error('Camera timeout: Could not access camera');
@@ -537,6 +604,14 @@ export class AgoraRTCService {
       if (enabled) {
         // Create new track if it doesn't exist
         if (!this.localAudioTrack) {
+          // Check if microphone is available first
+          const devices = await AgoraRTC.getDevices();
+          const hasMicrophone = devices.some(d => d.kind === 'audioinput');
+          
+          if (!hasMicrophone) {
+            throw new Error('DEVICE_NOT_FOUND: No microphone found. Please connect a microphone and try again.');
+          }
+
           // Set timeout for track creation
           const createTimeout = setTimeout(() => {
             throw new Error('Microphone timeout: Could not access microphone');

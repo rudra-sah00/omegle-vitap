@@ -92,6 +92,12 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
 
   const loadDevices = async () => {
     try {
+      // Check if mediaDevices API is available (Safari compatibility)
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        console.error('Media devices API not available');
+        return;
+      }
+
       // First try to enumerate devices without requesting permissions
       const deviceInfos = await navigator.mediaDevices.enumerateDevices();
       const kind = type === 'camera' ? 'videoinput' : 'audioinput';

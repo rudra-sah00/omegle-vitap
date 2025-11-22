@@ -24,11 +24,12 @@ export class WebSocketService {
   private reconnectTimer: NodeJS.Timeout | null = null;
   private isIntentionalClose = false;
   private heartbeatInterval: NodeJS.Timeout | null = null;
-  private heartbeatIntervalMs = 25000; // 25 seconds (backend timeout is likely 30s)
+  private heartbeatIntervalMs = 25000; // 25 seconds (backend sends ping every 30s)
   private missedPongs = 0;
   private maxMissedPongs = 2;
   private consecutiveFailures = 0;
   private maxConsecutiveFailures = 3; // Stop after 3 consecutive connection failures
+  private isAuthenticated = false; // Track authentication state (via auth message)
 
   private visibilityHandlerSetup = false;
 
@@ -58,7 +59,7 @@ export class WebSocketService {
     this.isIntentionalClose = false;
 
     try {
-      // Append API key as query parameter (browser compatible)
+      // Connect with API key - then authenticate via auth message
       const wsUrl = `${this.url}?apiKey=${encodeURIComponent(this.apiKey)}`;
       this.ws = new WebSocket(wsUrl);
 
@@ -175,12 +176,20 @@ export class WebSocketService {
   }
 
   /**
+   * Check if authenticated
+   */
+  isAuth(): boolean {
+    return this.isAuthenticated && this.isConnected();
+  }
+
+  /**
    * Handle WebSocket open event
    */
   private handleOpen(): void {
     this.reconnectAttempts = 0;
     this.consecutiveFailures = 0; // Reset consecutive failures on successful connection
     this.reconnectDelay = 2000;
+    this.isAuthenticated = false; // Reset auth state on new connection
     this.startHeartbeat();
 
     this.openHandlers.forEach(handler => handler());
@@ -193,16 +202,22 @@ export class WebSocketService {
     try {
       const data = JSON.parse(event.data);
       
-      // Handle pong response (has type but no data field)
-      if (data.type === 'pong' || (data.type === 'response' && data.data?.status === 'pong')) {
+      // Handle pong response
+      if (data.type === 'pong') {
         this.missedPongs = 0; // Reset missed pongs counter
         return;
+      }
+      
+      // Track authentication state
+      if (data.type === 'authenticated') {
+        this.isAuthenticated = true;
       }
       
       const message = data as ServerMessage;
 
       this.messageHandlers.forEach(handler => handler(message));
     } catch (error) {
+      console.error('Failed to parse WebSocket message:', error);
     }
   }
 
@@ -338,6 +353,10 @@ let wsInstance: WebSocketService | null = null;
 
 /**
  * Get or create WebSocket service instance (does NOT auto-connect)
+ * 
+ * Two-step authentication:
+ * 1. API key in query param for WebSocket connection
+ * 2. Auth message with uid/name/gender after connection
  */
 export const getWebSocketService = (): WebSocketService => {
   if (!wsInstance) {

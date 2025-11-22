@@ -257,6 +257,14 @@ export class AgoraRTMService {
    * Send a text message to the channel
    */
   async sendMessage(text: string): Promise<void> {
+    console.log('📨 sendMessage called with:', text);
+    console.log('📊 RTM State:', {
+      hasClient: !!this.client,
+      isLoggedIn: this.isLoggedIn,
+      hasChannel: !!this.channel,
+      isChannelJoined: this.isChannelJoined
+    });
+    
     if (!this.client || !this.isLoggedIn) {
       throw new Error('Not logged in to messaging service');
     }
@@ -274,6 +282,7 @@ export class AgoraRTMService {
     }
 
     try {
+      console.log('🚀 Publishing message to channel...');
       const publishTimeout = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Message send timeout')), 5000);
       });
@@ -282,8 +291,9 @@ export class AgoraRTMService {
         this.client.publish(this.channel, text),
         publishTimeout
       ]);
+      console.log('✅ Message published successfully');
     } catch (error: any) {
-      console.error('Failed to send RTM message:', error);
+      console.error('❌ Failed to send RTM message:', error);
       throw new Error('Failed to send message');
     }
   }

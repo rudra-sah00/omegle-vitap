@@ -9,12 +9,15 @@ import { showError, ErrorCode } from '@/lib/toast';
 import type {
   ConnectionState,
   MatchData,
+  MatchDataMatched,
   UserData,
   ServerMessage,
 } from '@/types/matchmaking';
 
 interface UseMatchmakingOptions {
   autoConnect?: boolean;
+  userData?: UserData; // User data for authentication
+  onAuthenticated?: () => void;
   onMatched?: (matchData: MatchData) => void;
   onPartnerLeft?: () => void;
   onError?: (error: string) => void;
@@ -22,31 +25,36 @@ interface UseMatchmakingOptions {
 
 interface UseMatchmakingReturn {
   connectionState: ConnectionState;
-  matchData: MatchData | null;
+  matchData: MatchDataMatched | null;
   error: string | null;
   isConnected: boolean;
+  isAuthenticated: boolean;
   isWaiting: boolean;
   isMatched: boolean;
-  joinQueue: (userData: UserData) => void;
+  join: (userData: UserData) => void;
   leaveRoom: () => void;
-  cancelSearch: (userData: UserData) => void;
+  cancelSearch: () => void;
   disconnect: () => void;
 }
 
 export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmakingReturn => {
   const {
     autoConnect = false,
+    userData,
+    onAuthenticated,
     onMatched,
     onPartnerLeft,
     onError,
   } = options;
 
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
-  const [matchData, setMatchData] = useState<MatchData | null>(null);
+  const [matchData, setMatchData] = useState<MatchDataMatched | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const wsRef = useRef<WebSocketService | null>(null);
   const isJoiningRef = useRef(false);
+  const isLeavingRef = useRef(false);
   const lastErrorTimeRef = useRef<number>(0);
   const lastErrorMessageRef = useRef<string>('');
 
@@ -62,57 +70,76 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
    * Handle incoming WebSocket messages
    */
   const handleMessage = useCallback((message: ServerMessage) => {
-    const { data } = message;
-
-    switch (data.status) {
-      case 'waiting':
-        setConnectionState('waiting');
-        setError(null);
+    switch (message.type) {
+      case 'match':
+        if (message.data.status === 'waiting') {
+          // Still searching for match
+          setIsAuthenticated(true);
+          setConnectionState('waiting');
+          setError(null);
+          onAuthenticated?.();
+        } else if (message.data.status === 'matched') {
+          // Match found!
+          setConnectionState('matched');
+          setMatchData(message.data);
+          setError(null);
+          isJoiningRef.current = false;
+          onMatched?.(message.data);
+        }
         break;
 
-      case 'matched':
+      case 'reconnected':
+        // Reconnected to existing session
         setConnectionState('matched');
-        setMatchData(data);
+        // Convert reconnected data to match data format
+        setMatchData({
+          status: 'matched',
+          roomId: message.data.roomId,
+          channelName: message.data.channelName,
+          partnerUid: message.data.partnerUid,
+          rtcToken: '', // Will need to refresh
+          rtmToken: '',
+          partnerName: '',
+          expiresAt: 0,
+        } as MatchDataMatched);
         setError(null);
-        isJoiningRef.current = false;
-        onMatched?.(data);
         break;
 
-      case 'left':
+      case 'session_expired':
         setConnectionState('connected');
         setMatchData(null);
-        setError(null);
+        setError('Session expired. Please join again.');
         break;
 
       case 'partner_left':
-      case 'partner_disconnected':
         setConnectionState('connected');
         setMatchData(null);
         setError(null);
         onPartnerLeft?.();
         break;
 
-      case 'cancelled':
-        setConnectionState('connected');
-        setMatchData(null);
-        setError(null);
-        isJoiningRef.current = false;
-        break;
-
       case 'error':
+        console.error('❌ Server error:', message.data);
         setConnectionState('error');
-        setError(data.message);
+        setError(message.data.message);
         isJoiningRef.current = false;
-        onError?.(data.message);
+        onError?.(message.data.message);
+        showError(message.data.message, ErrorCode.CONNECTION_LOST);
         break;
 
       case 'pong':
         // Heartbeat response, no action needed
         break;
 
+      // Ignore message and signal types - handled by other hooks
+      case 'message':
+      case 'signal':
+        break;
+
       default:
+        console.warn('Unknown message type:', (message as any).type);
     }
-  }, [onMatched, onPartnerLeft, onError]);
+  }, [onAuthenticated, onMatched, onPartnerLeft, onError]);
 
   /**
    * Handle WebSocket open event
@@ -199,7 +226,7 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
   /**
    * Join matchmaking queue
    */
-  const joinQueue = useCallback((userData: UserData) => {
+  const join = useCallback((userData: UserData) => {
     const ws = getWs();
 
     if (!ws.isConnected()) {
@@ -210,22 +237,23 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
     }
 
     if (isJoiningRef.current) {
+      console.log('Already joining, skipping duplicate request');
       return;
     }
 
-    isJoiningRef.current = true;
-    setConnectionState('waiting');
-    setError(null);
+    console.log('📤 Sending join message:', { type: 'join', data: userData });
 
     const success = ws.send({
       type: 'join',
       data: userData,
     });
 
-    if (!success) {
+    if (success) {
+      isJoiningRef.current = true;
+      setConnectionState('waiting');
+    } else {
       setError('Failed to join queue');
       setConnectionState('error');
-      isJoiningRef.current = false;
     }
   }, [getWs]);
 
@@ -233,6 +261,12 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
    * Leave current room
    */
   const leaveRoom = useCallback(() => {
+    // Prevent duplicate leave calls
+    if (isLeavingRef.current) {
+      console.log('⚠️ Leave already in progress, skipping');
+      return;
+    }
+
     const ws = getWs();
 
     if (!matchData) {
@@ -240,6 +274,9 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
       return;
     }
 
+    isLeavingRef.current = true;
+    console.log('📤 Sending leave message to server');
+    
     const success = ws.send({
       type: 'leave',
       data: {},
@@ -248,8 +285,13 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
     if (success) {
       setConnectionState('connected');
       setMatchData(null);
+      // Reset flag after a short delay to allow for next operation
+      setTimeout(() => {
+        isLeavingRef.current = false;
+      }, 500);
     } else {
       setError('Failed to leave room');
+      isLeavingRef.current = false;
     }
   }, [matchData, getWs]);
 
@@ -297,6 +339,15 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
   }, [autoConnect, handleMessage, handleOpen, handleClose, handleError, getWs]);
 
   /**
+   * Auto-join when connected if userData is provided
+   */
+  useEffect(() => {
+    if (connectionState === 'connected' && !isAuthenticated && userData) {
+      join(userData);
+    }
+  }, [connectionState, isAuthenticated, userData, join]);
+
+  /**
    * Cleanup on unmount
    */
   useEffect(() => {
@@ -309,7 +360,7 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
   /**
    * Cancel search while waiting in queue
    */
-  const cancelSearch = useCallback((userData: UserData) => {
+  const cancelSearch = useCallback(() => {
     if (!wsRef.current || connectionState !== 'waiting') {
       return;
     }
@@ -317,7 +368,7 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
     const ws = wsRef.current;
     ws.send({
       type: 'cancel',
-      data: userData,
+      data: {},
     });
 
     setConnectionState('connected');
@@ -330,9 +381,10 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
     matchData,
     error,
     isConnected: connectionState === 'connected' || connectionState === 'waiting' || connectionState === 'matched',
+    isAuthenticated,
     isWaiting: connectionState === 'waiting',
     isMatched: connectionState === 'matched',
-    joinQueue,
+    join,
     leaveRoom,
     cancelSearch,
     disconnect,

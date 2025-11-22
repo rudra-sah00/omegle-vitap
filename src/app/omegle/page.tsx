@@ -12,6 +12,7 @@ import { LoadingState } from '@/components/omegle/LoadingState';
 import { ErrorState } from '@/components/omegle/ErrorState';
 import { OmegleErrorBoundary } from '@/components/omegle/OmegleErrorBoundary';
 import { showError, showWarning, ErrorCode } from '@/lib/toast';
+import { isBrowserSupported } from '@/lib/browser-polyfill';
 
 function OmeglePageContent() {
   const { name, gender } = useUser();
@@ -49,18 +50,12 @@ function OmeglePageContent() {
 
   /**
    * Check browser compatibility
+   * Note: Browser polyfills are already initialized in root layout
    */
   useEffect(() => {
-    // Check for required APIs
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      showError('Your browser does not support video/audio. Please use Chrome, Firefox, or Safari.', ErrorCode.MEDIA_DEVICE_NOT_FOUND);
-      setTimeout(() => router.push('/welcome'), 3000);
-      return;
-    }
-
-    // Check for WebRTC support
-    if (!window.RTCPeerConnection) {
-      showError('Your browser does not support WebRTC. Please update your browser.', ErrorCode.MEDIA_DEVICE_NOT_FOUND);
+    // Check if browser is supported
+    if (!isBrowserSupported()) {
+      showError('Your browser does not support video/audio. Please use Chrome, Firefox, or Safari 11+.', ErrorCode.MEDIA_DEVICE_NOT_FOUND);
       setTimeout(() => router.push('/welcome'), 3000);
       return;
     }
@@ -256,6 +251,7 @@ function OmeglePageContent() {
             isSearching={false}
             showConnectionIndicator={false}
             isCameraOn={isCameraOn}
+            isMicOn={isMicOn}
           >
             {/* Control Buttons */}
             <VideoControls

@@ -1,19 +1,33 @@
 /**
  * WebSocket Types for Omegle VITAP Backend Integration
- * Based on backend API documentation
+ * Based on backend API documentation v1.0.0
+ * Last Updated: November 22, 2025
  */
 
 // Message Types
-export type MessageType = 'join' | 'leave' | 'cancel' | 'ping' | 'response';
+export type MessageType = 'join' | 'leave' | 'cancel' | 'message' | 'signal' | 'ping';
+
+// Server Message Types
+export type ServerMessageType = 'match' | 'reconnected' | 'session_expired' | 'leave' | 'cancel' | 'partner_left' | 'error' | 'message' | 'signal' | 'pong';
 
 // Status Types
-export type MatchStatus = 'waiting' | 'matched' | 'left' | 'partner_left' | 'partner_disconnected' | 'cancelled' | 'error' | 'pong';
+export type MatchStatus = 'idle' | 'searching' | 'active';
+
+// User State
+export type UserState = 'idle' | 'searching' | 'active';
 
 // User Data
 export interface UserData {
   uid: number;
   name: string;
-  gender?: 'male' | 'female' | 'other';
+  gender: 'male' | 'female' | 'other';
+}
+
+// Join Data (for join message)
+export interface JoinData {
+  uid: number;
+  name: string;
+  gender: 'male' | 'female' | 'other';
 }
 
 // Partner Information
@@ -23,73 +37,99 @@ export interface PartnerInfo {
   gender?: string;
 }
 
-// Match Data (received when matched)
-export interface MatchData {
+// Match Data - Waiting status
+export interface MatchDataWaiting {
+  status: 'waiting';
+  message: string;
+  queuePosition: number;
+}
+
+// Match Data - Matched status
+export interface MatchDataMatched {
   status: 'matched';
   roomId: string;
   channelName: string;
   rtcToken: string;
   rtmToken: string;
-  partner: PartnerInfo;
+  partnerName: string;
+  partnerUid: number;
+  expiresAt: number;
 }
 
-// Waiting Response
-export interface WaitingResponse {
-  status: 'waiting';
+// Union type for match responses
+export type MatchData = MatchDataWaiting | MatchDataMatched;
+
+// Reconnected Response
+export interface ReconnectedData {
+  status: 'reconnected';
+  roomId: string;
+  channelName: string;
+  partnerUid: number;
   message: string;
 }
 
-// Left Response
-export interface LeftResponse {
+// Session Expired Response
+export interface SessionExpiredData {
+  message: string;
+}
+
+// Leave Response
+export interface LeaveData {
   status: 'left';
-  message: string;
+}
+
+// Cancel Response
+export interface CancelData {
+  status: 'cancelled';
 }
 
 // Partner Left Response
-export interface PartnerLeftResponse {
-  status: 'partner_left';
-  message: string;
-}
-
-// Partner Disconnected Response
-export interface PartnerDisconnectedResponse {
-  status: 'partner_disconnected';
-  message: string;
+export interface PartnerLeftData {
+  reason: string;
 }
 
 // Error Response
-export interface ErrorResponse {
-  status: 'error';
+export interface ErrorData {
+  code: string;
   message: string;
 }
 
-// Pong Response
-export interface PongResponse {
-  status: 'pong';
-  message: string;
+// Message Response (chat message from partner)
+export interface MessageData {
+  from: number;
+  text: string;
+  timestamp: number;
 }
 
-// Cancelled Response
-export interface CancelledResponse {
-  status: 'cancelled';
-  message: string;
+// Signal Response (WebRTC signaling from partner)
+export interface SignalData {
+  signal: RTCSignal;
 }
 
-// Union type for all response data
-export type ResponseData =
-  | MatchData
-  | WaitingResponse
-  | LeftResponse
-  | PartnerLeftResponse
-  | PartnerDisconnectedResponse
-  | CancelledResponse
-  | ErrorResponse
-  | PongResponse;
+// WebRTC Signal Types
+export interface RTCOfferSignal {
+  type: 'offer';
+  sdp: string;
+}
+
+export interface RTCAnswerSignal {
+  type: 'answer';
+  sdp: string;
+}
+
+export interface RTCCandidateSignal {
+  type: 'candidate';
+  candidate: string;
+  sdpMid: string;
+  sdpMLineIndex: number;
+}
+
+export type RTCSignal = RTCOfferSignal | RTCAnswerSignal | RTCCandidateSignal;
 
 // Client Messages (sent to server)
 export interface JoinMessage {
   type: 'join';
-  data: UserData;
+  data: JoinData;
 }
 
 export interface LeaveMessage {
@@ -97,23 +137,100 @@ export interface LeaveMessage {
   data: Record<string, never>; // empty object
 }
 
+export interface CancelMessage {
+  type: 'cancel';
+  data: Record<string, never>; // empty object
+}
+
+export interface ChatMessage {
+  type: 'message';
+  data: {
+    text: string;
+  };
+}
+
+export interface SignalMessage {
+  type: 'signal';
+  data: {
+    signal: RTCSignal;
+  };
+}
+
 export interface PingMessage {
   type: 'ping';
   data: Record<string, never>; // empty object
 }
 
-export interface CancelMessage {
-  type: 'cancel';
-  data: UserData;
-}
-
-export type ClientMessage = JoinMessage | LeaveMessage | CancelMessage | PingMessage;
+export type ClientMessage = 
+  | JoinMessage 
+  | LeaveMessage 
+  | CancelMessage 
+  | ChatMessage
+  | SignalMessage
+  | PingMessage;
 
 // Server Messages (received from server)
-export interface ServerMessage {
-  type: 'response';
-  data: ResponseData;
+export interface MatchMessage {
+  type: 'match';
+  data: MatchData;
 }
+
+export interface ReconnectedMessage {
+  type: 'reconnected';
+  data: ReconnectedData;
+}
+
+export interface SessionExpiredMessage {
+  type: 'session_expired';
+  data: SessionExpiredData;
+}
+
+export interface ServerLeaveMessage {
+  type: 'leave';
+  data: LeaveData;
+}
+
+export interface ServerCancelMessage {
+  type: 'cancel';
+  data: CancelData;
+}
+
+export interface PartnerLeftMessage {
+  type: 'partner_left';
+  data: PartnerLeftData;
+}
+
+export interface ErrorMessage {
+  type: 'error';
+  data: ErrorData;
+}
+
+export interface IncomingChatMessage {
+  type: 'message';
+  data: MessageData;
+}
+
+export interface IncomingSignalMessage {
+  type: 'signal';
+  data: SignalData;
+}
+
+export interface PongMessage {
+  type: 'pong';
+  data: Record<string, never>;
+}
+
+export type ServerMessage = 
+  | MatchMessage
+  | ReconnectedMessage
+  | SessionExpiredMessage
+  | ServerLeaveMessage
+  | ServerCancelMessage
+  | PartnerLeftMessage
+  | ErrorMessage
+  | IncomingChatMessage
+  | IncomingSignalMessage
+  | PongMessage;
 
 // WebSocket Connection States
 export type ConnectionState = 
