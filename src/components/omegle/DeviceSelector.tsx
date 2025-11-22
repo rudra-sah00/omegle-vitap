@@ -94,7 +94,6 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
     try {
       // Check if mediaDevices API is available (Safari compatibility)
       if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-        console.error('Media devices API not available');
         return;
       }
 

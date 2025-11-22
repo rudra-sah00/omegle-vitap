@@ -46,9 +46,6 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     disconnect,
   } = useMatchmaking({
     autoConnect: true,
-    onAuthenticated: () => {
-      console.log('✅ Joined matchmaking queue, waiting for match...');
-    },
     onMatched: handleMatched,
     onPartnerLeft: () => {
       handlePartnerLeftRef.current?.();
@@ -100,10 +97,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
    * Handle successful match
    */
   async function handleMatched(matchData: MatchDataMatched) {
-    console.log('🎯 handleMatched called', { isLeavingRef: isLeavingRef.current, isInSession, isRTCInitialized });
-    
     if (isLeavingRef.current || isInSession || isRTCInitialized) {
-      console.log('⚠️ Skipping match - already in session or leaving');
       return;
     }
     
@@ -113,17 +107,11 @@ export const useChatSession = (options: UseChatSessionOptions) => {
       // Initialize both RTC and RTM with the same UID
       const uid = currentUidRef.current;
       
-      console.log('🚀 Starting RTC and RTM initialization...');
       // Initialize RTC (required) and RTM (optional - may fail if not enabled)
       const [rtcResult, rtmResult] = await Promise.allSettled([
         initializeRTC(matchData, uid, localVideoElementId, remoteVideoElementId),
         initializeRTM(matchData, uid),
       ]);
-
-      console.log('📊 Initialization results:', {
-        rtc: rtcResult.status,
-        rtm: rtmResult.status
-      });
 
       // Check if RTC initialized successfully (RTM is optional)
       if (rtcResult.status === 'rejected') {
@@ -131,7 +119,6 @@ export const useChatSession = (options: UseChatSessionOptions) => {
         throw new Error('Failed to initialize video/audio');
       }
 
-      console.log('✅ Setting isInSession = true');
       setIsInSession(true);
     } catch (error) {
       console.error('❌ handleMatched error:', error);
@@ -179,9 +166,6 @@ export const useChatSession = (options: UseChatSessionOptions) => {
       name: userData.name.trim(),
       gender: userData.gender.toLowerCase() as 'male' | 'female' | 'other',
     };
-
-    // Debug logging
-    console.log('🔐 Joining with data:', authData);
 
     // Store user data for later use (cancel, findNext)
     userDataRef.current = {

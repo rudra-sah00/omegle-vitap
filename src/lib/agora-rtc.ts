@@ -220,7 +220,6 @@ export class AgoraRTCService {
     }
 
     if (this.isJoined) {
-      console.warn('Already joined to a channel');
       return;
     }
 

@@ -73,11 +73,6 @@ export function showError(message: string, code?: ErrorCode) {
   setTimeout(() => {
     activeToastIds.delete(toastId);
   }, 4000);
-  
-  // Log error code for debugging (not visible to user)
-  if (code && process.env.NODE_ENV === 'development') {
-    console.error(`[${code}] ${message}`);
-  }
 }
 
 /**

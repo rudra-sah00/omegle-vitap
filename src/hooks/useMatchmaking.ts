@@ -119,7 +119,6 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
         break;
 
       case 'error':
-        console.error('❌ Server error:', message.data);
         setConnectionState('error');
         setError(message.data.message);
         isJoiningRef.current = false;
@@ -137,7 +136,7 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
         break;
 
       default:
-        console.warn('Unknown message type:', (message as any).type);
+        break;
     }
   }, [onAuthenticated, onMatched, onPartnerLeft, onError]);
 
@@ -237,11 +236,8 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
     }
 
     if (isJoiningRef.current) {
-      console.log('Already joining, skipping duplicate request');
       return;
     }
-
-    console.log('📤 Sending join message:', { type: 'join', data: userData });
 
     const success = ws.send({
       type: 'join',
@@ -263,7 +259,6 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
   const leaveRoom = useCallback(() => {
     // Prevent duplicate leave calls
     if (isLeavingRef.current) {
-      console.log('⚠️ Leave already in progress, skipping');
       return;
     }
 
@@ -275,7 +270,6 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
     }
 
     isLeavingRef.current = true;
-    console.log('📤 Sending leave message to server');
     
     const success = ws.send({
       type: 'leave',

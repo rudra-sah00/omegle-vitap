@@ -54,7 +54,7 @@ export function initBrowserPolyfills(): void {
 
     isInitialized = true;
   } catch (error) {
-    console.error('Failed to initialize browser polyfills:', error);
+    // Failed to initialize browser polyfills
   }
 }
 

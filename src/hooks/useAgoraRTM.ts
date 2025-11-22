@@ -32,13 +32,11 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
   ) => {
     // Prevent concurrent initialization
     if (isInitializingRef.current) {
-      console.log('⚠️ RTM initialization already in progress, skipping');
       return;
     }
     
     // Don't initialize if cleanup is in progress
     if (isCleaningUpRef.current) {
-      console.log('⚠️ RTM cleanup in progress, skipping initialization');
       return;
     }
     
@@ -75,7 +73,6 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
       });
 
       // Login to RTM immediately (no delay to prevent race condition)
-      console.log('🔐 Logging into RTM channel:', matchData.channelName);
       await rtmServiceRef.current.login({
         channelName: matchData.channelName,
         token: matchData.rtmToken,
@@ -86,11 +83,8 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
 
       // Final check - if cleanup happened during async operations, abort
       if (!rtmServiceRef.current) {
-        console.warn('⚠️ RTM was cleaned up after login, aborting');
         return;
       }
-
-      console.log('✅ RTM initialized successfully');
       setIsRTMInitialized(true);
     } catch (error) {
       console.error('RTM initialization failed:', error);
@@ -113,28 +107,17 @@ export const useAgoraRTM = (options: UseAgoraRTMOptions = {}) => {
    * Send a text message
    */
   const sendMessage = useCallback(async (text: string) => {
-    console.log('📨 sendMessage called, ref status:', {
-      hasRef: !!rtmServiceRef.current,
-      isInitialized: isRTMInitialized,
-      text: text
-    });
-    
     if (!text.trim()) {
-      console.log('⚠️ Empty message, not sending');
       return;
     }
     
     if (!rtmServiceRef.current) {
-      console.error('❌ RTM service not initialized, cannot send message');
-      console.error('Debug: isRTMInitialized state:', isRTMInitialized);
       showError('Chat not ready. Please wait a moment.', ErrorCode.MESSAGE_SEND_FAILED);
       return;
     }
 
     try {
-      console.log('📤 Sending message:', text);
       await rtmServiceRef.current.sendMessage(text);
-      console.log('✅ Message sent successfully');
       
       // Don't add to local messages - let the RTM SDK echo it back
       // This prevents duplicate messages
