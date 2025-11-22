@@ -5,7 +5,7 @@ import { ChatHeader } from './ChatHeader';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
 import type { ConnectionState } from '@/types/matchmaking';
-import type { MessageData } from '@/lib/agora-rtm';
+import type { MessageData } from '@/hooks/useWebSocketChat';
 
 interface MobileChatProps {
   isConnected: boolean;
