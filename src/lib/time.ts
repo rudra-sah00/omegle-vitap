@@ -14,6 +14,6 @@ export function isServiceOnline(): boolean {
   
   const hours = istTime.getHours();
   
-  // Online between 9 PM (21:00) and 1 AM (01:00)
-  return hours >= 21 || hours < 1;
+  // Online between 9 PM (21:00) and 2 AM (02:00)
+  return hours >= 21 || hours < 2;
 }

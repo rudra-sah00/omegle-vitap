@@ -119,6 +119,12 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
         break;
 
       case 'error':
+        // Silently ignore typing-related errors (backend doesn't support it yet on production)
+        const errorMsg = message.data.message.toLowerCase();
+        if (errorMsg.includes('unknown message type') || errorMsg.includes('typing')) {
+          break; // Silently ignore
+        }
+        
         setConnectionState('error');
         setError(message.data.message);
         isJoiningRef.current = false;

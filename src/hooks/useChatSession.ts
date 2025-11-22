@@ -234,10 +234,13 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     // Clear chat messages
     clearMessages();
 
+    // Leave the backend room first
+    await leaveRoom();
+
     // Cleanup RTC connection
     await leaveRTC();
     
-    // Wait a moment for Agora to fully disconnect
+    // Wait a moment for backend and Agora to fully disconnect
     await new Promise(resolve => setTimeout(resolve, 500));
 
     // Use same UID from context (no new UID generation)
@@ -257,7 +260,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     } else {
       isLeavingRef.current = false;
     }
-  }, [leaveRTC, join, clearMessages]);
+  }, [leaveRoom, leaveRTC, join, clearMessages]);
 
   // Cleanup on unmount only (not on endSession changes)
   useEffect(() => {

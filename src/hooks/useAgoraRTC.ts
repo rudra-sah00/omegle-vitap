@@ -18,8 +18,8 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
   const [isCameraOn, setIsCameraOn] = useState(false); // Start with camera OFF
   const [isMicOn, setIsMicOn] = useState(false); // Start with mic OFF
   const [isRTCInitialized, setIsRTCInitialized] = useState(false);
-  const [isRemoteCameraOn, setIsRemoteCameraOn] = useState(true); // Track remote user's camera
-  const [isRemoteMicOn, setIsRemoteMicOn] = useState(true); // Track remote user's mic
+  const [isRemoteCameraOn, setIsRemoteCameraOn] = useState(false); // Track remote user's camera (start false, update when detected)
+  const [isRemoteMicOn, setIsRemoteMicOn] = useState(false); // Track remote user's mic (start false, update when detected)
   const hasPreviewRef = useRef(false); // Track if preview is active
 
   /**
@@ -78,8 +78,8 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
       });
 
       rtcServiceRef.current.setOnUserLeft((user: any) => {
-        setIsRemoteCameraOn(true); // Reset to default
-        setIsRemoteMicOn(true); // Reset to default
+        setIsRemoteCameraOn(false); // Reset to default (no camera until detected)
+        setIsRemoteMicOn(false); // Reset to default (no mic until detected)
         onRemoteUserLeft?.(user.uid);
       });
 

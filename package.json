@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.26.0",
     "agora-rtc-sdk-ng": "^4.23.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

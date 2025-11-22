@@ -79,7 +79,7 @@ export class AgoraRTCService {
           this.onUserPublished?.(user, mediaType);
         }
       } catch (error) {
-        console.error('Error handling user-published event:', error);
+        // Silently handle subscription errors
       }
     });
 
@@ -89,7 +89,7 @@ export class AgoraRTCService {
           this.onUserUnpublished?.(user, mediaType);
         }
       } catch (error) {
-        console.error('Error handling user-unpublished event:', error);
+        // Silently handle unsubscription errors
       }
     });
 
@@ -97,7 +97,7 @@ export class AgoraRTCService {
       try {
         this.onUserJoined?.(user);
       } catch (error) {
-        console.error('Error handling user-joined event:', error);
+        // Silently handle user join errors
       }
     });
 
@@ -105,20 +105,18 @@ export class AgoraRTCService {
       try {
         this.onUserLeft?.(user);
       } catch (error) {
-        console.error('Error handling user-left event:', error);
+        // Silently handle user leave errors
       }
     });
 
     // Handle connection state changes
     this.client.on('connection-state-change', (curState, prevState, reason) => {
-      if (curState === 'DISCONNECTED' || curState === 'DISCONNECTING') {
-        console.warn('Connection state changed:', curState, 'Reason:', reason);
-      }
+      // Silently monitor connection state
     });
 
     // Handle exceptions
     this.client.on('exception', (event) => {
-      console.error('Agora RTC exception:', event);
+      // Silently handle Agora exceptions
     });
   }
 

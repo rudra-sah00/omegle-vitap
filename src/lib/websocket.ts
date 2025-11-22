@@ -217,7 +217,7 @@ export class WebSocketService {
 
       this.messageHandlers.forEach(handler => handler(message));
     } catch (error) {
-      console.error('Failed to parse WebSocket message:', error);
+      // Silently ignore malformed messages
     }
   }
 

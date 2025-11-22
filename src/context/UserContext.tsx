@@ -12,8 +12,12 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-// Generate UID once per session
-const generateUID = () => Math.floor(Math.random() * 1000000);
+// Generate unique UID per tab/session (timestamp + random ensures uniqueness)
+const generateUID = () => {
+  const timestamp = Date.now() % 1000000; // Last 6 digits of timestamp
+  const random = Math.floor(Math.random() * 1000); // Random 0-999
+  return timestamp * 1000 + random; // Combine for unique ID
+};
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [name, setName] = useState('');

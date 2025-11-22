@@ -19,8 +19,7 @@ export const WelcomeForm = () => {
         const data = await res.json();
         setIsOnline(data.isOnline);
       } catch (error) {
-        console.error('Failed to check status', error);
-        // Fallback to local check if API fails
+        // Silently fallback to local check if API fails
         const now = new Date();
         const utc = now.getTime() + now.getTimezoneOffset() * 60000;
         const istOffset = 5.5 * 60 * 60000;
