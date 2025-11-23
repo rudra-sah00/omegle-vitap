@@ -4,6 +4,7 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { showError, showWarning, parseMediaError, ErrorCode } from '@/lib/toast';
+import { getPersistedCameraState, getPersistedMicState, persistCameraState, persistMicState } from '@/lib/mediaState';
 import type { MatchData } from '@/types/matchmaking';
 
 interface UseAgoraRTCOptions {
@@ -15,12 +16,23 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
   const { onRemoteVideoReady, onRemoteUserLeft } = options;
 
   const rtcServiceRef = useRef<any>(null);
-  const [isCameraOn, setIsCameraOn] = useState(false); // Start with camera OFF
-  const [isMicOn, setIsMicOn] = useState(false); // Start with mic OFF
+  // Initialize with persisted states from localStorage
+  const [isCameraOn, setIsCameraOn] = useState(() => getPersistedCameraState());
+  const [isMicOn, setIsMicOn] = useState(() => getPersistedMicState());
   const [isRTCInitialized, setIsRTCInitialized] = useState(false);
   const [isRemoteCameraOn, setIsRemoteCameraOn] = useState(false); // Track remote user's camera (start false, update when detected)
   const [isRemoteMicOn, setIsRemoteMicOn] = useState(false); // Track remote user's mic (start false, update when detected)
   const hasPreviewRef = useRef(false); // Track if preview is active
+
+  // Persist camera state whenever it changes
+  useEffect(() => {
+    persistCameraState(isCameraOn);
+  }, [isCameraOn]);
+
+  // Persist mic state whenever it changes
+  useEffect(() => {
+    persistMicState(isMicOn);
+  }, [isMicOn]);
 
   /**
    * Initialize RTC with match data
@@ -64,7 +76,7 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
 
       // Initialize service if not exists or was cleaned up
       if (!rtcServiceRef.current) {
-        const { AgoraRTCService } = await import('@/lib/agora-rtc');
+        const { AgoraRTCService } = await import('@/lib/agora/agora-rtc');
         rtcServiceRef.current = new AgoraRTCService();
       }
 
@@ -217,6 +229,7 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
 
   /**
    * Leave RTC channel and cleanup
+   * IMPORTANT: Camera/Mic states are preserved across sessions
    */
   const leaveRTC = useCallback(async () => {
     if (!rtcServiceRef.current) return;
@@ -227,14 +240,11 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
       hasPreviewRef.current = false;
       setIsRTCInitialized(false);
       
-      // Reset UI state for next session
-      setIsCameraOn(false);
-      setIsMicOn(false);
+      // DO NOT reset camera/mic states - they persist across sessions
+      // User's preference (on/off) remains the same for next match
     } catch (error) {
-      // Reset state even on error
+      // Reset only initialization state on error, keep camera/mic preferences
       setIsRTCInitialized(false);
-      setIsCameraOn(false);
-      setIsMicOn(false);
     }
   }, []);
 

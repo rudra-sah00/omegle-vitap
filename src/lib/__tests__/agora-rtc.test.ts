@@ -3,7 +3,7 @@
  * Comprehensive tests for video/audio communication service
  */
 
-import { AgoraRTCService } from '../agora-rtc';
+import { AgoraRTCService } from '../agora/agora-rtc';
 import AgoraRTC, {
   IAgoraRTCClient,
   ICameraVideoTrack,

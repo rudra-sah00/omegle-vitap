@@ -25,9 +25,6 @@ export {
 // General Utilities
 export { cn } from './utils';
 
-// Time Utilities
-export { isServiceOnline } from './time';
-
 // Types
-export type { AgoraRTCConfig } from './agora-rtc';
+export type { AgoraRTCConfig } from './agora/agora-rtc';
 export type { MessageData } from '@/hooks/useWebSocketChat';

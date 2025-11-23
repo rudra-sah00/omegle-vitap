@@ -9,24 +9,34 @@ import { useUser } from '@/context/UserContext';
 
 export const WelcomeForm = () => {
   const { name, setName, gender, setGender } = useUser();
-  const [isOnline, setIsOnline] = useState(false);
+  const [isOnline, setIsOnline] = useState(true); // Default to true while checking
   const [isLoading, setIsLoading] = useState(false);
+  const [serviceAvailable, setServiceAvailable] = useState(true);
+  const [serviceMessage, setServiceMessage] = useState('');
+  const [isCheckingService, setIsCheckingService] = useState(false);
+  const [isCheckingOnlineStatus, setIsCheckingOnlineStatus] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const checkOnlineStatus = async () => {
       try {
-        const res = await fetch('/api/status');
-        const data = await res.json();
-        setIsOnline(data.isOnline);
+        // Check backend status directly
+        const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+        if (wsUrl) {
+          const httpUrl = wsUrl.replace('ws://', 'http://').replace('wss://', 'https://');
+          const baseUrl = httpUrl.split('/ws')[0];
+          
+          const res = await fetch(`${baseUrl}/status`);
+          const data = await res.json();
+          setIsOnline(data.status);
+        } else {
+          setIsOnline(true); // Default to online if no backend URL
+        }
       } catch (error) {
-        // Silently fallback to local check if API fails
-        const now = new Date();
-        const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-        const istOffset = 5.5 * 60 * 60000;
-        const istTime = new Date(utc + istOffset);
-        const hours = istTime.getHours();
-        setIsOnline(hours >= 21 || hours < 1);
+        // If backend is unreachable, assume offline
+        setIsOnline(false);
+      } finally {
+        setIsCheckingOnlineStatus(false);
       }
     };
 
@@ -36,17 +46,57 @@ export const WelcomeForm = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     if (!name.trim() || isLoading) {
       return;
     }
+    
     try {
       setIsLoading(true);
-      // Navigate to the main chat page
+      setIsCheckingService(true);
+      setServiceAvailable(true);
+      setServiceMessage('');
+      
+      // Check backend status before navigating
+      const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+      if (!wsUrl) {
+        setServiceAvailable(false);
+        setServiceMessage('Backend service not configured. Please contact support.');
+        setIsLoading(false);
+        setIsCheckingService(false);
+        return;
+      }
+
+      // Convert WebSocket URL to HTTP for status check
+      const httpUrl = wsUrl.replace('ws://', 'http://').replace('wss://', 'https://');
+      const baseUrl = httpUrl.split('/ws')[0];
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const res = await fetch(`${baseUrl}/status`, {
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      const data = await res.json();
+      
+      if (!data.status) {
+        setServiceAvailable(false);
+        setServiceMessage('Backend service is currently unavailable. Please try again later.');
+        setIsLoading(false);
+        setIsCheckingService(false);
+        return;
+      }
+      
+      // Service is available, navigate to chat
+      setIsCheckingService(false);
       router.push('/omegle');
     } catch (error) {
+      setServiceAvailable(false);
+      setServiceMessage('Unable to connect to backend service. Please check your internet connection and try again.');
       setIsLoading(false);
-      // Silently handle navigation errors
+      setIsCheckingService(false);
     }
   };
 
@@ -130,11 +180,30 @@ export const WelcomeForm = () => {
             </div>
           </div>
 
+          {/* Service Unavailable Error Banner - Only shown after check fails */}
+          {!serviceAvailable && serviceMessage && (
+            <div className="bg-red-500/95 backdrop-blur-sm border-2 border-red-300 rounded-2xl p-4 shadow-xl animate-fade-in">
+              <div className="flex items-start gap-3">
+                <svg className="w-6 h-6 text-white flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div className="flex-1">
+                  <h3 className="text-white font-bold text-sm mb-1">Service Unavailable</h3>
+                  <p className="text-white/95 text-xs leading-relaxed">
+                    {serviceMessage}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="pt-1">
             <JoinButton 
               isOnline={isOnline} 
               onClick={handleJoin}
               disabled={!name.trim() || isLoading}
+              isChecking={isCheckingService}
+              isCheckingOnlineStatus={isCheckingOnlineStatus}
             />
           </div>
 

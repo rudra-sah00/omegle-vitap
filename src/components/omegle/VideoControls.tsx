@@ -52,7 +52,7 @@ export function VideoControls({
               className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors ${
                 isCameraOn ? 'bg-slate-600 hover:bg-slate-700' : 'bg-red-500 hover:bg-red-600'
               }`}
-              title={isCameraOn ? 'Turn off camera' : 'Turn on camera'}
+              title={isCameraOn ? 'Turn off camera (stays off until you turn it back on)' : 'Turn on camera (stays on for next matches)'}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {isCameraOn ? (
@@ -99,7 +99,7 @@ export function VideoControls({
               className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors ${
                 isMicOn ? 'bg-slate-600 hover:bg-slate-700' : 'bg-red-500 hover:bg-red-600'
               }`}
-              title={isMicOn ? 'Turn off microphone' : 'Turn on microphone'}
+              title={isMicOn ? 'Turn off microphone (stays off until you turn it back on)' : 'Turn on microphone (stays on for next matches)'}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {isMicOn ? (
@@ -171,7 +171,7 @@ export function VideoControls({
               className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors ${
                 isCameraOn ? 'bg-slate-600 hover:bg-slate-700' : 'bg-red-500 hover:bg-red-600'
               }`}
-              title={isCameraOn ? 'Turn off camera' : 'Turn on camera'}
+              title={isCameraOn ? 'Turn off camera (stays off until you turn it back on)' : 'Turn on camera (stays on for next matches)'}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {isCameraOn ? (
@@ -218,7 +218,7 @@ export function VideoControls({
               className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors ${
                 isMicOn ? 'bg-slate-600 hover:bg-slate-700' : 'bg-red-500 hover:bg-red-600'
               }`}
-              title={isMicOn ? 'Turn off microphone' : 'Turn on microphone'}
+              title={isMicOn ? 'Turn off microphone (stays off until you turn it back on)' : 'Turn on microphone (stays on for next matches)'}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {isMicOn ? (

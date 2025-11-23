@@ -57,6 +57,7 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
   const isLeavingRef = useRef(false);
   const lastErrorTimeRef = useRef<number>(0);
   const lastErrorMessageRef = useRef<string>('');
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize WebSocket service only when needed
   const getWs = useCallback(() => {
@@ -79,7 +80,12 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
           setError(null);
           onAuthenticated?.();
         } else if (message.data.status === 'matched') {
-          // Match found!
+          // Match found! Clear timeout
+          if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+            searchTimeoutRef.current = null;
+          }
+          
           setConnectionState('matched');
           setMatchData(message.data);
           setError(null);
@@ -241,8 +247,16 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
       return;
     }
 
+    // If already joining, allow retry after clearing the flag
     if (isJoiningRef.current) {
-      return;
+      // Reset flag to allow retry - handles edge case where join was stuck
+      isJoiningRef.current = false;
+    }
+
+    // Clear any existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
     }
 
     const success = ws.send({
@@ -253,6 +267,31 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
     if (success) {
       isJoiningRef.current = true;
       setConnectionState('waiting');
+      setError(null); // Clear any previous errors
+
+      // Set 30-second timeout for search
+      searchTimeoutRef.current = setTimeout(() => {
+        // Check if still joining (not matched yet)
+        if (isJoiningRef.current) {
+          // Auto-cancel search after 30 seconds
+          const currentWs = wsRef.current;
+          if (currentWs) {
+            currentWs.send({
+              type: 'cancel',
+              data: {},
+            });
+          }
+
+          setConnectionState('connected');
+          setMatchData(null);
+          isJoiningRef.current = false;
+          
+          const timeoutMsg = 'No match found. Please try again.';
+          setError(timeoutMsg);
+          showError(timeoutMsg, ErrorCode.CONNECTION_TIMEOUT);
+        }
+        searchTimeoutRef.current = null;
+      }, 30000); // 30 seconds
     } else {
       setError('Failed to join queue');
       setConnectionState('error');
@@ -299,6 +338,12 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
    * Manually disconnect from WebSocket
    */
   const disconnect = useCallback(() => {
+    // Clear timeout on disconnect
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+
     if (!wsRef.current) return;
     const ws = wsRef.current;
     ws.disconnect();
@@ -331,6 +376,12 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
 
     // Cleanup on unmount
     return () => {
+      // Clear search timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
+
       unsubscribeMessage();
       unsubscribeOpen();
       unsubscribeClose();
@@ -361,20 +412,29 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
    * Cancel search while waiting in queue
    */
   const cancelSearch = useCallback(() => {
-    if (!wsRef.current || connectionState !== 'waiting') {
+    if (!wsRef.current) {
       return;
     }
 
+    // Clear timeout if exists
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+
+    // Allow cancel even if not in 'waiting' state to handle edge cases
     const ws = wsRef.current;
     ws.send({
       type: 'cancel',
       data: {},
     });
 
+    // Reset all search-related state
     setConnectionState('connected');
     setMatchData(null);
+    setError(null);
     isJoiningRef.current = false; // Reset joining flag
-  }, [connectionState]);
+  }, []);
 
   return {
     connectionState,

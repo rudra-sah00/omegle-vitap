@@ -161,9 +161,10 @@ function OmeglePageContent() {
         return;
       }
 
-      // Check if already searching or in session
-      if (connectionState === 'waiting' || isInSession) {
-        showWarning('Already searching or in a session');
+      // Only block if actually in an active session (matched with partner)
+      // Allow search even if connectionState is 'waiting' since user might have cancelled
+      if (isInSession) {
+        showWarning('Already in an active chat session');
         return;
       }
 
