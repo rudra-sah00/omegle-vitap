@@ -161,9 +161,11 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
       try {
         await rtcServiceRef.current.toggleCamera(newState);
       } catch (error) {
-        // Only show error for permission issues, not for device not found
-        const { message } = parseMediaError(error);
-        if (message.includes('denied') || message.includes('permission')) {
+        // Silent failure - user toggled off or device unavailable
+        // Only show error if explicitly denied by user
+        const errorStr = String(error);
+        if (errorStr.includes('NotAllowedError') || errorStr.includes('PermissionDenied')) {
+          const { message } = parseMediaError(error);
           showError(message, ErrorCode.CAMERA_PERMISSION_DENIED);
           setTimeout(() => {
             showWarning('Please allow camera access in your browser settings and try again.');
@@ -184,9 +186,10 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
           await rtcServiceRef.current.createLocalPreview(true, isMicOn);
           hasPreviewRef.current = true;
         } catch (error) {
-          // Only show error for permission issues
-          const { message } = parseMediaError(error);
-          if (message.includes('denied') || message.includes('permission')) {
+          // Silent failure - only show error for explicit permission denial
+          const errorStr = String(error);
+          if (errorStr.includes('NotAllowedError') || errorStr.includes('PermissionDenied')) {
+            const { message } = parseMediaError(error);
             showError(message, ErrorCode.CAMERA_PERMISSION_DENIED);
           }
           setIsCameraOn(false);
@@ -207,6 +210,12 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
       try {
         await rtcServiceRef.current.toggleMicrophone(newState);
       } catch (error) {
+        // Silent failure - only show error for explicit permission denial
+        const errorStr = String(error);
+        if (errorStr.includes('NotAllowedError') || errorStr.includes('PermissionDenied')) {
+          const { message, code } = parseMediaError(error);
+          showError(message, code);
+        }
         setIsMicOn(!newState); // Revert on error
       }
     } else {
@@ -235,10 +244,20 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
     if (!rtcServiceRef.current) return;
 
     try {
+      // Properly leave and cleanup tracks
       await rtcServiceRef.current.leave();
-      // Don't set to null - the service recreates the client internally
       hasPreviewRef.current = false;
       setIsRTCInitialized(false);
+      setIsRemoteCameraOn(false);
+      setIsRemoteMicOn(false);
+      
+      // Force cleanup after delay to ensure tracks are released
+      setTimeout(() => {
+        const service = rtcServiceRef.current;
+        if (service) {
+          rtcServiceRef.current = null;
+        }
+      }, 200);
       
       // DO NOT reset camera/mic states - they persist across sessions
       // User's preference (on/off) remains the same for next match

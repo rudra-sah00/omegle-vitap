@@ -1,6 +1,7 @@
 import { UserProvider } from "@/context/UserContext";
 import { BrowserInit } from "@/components/BrowserInit";
 import { ErrorBoundaryHandler } from "@/components/ErrorBoundaryHandler";
+import { MaintenanceGuard } from "@/components/MaintenanceGuard";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
@@ -189,9 +190,11 @@ export default function RootLayout({
         <BrowserInit />
         <ErrorBoundaryHandler />
         <Toaster />
-        <UserProvider>
-          {children}
-        </UserProvider>
+        <MaintenanceGuard>
+          <UserProvider>
+            {children}
+          </UserProvider>
+        </MaintenanceGuard>
       </body>
     </html>
   );

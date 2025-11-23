@@ -1,13 +1,8 @@
-/**
- * Hook to manage the complete chat session lifecycle
- * Integrates matchmaking, RTC, and WebSocket chat
- */
-
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { useMatchmaking } from './useMatchmaking';
 import { useAgoraRTC } from './useAgoraRTC';
 import { useWebSocketChat } from './useWebSocketChat';
-import { getWebSocketService } from '@/lib/websocket';
+import { getSocketIOService } from '@/lib/socketio';
 import { showError, showInfo, ErrorCode } from '@/lib/toast';
 import { useUser } from '@/context/UserContext';
 import type { MatchData, MatchDataMatched } from '@/types/matchmaking';
@@ -33,6 +28,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
 
   // State
   const [isInSession, setIsInSession] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   // Matchmaking
   const {
@@ -78,7 +74,6 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     },
   });
 
-  // WebSocket Chat (replaces Agora RTM)
   const {
     messages,
     isPartnerTyping,
@@ -86,14 +81,10 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     sendTypingIndicator,
     clearMessages,
   } = useWebSocketChat({
-    ws: getWebSocketService(),
+    ws: getSocketIOService(),
     isInSession,
-    onMessageReceived: () => {
-      // Message received
-    },
-    onTypingIndicator: () => {
-      // Partner typing indicator
-    },
+    onMessageReceived: () => {},
+    onTypingIndicator: () => {},
   });
 
   /**
@@ -104,6 +95,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
       return;
     }
     
+    setIsSearching(false);
     currentMatchRef.current = matchData;
 
     // Retry logic with exponential backoff
@@ -210,6 +202,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
    * Stop searching (cancel while waiting)
    */
   const stopSearch = useCallback(async () => {
+    setIsSearching(false);
     // Cancel search - new API doesn't require user data
     cancelSearch();
   }, [cancelSearch]);
@@ -225,6 +218,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     isLeavingRef.current = true;
     
     setIsInSession(false);
+    setIsSearching(false);
     currentMatchRef.current = null;
 
     // Clear chat messages
@@ -367,6 +361,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     matchData,
     isMatched,
     isInSession,
+    isSearching,
     matchmakingError,
 
     // Media state

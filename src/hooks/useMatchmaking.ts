@@ -58,6 +58,7 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
   const lastErrorTimeRef = useRef<number>(0);
   const lastErrorMessageRef = useRef<string>('');
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingJoinRef = useRef<UserData | null>(null);
 
   // Initialize WebSocket service only when needed
   const getWs = useCallback(() => {
@@ -241,11 +242,15 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
     const ws = getWs();
 
     if (!ws.isConnected()) {
-      const errorMsg = 'Not connected to server. Please wait and try again.';
-      setError(errorMsg);
-      showError(errorMsg, ErrorCode.CONNECTION_LOST);
+      // Queue the join request for when connection is established
+      pendingJoinRef.current = userData;
+      setConnectionState('connecting');
+      setError(null);
       return;
     }
+
+    // Clear pending join since we're processing it now
+    pendingJoinRef.current = null;
 
     // If already joining, allow retry after clearing the flag
     if (isJoiningRef.current) {
@@ -273,7 +278,7 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
       searchTimeoutRef.current = setTimeout(() => {
         // Check if still joining (not matched yet)
         if (isJoiningRef.current) {
-          // Auto-cancel search after 30 seconds
+          // Auto-cancel search after timeout
           const currentWs = wsRef.current;
           if (currentWs) {
             currentWs.send({
@@ -344,6 +349,9 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
       searchTimeoutRef.current = null;
     }
 
+    // Clear any pending join request
+    pendingJoinRef.current = null;
+
     if (!wsRef.current) return;
     const ws = wsRef.current;
     ws.disconnect();
@@ -390,6 +398,20 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
   }, [autoConnect, handleMessage, handleOpen, handleClose, handleError, getWs]);
 
   /**
+   * Process pending join requests when connection becomes ready
+   */
+  useEffect(() => {
+    if (connectionState === 'connected' && pendingJoinRef.current) {
+      const userData = pendingJoinRef.current;
+      pendingJoinRef.current = null;
+      // Use setTimeout to ensure connection is fully ready
+      setTimeout(() => {
+        join(userData);
+      }, 100);
+    }
+  }, [connectionState, join]);
+
+  /**
    * Auto-join when connected if userData is provided
    */
   useEffect(() => {
@@ -421,6 +443,9 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
       clearTimeout(searchTimeoutRef.current);
       searchTimeoutRef.current = null;
     }
+
+    // Clear any pending join request
+    pendingJoinRef.current = null;
 
     // Allow cancel even if not in 'waiting' state to handle edge cases
     const ws = wsRef.current;

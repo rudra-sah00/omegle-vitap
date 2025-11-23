@@ -1,6 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
+
+// Dynamically import emoji picker to avoid SSR issues
+const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
 interface ChatInputProps {
   isConnected: boolean;
@@ -10,7 +14,9 @@ interface ChatInputProps {
 
 export const ChatInput = ({ isConnected, onSend, onTyping }: ChatInputProps) => {
   const [message, setMessage] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
 
   const handleSend = () => {
     if (message.trim() && isConnected) {
@@ -72,9 +78,49 @@ export const ChatInput = ({ isConnected, onSend, onTyping }: ChatInputProps) => 
     }
   };
 
+  const handleEmojiClick = (emojiData: any) => {
+    setMessage(prev => prev + emojiData.emoji);
+    setShowEmojiPicker(false);
+    onTyping?.(true);
+  };
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
+
   return (
-    <div className="border-t border-slate-200 p-4 bg-white">
-      <div className="flex gap-3">
+    <div className="border-t border-slate-200 p-4 bg-white relative">
+      {/* Emoji Picker */}
+      {showEmojiPicker && (
+        <div ref={emojiPickerRef} className="absolute bottom-20 left-4 z-50">
+          <EmojiPicker onEmojiClick={handleEmojiClick} width={300} height={400} />
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        {/* Emoji Button */}
+        <button
+          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          disabled={!isConnected}
+          className="p-3 rounded-xl border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          title="Add emoji"
+        >
+          <span className="text-xl">😊</span>
+        </button>
+
         <input
           type="text"
           value={message}

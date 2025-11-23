@@ -2,6 +2,7 @@
 
 import { TypingIndicator } from './TypingIndicator';
 import { EncryptedText } from '@/components/ui/encrypted-text';
+import { formatMessage } from '@/utils/messageFormatter';
 import type { MessageData } from '@/hooks/useWebSocketChat';
 
 interface ChatMessagesProps {
@@ -45,13 +46,8 @@ export const ChatMessages = ({ isConnected, isStrangerTyping = false, messages =
                 }`}>
                   {isYou ? 'You:' : `${partnerName || 'Stranger'}:`}
                 </span>
-                <div className="flex-1">
-                  <EncryptedText 
-                    text={message.text}
-                    className="text-sm text-slate-800 break-words"
-                    revealDelayMs={30}
-                    flipDelayMs={30}
-                  />
+                <div className="flex-1 text-sm text-slate-800 break-words whitespace-pre-wrap">
+                  {formatMessage(message.text)}
                 </div>
               </div>
             );

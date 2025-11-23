@@ -191,8 +191,8 @@ function OmeglePageContent() {
     try {
       await stopSearch();
     } catch (error) {
-      showError('Failed to stop search. Refreshing...', ErrorCode.CONNECTION_LOST);
-      setTimeout(() => window.location.reload(), 1000);
+      // Silently handle cancel errors - no need to reload page
+      // The cancelSearch function already handles cleanup
     }
   };
 

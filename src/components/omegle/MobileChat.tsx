@@ -22,6 +22,20 @@ export const MobileChat = ({ isConnected, isStrangerTyping = false, onSendMessag
   const [isChatOpen, setIsChatOpen] = React.useState(false);
   const lastMessageCountRef = React.useRef(0);
 
+  // Reset chat state when disconnected
+  React.useEffect(() => {
+    if (!isConnected) {
+      setUnreadCount(0);
+      setIsChatOpen(false);
+      lastMessageCountRef.current = 0;
+      // Close the chat panel
+      const chatPanel = document.getElementById('mobile-chat');
+      if (chatPanel) {
+        chatPanel.classList.add('hidden');
+      }
+    }
+  }, [isConnected]);
+
   // Track new messages and update unread count
   React.useEffect(() => {
     // Count only messages from stranger (not from 'You')

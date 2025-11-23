@@ -1,10 +1,5 @@
-/**
- * Hook to manage WebSocket-based chat (replaces Agora RTM)
- * Uses existing matchmaking WebSocket connection for text chat
- */
-
 import { useRef, useState, useCallback, useEffect } from 'react';
-import type { WebSocketService } from '@/lib/websocket';
+import type { SocketIOService } from '@/lib/socketio';
 
 export interface MessageData {
   id: string; // Unique message ID
@@ -15,7 +10,7 @@ export interface MessageData {
 }
 
 interface UseWebSocketChatOptions {
-  ws: WebSocketService | null;
+  ws: SocketIOService | null;
   isInSession: boolean;
   onMessageReceived?: (message: MessageData) => void;
   onTypingIndicator?: (isTyping: boolean) => void;
@@ -32,7 +27,15 @@ export const useWebSocketChat = (options: UseWebSocketChatOptions) => {
    * Listen for incoming chat messages and typing indicators
    */
   useEffect(() => {
-    if (!ws || !isInSession) return;
+    if (!ws || !isInSession) {
+      // Clear typing indicator when not in session
+      setIsPartnerTyping(false);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      return;
+    }
 
     const unsubscribe = ws.onMessage((msg) => {
       if (msg.type === 'message') {
@@ -77,17 +80,23 @@ export const useWebSocketChat = (options: UseWebSocketChatOptions) => {
    * Send a text message to partner
    */
   const sendMessage = useCallback((text: string) => {
+    console.log('[useWebSocketChat] sendMessage called:', { text, hasWs: !!ws, isInSession, connected: ws?.isConnected() });
+    
     if (!ws || !text.trim() || !isInSession) {
+      console.log('[useWebSocketChat] sendMessage blocked:', { hasWs: !!ws, hasTrimmedText: !!text.trim(), isInSession });
       return;
     }
 
     const trimmedText = text.trim();
     
     // Send to backend
+    console.log('[useWebSocketChat] Sending message to backend:', { type: 'message', data: { text: trimmedText } });
     const sent = ws.send({ 
       type: 'message', 
       data: { text: trimmedText } 
     });
+
+    console.log('[useWebSocketChat] Message sent result:', sent);
 
     if (sent) {
       // Add to local messages immediately (optimistic update)
@@ -101,6 +110,7 @@ export const useWebSocketChat = (options: UseWebSocketChatOptions) => {
       };
       
       setMessages((prev) => [...prev, messageData]);
+      console.log('[useWebSocketChat] Message added to local messages');
     }
   }, [ws, isInSession]);
 

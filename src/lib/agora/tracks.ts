@@ -97,47 +97,47 @@ async function attemptCreateAndPublishTracks(
   });
 
   try {
-    // Check permission state (actively prompt if needed)
-    await checkPermissions();
+    // Check permission state (only if we need to create tracks)
+    if (cameraOn || micOn) {
+      await checkPermissions();
+    }
 
     // Check available devices
     const devices = await AgoraRTC.getDevices().catch(() => []);
     const hasMicrophone = devices.some(d => d.kind === 'audioinput');
     const hasCamera = devices.some(d => d.kind === 'videoinput');
 
-    if (!hasMicrophone && !hasCamera) {
+    // Only throw error if user wants devices but none exist
+    if ((cameraOn && !hasCamera) && (micOn && !hasMicrophone)) {
       if (timeoutId) clearTimeout(timeoutId);
       throw new Error('DEVICE_NOT_FOUND: No camera or microphone found. Please connect a device and grant permissions.');
     }
 
-    // Create tracks
+    // Create tracks ONLY if user wants them ON
     let videoTrack: ICameraVideoTrack | null = null;
     let audioTrack: IMicrophoneAudioTrack | null = null;
 
-    if (hasMicrophone && hasCamera) {
+    // Create both tracks if both are available and wanted
+    if (cameraOn && micOn && hasMicrophone && hasCamera) {
       const result = await createBothTracks(trackTimeout, currentCameraId, currentMicId);
       audioTrack = result.audioTrack;
       videoTrack = result.videoTrack;
-    } else if (hasMicrophone) {
-      audioTrack = await createAudioTrack(trackTimeout, currentMicId);
-    } else if (hasCamera) {
-      videoTrack = await createVideoTrack(trackTimeout, currentCameraId);
+    } else {
+      // Create individual tracks only if wanted and available
+      if (micOn && hasMicrophone) {
+        audioTrack = await createAudioTrack(trackTimeout, currentMicId);
+      }
+      if (cameraOn && hasCamera) {
+        videoTrack = await createVideoTrack(trackTimeout, currentCameraId);
+      }
     }
 
     if (timeoutId) clearTimeout(timeoutId);
 
-    // Set enabled state
-    if (videoTrack) {
-      await videoTrack.setEnabled(cameraOn);
-    }
-    if (audioTrack) {
-      await audioTrack.setEnabled(micOn);
-    }
-
-    // Publish tracks
+    // Publish tracks that were created
     const tracksToPublish = [];
-    if (cameraOn && videoTrack) tracksToPublish.push(videoTrack);
-    if (micOn && audioTrack) tracksToPublish.push(audioTrack);
+    if (videoTrack) tracksToPublish.push(videoTrack);
+    if (audioTrack) tracksToPublish.push(audioTrack);
 
     if (tracksToPublish.length > 0) {
       await publishTracks(client, tracksToPublish);
@@ -152,6 +152,9 @@ async function attemptCreateAndPublishTracks(
 
 /**
  * Check permissions before creating tracks
+ * NOTE: This function does NOT actively request permissions.
+ * It only checks if permissions are explicitly denied.
+ * Actual permission prompts will happen when Agora tries to create tracks.
  */
 async function checkPermissions(): Promise<void> {
   // Use Permissions API when available to detect explicit denial early
@@ -160,54 +163,22 @@ async function checkPermissions(): Promise<void> {
       const cameraPermission = await navigator.permissions.query({ name: 'camera' as PermissionName }).catch(() => null);
       const micPermission = await navigator.permissions.query({ name: 'microphone' as PermissionName }).catch(() => null);
 
-      if (cameraPermission?.state === 'denied' || micPermission?.state === 'denied') {
-        throw new Error('PERMISSION_DENIED: Camera or microphone access was denied. Please allow access in your browser settings.');
-      }
-
-      // If both are granted, nothing else to do
-      if (cameraPermission?.state === 'granted' && micPermission?.state === 'granted') {
-        return;
+      // Only throw error if BOTH are explicitly denied (not just one)
+      // Allow joining if at least one device has permission
+      if (cameraPermission?.state === 'denied' && micPermission?.state === 'denied') {
+        throw new Error('PERMISSION_DENIED: Camera and microphone access denied. Please allow access in your browser settings.');
       }
     }
-
-    // If Permissions API not available or state is 'prompt', actively request a short getUserMedia
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      const shortTimeout = 5000; // 5s to get user response
-      let gmTimeout: NodeJS.Timeout | null = null;
-
-      const gmPromise = navigator.mediaDevices.getUserMedia({ audio: true, video: true }).then(stream => {
-        // Immediately stop any tracks we started for permission check
-        try {
-          stream.getTracks().forEach(t => t.stop());
-        } catch (stopErr) {
-          // ignore
-        }
-      });
-
-      const race = Promise.race([
-        gmPromise,
-        new Promise<never>((_, reject) => {
-          gmTimeout = setTimeout(() => reject(new Error('PERMISSION_PROMPT_TIMEOUT: Permission prompt timed out')), shortTimeout);
-        })
-      ]);
-
-      try {
-        await race;
-      } finally {
-        if (gmTimeout) clearTimeout(gmTimeout);
-      }
-
-      return;
+  } catch (error) {
+    // If permissions API fails, continue anyway - let Agora handle it
+    if ((error as Error).message?.includes('PERMISSION_DENIED')) {
+      throw error;
     }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes('denied') || msg.includes('PERMISSION')) {
-      throw new Error('PERMISSION_DENIED: Camera or microphone access was denied. Please allow access in your browser settings.');
-    }
-
-    // If timeout or other permission prompt issues
-    throw new Error('PERMISSION_DENIED: Could not obtain camera/microphone permission.');
   }
+
+  // DO NOT actively request getUserMedia here
+  // Let Agora SDK handle permission requests only when user turns on camera/mic
+  return;
 }
 
 /**
