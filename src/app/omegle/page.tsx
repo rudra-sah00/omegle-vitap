@@ -89,9 +89,7 @@ function OmeglePageContent() {
    */
   useEffect(() => {
     const handleOnline = () => {
-      if (isInSession) {
-        showWarning('Connection restored. You may need to reconnect.');
-      }
+      // Connection restored - no toast needed
     };
 
     const handleOffline = () => {
@@ -120,8 +118,7 @@ function OmeglePageContent() {
       if (document.hidden) {
         wasHidden = true;
       } else if (wasHidden && isInSession) {
-        // User came back to tab during active session
-        showWarning('Welcome back! Check your connection.');
+        // User came back to tab during active session - no toast needed
         wasHidden = false;
       }
     };

@@ -4,13 +4,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
-  // Static export for Firebase hosting
-  output: 'export',
   images: {
     unoptimized: true,
   },
   trailingSlash: true,
-  // Note: headers() doesn't work with static export, moved to public/_headers
 };
 
 export default withSentryConfig(nextConfig, {
@@ -41,4 +38,9 @@ export default withSentryConfig(nextConfig, {
   // https://docs.sentry.io/product/crons/
   // https://vercel.com/docs/cron-jobs
   automaticVercelMonitors: true,
+
+  // Disable automatic instrumentation for static export
+  autoInstrumentServerFunctions: false,
+  autoInstrumentMiddleware: false,
+  autoInstrumentAppDirectory: false,
 });

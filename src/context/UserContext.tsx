@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 interface UserContextType {
   name: string;
@@ -22,7 +22,14 @@ const generateUID = () => {
 export function UserProvider({ children }: { children: ReactNode }) {
   const [name, setName] = useState('');
   const [gender, setGender] = useState('Male');
-  const [uid] = useState(generateUID()); // Generate once, never changes
+  const [uid, setUid] = useState(() => generateUID()); // Initialize with function to ensure fresh generation
+
+  // Force new UID generation on mount (ensures new UID on every page reload)
+  // This prevents backend from detecting a previous session and auto-reconnecting
+  // Each page reload = new UID = fresh start = no auto-matching
+  useEffect(() => {
+    setUid(generateUID());
+  }, []);
 
   return (
     <UserContext.Provider value={{ name, gender, uid, setName, setGender }}>

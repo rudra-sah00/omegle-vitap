@@ -89,19 +89,19 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
         break;
 
       case 'reconnected':
-        // Reconnected to existing session
-        setConnectionState('matched');
-        // Convert reconnected data to match data format
-        setMatchData({
-          status: 'matched',
-          roomId: message.data.roomId,
-          channelName: message.data.channelName,
-          partnerUid: message.data.partnerUid,
-          rtcToken: '', // Will need to refresh
-          rtmToken: '',
-          partnerName: '',
-          expiresAt: 0,
-        } as MatchDataMatched);
+        // IMPORTANT: Ignore reconnected messages - require explicit user action to rejoin
+        // 
+        // Why? When User B reloads the page while in a session with User A:
+        // 1. Backend detects User B had an active session (via UID)
+        // 2. Backend sends 'reconnected' message to auto-rejoin the old room
+        // 3. We ignore it to prevent auto-matching without user clicking "Start"
+        // 4. User A sees "Partner left" as expected
+        // 5. User B must explicitly click "Start" to find a new match
+        //
+        // Note: New UID is generated on each page reload (see UserContext.tsx)
+        // which helps prevent stale session issues
+        setConnectionState('connected');
+        setMatchData(null);
         setError(null);
         break;
 

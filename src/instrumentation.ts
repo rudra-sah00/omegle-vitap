@@ -1,13 +1,7 @@
-import * as Sentry from '@sentry/nextjs';
+// Instrumentation disabled for static export
+// Sentry is initialized via client-side configuration only
 
 export async function register() {
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    await import('../sentry.server.config');
-  }
-
-  if (process.env.NEXT_RUNTIME === 'edge') {
-    await import('../sentry.edge.config');
-  }
+  // Static export doesn't support server-side instrumentation
+  // Client-side Sentry is initialized in sentry.client.config.ts
 }
-
-export const onRequestError = Sentry.captureRequestError;

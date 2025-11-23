@@ -235,7 +235,12 @@ export const useChatSession = (options: UseChatSessionOptions) => {
   const handlePartnerLeft = useCallback(async () => {
     if (isLeavingRef.current) return;
     
-    showInfo('Your chat partner has disconnected.');
+    // Get partner name from current match data
+    const partnerName = currentMatchRef.current && 'partnerName' in currentMatchRef.current 
+      ? currentMatchRef.current.partnerName 
+      : 'Your partner';
+    
+    showInfo(`${partnerName} left`);
     await endSession();
   }, [endSession]);
 
