@@ -301,11 +301,33 @@ export const useChatSession = (options: UseChatSessionOptions) => {
           gender: userDataRef.current.gender,
         };
         
-        // Join matchmaking queue with new UID
+        // Join matchmaking queue (same UID, new search)
         join(authData);
       }
     } catch (error) {
-      // Silently handle errors and reset state
+      // Log error and notify user if it's a critical issue
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const errorLower = errorMsg.toLowerCase();
+      
+      if (errorLower.includes('permission') || errorLower.includes('denied')) {
+        showError('Camera/microphone permission denied. Please allow access in your browser settings.', ErrorCode.CAMERA_PERMISSION_DENIED);
+      } else if (errorLower.includes('device') || errorLower.includes('not found')) {
+        showError('Camera or microphone not found. Please check your devices.', ErrorCode.MEDIA_DEVICE_NOT_FOUND);
+      } else if (errorLower.includes('timeout')) {
+        showError('Connection timeout. Please check your network and try again.', ErrorCode.CONNECTION_TIMEOUT);
+      } else {
+        // For other errors, allow retry
+        showInfo('Retrying search...');
+        if (userDataRef.current) {
+          const uid = parseInt(currentUidRef.current, 10);
+          const authData = {
+            uid,
+            name: userDataRef.current.name,
+            gender: userDataRef.current.gender,
+          };
+          join(authData);
+        }
+      }
     } finally {
       isLeavingRef.current = false;
     }

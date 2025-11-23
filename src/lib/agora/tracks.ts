@@ -97,8 +97,8 @@ async function attemptCreateAndPublishTracks(
   });
 
   try {
-    // Check permission state
-    await checkPermissions(timeoutId);
+    // Check permission state (actively prompt if needed)
+    await checkPermissions();
 
     // Check available devices
     const devices = await AgoraRTC.getDevices().catch(() => []);
@@ -153,21 +153,60 @@ async function attemptCreateAndPublishTracks(
 /**
  * Check permissions before creating tracks
  */
-async function checkPermissions(timeoutId: NodeJS.Timeout | null): Promise<void> {
+async function checkPermissions(): Promise<void> {
+  // Use Permissions API when available to detect explicit denial early
   try {
     if (navigator.permissions && navigator.permissions.query) {
       const cameraPermission = await navigator.permissions.query({ name: 'camera' as PermissionName }).catch(() => null);
       const micPermission = await navigator.permissions.query({ name: 'microphone' as PermissionName }).catch(() => null);
-      
+
       if (cameraPermission?.state === 'denied' || micPermission?.state === 'denied') {
-        if (timeoutId) clearTimeout(timeoutId);
         throw new Error('PERMISSION_DENIED: Camera or microphone access was denied. Please allow access in your browser settings.');
       }
+
+      // If both are granted, nothing else to do
+      if (cameraPermission?.state === 'granted' && micPermission?.state === 'granted') {
+        return;
+      }
     }
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('PERMISSION_DENIED')) {
-      throw error;
+
+    // If Permissions API not available or state is 'prompt', actively request a short getUserMedia
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      const shortTimeout = 5000; // 5s to get user response
+      let gmTimeout: NodeJS.Timeout | null = null;
+
+      const gmPromise = navigator.mediaDevices.getUserMedia({ audio: true, video: true }).then(stream => {
+        // Immediately stop any tracks we started for permission check
+        try {
+          stream.getTracks().forEach(t => t.stop());
+        } catch (stopErr) {
+          // ignore
+        }
+      });
+
+      const race = Promise.race([
+        gmPromise,
+        new Promise<never>((_, reject) => {
+          gmTimeout = setTimeout(() => reject(new Error('PERMISSION_PROMPT_TIMEOUT: Permission prompt timed out')), shortTimeout);
+        })
+      ]);
+
+      try {
+        await race;
+      } finally {
+        if (gmTimeout) clearTimeout(gmTimeout);
+      }
+
+      return;
     }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('denied') || msg.includes('PERMISSION')) {
+      throw new Error('PERMISSION_DENIED: Camera or microphone access was denied. Please allow access in your browser settings.');
+    }
+
+    // If timeout or other permission prompt issues
+    throw new Error('PERMISSION_DENIED: Could not obtain camera/microphone permission.');
   }
 }
 
