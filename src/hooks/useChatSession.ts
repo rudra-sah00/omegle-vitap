@@ -136,10 +136,20 @@ export const useChatSession = (options: UseChatSessionOptions) => {
 
     // All retries failed
     const errorMsg = lastError?.message || 'Unknown error';
-    if (errorMsg.includes('timeout')) {
-      showError('Connection timeout. Please check your internet and try again.', ErrorCode.CONNECTION_LOST);
-    } else if (errorMsg.includes('permission')) {
-      showError('Camera/microphone permission denied. Please allow access.', ErrorCode.MEDIA_DEVICE_NOT_FOUND);
+    const errorLower = errorMsg.toLowerCase();
+    
+    if (errorMsg.includes('PERMISSION_DENIED') || errorLower.includes('permission') || errorLower.includes('denied')) {
+      showError('Camera/microphone permission denied. Please allow access in your browser settings and refresh the page.', ErrorCode.CAMERA_PERMISSION_DENIED);
+    } else if (errorMsg.includes('DEVICE_NOT_FOUND') || errorLower.includes('not found')) {
+      showError('Camera or microphone not found. Please connect a device and try again.', ErrorCode.MEDIA_DEVICE_NOT_FOUND);
+    } else if (errorMsg.includes('DEVICE_IN_USE') || errorLower.includes('in use') || errorLower.includes('being used')) {
+      showError('Camera or microphone is being used by another app. Please close other apps and try again.', ErrorCode.CAMERA_IN_USE);
+    } else if (errorLower.includes('timeout') || errorLower.includes('timed out')) {
+      showError('Connection timeout. This may be due to slow device or network. Please try again.', ErrorCode.CONNECTION_TIMEOUT);
+    } else if (errorLower.includes('token') || errorLower.includes('invalid')) {
+      showError('Session token expired. Please try again.', ErrorCode.AUTH_FAILED);
+    } else if (errorLower.includes('network') || errorLower.includes('offline')) {
+      showError('No internet connection. Please check your network and try again.', ErrorCode.CONNECTION_LOST);
     } else {
       showError('Failed to connect. Please try again.', ErrorCode.CHANNEL_JOIN_FAILED);
     }

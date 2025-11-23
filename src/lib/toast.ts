@@ -173,6 +173,65 @@ export function showWarning(message: string) {
 export function parseMediaError(error: unknown): { message: string; code: ErrorCode } {
   const errorStr = String(error).toLowerCase();
   
+  // Check for custom error prefixes first (for better error messages)
+  if (errorStr.includes('permission_denied')) {
+    if (errorStr.includes('camera')) {
+      return {
+        message: 'Camera access denied. Please allow camera permissions in your browser settings and refresh.',
+        code: ErrorCode.CAMERA_PERMISSION_DENIED,
+      };
+    }
+    if (errorStr.includes('microphone')) {
+      return {
+        message: 'Microphone access denied. Please allow microphone permissions in your browser settings and refresh.',
+        code: ErrorCode.MIC_PERMISSION_DENIED,
+      };
+    }
+    return {
+      message: 'Camera or microphone access denied. Please allow permissions in your browser settings and refresh.',
+      code: ErrorCode.CAMERA_PERMISSION_DENIED,
+    };
+  }
+  
+  if (errorStr.includes('device_in_use')) {
+    if (errorStr.includes('camera')) {
+      return {
+        message: 'Camera is being used by another application. Please close other apps and try again.',
+        code: ErrorCode.CAMERA_IN_USE,
+      };
+    }
+    if (errorStr.includes('microphone')) {
+      return {
+        message: 'Microphone is being used by another application. Please close other apps and try again.',
+        code: ErrorCode.MIC_IN_USE,
+      };
+    }
+    return {
+      message: 'Camera or microphone is being used by another application. Please close other apps and try again.',
+      code: ErrorCode.CAMERA_IN_USE,
+    };
+  }
+  
+  if (errorStr.includes('device_not_found')) {
+    if (errorStr.includes('camera')) {
+      return {
+        message: 'No camera found. Please connect a camera and try again.',
+        code: ErrorCode.MEDIA_DEVICE_NOT_FOUND,
+      };
+    }
+    if (errorStr.includes('microphone')) {
+      return {
+        message: 'No microphone found. Please connect a microphone and try again.',
+        code: ErrorCode.MEDIA_DEVICE_NOT_FOUND,
+      };
+    }
+    return {
+      message: 'Camera or microphone not found. Please connect a device and try again.',
+      code: ErrorCode.MEDIA_DEVICE_NOT_FOUND,
+    };
+  }
+  
+  // Fallback to standard WebRTC error patterns
   if (errorStr.includes('permission') || errorStr.includes('notallowed')) {
     if (errorStr.includes('video') || errorStr.includes('camera')) {
       return {
@@ -186,8 +245,7 @@ export function parseMediaError(error: unknown): { message: string; code: ErrorC
     };
   }
   
-  if (errorStr.includes('device_not_found') || errorStr.includes('notfound') || errorStr.includes('no device') || errorStr.includes('no camera') || errorStr.includes('no microphone')) {
-    // Extract the specific device type from the error message
+  if (errorStr.includes('notfound') || errorStr.includes('no device') || errorStr.includes('no camera') || errorStr.includes('no microphone')) {
     if (errorStr.includes('camera')) {
       return {
         message: 'No camera found. Please connect a camera and try again.',
@@ -213,8 +271,15 @@ export function parseMediaError(error: unknown): { message: string; code: ErrorC
     };
   }
   
+  if (errorStr.includes('timeout')) {
+    return {
+      message: 'Device access timed out. This may be due to slow device or permission prompt delay. Please try again.',
+      code: ErrorCode.CONNECTION_TIMEOUT,
+    };
+  }
+  
   return {
-    message: 'Failed to access camera or microphone. Please check your device settings.',
+    message: 'Failed to access camera or microphone. Please check your device settings and try again.',
     code: ErrorCode.MEDIA_DEVICE_NOT_FOUND,
   };
 }
@@ -225,10 +290,17 @@ export function parseMediaError(error: unknown): { message: string; code: ErrorC
 export function parseConnectionError(error: unknown): { message: string; code: ErrorCode } {
   const errorStr = String(error).toLowerCase();
   
-  if (errorStr.includes('timeout')) {
+  if (errorStr.includes('timeout') || errorStr.includes('timed out')) {
     return {
-      message: 'Connection timed out. Please check your internet connection.',
+      message: 'Connection timed out. Please check your internet connection and try again.',
       code: ErrorCode.CONNECTION_TIMEOUT,
+    };
+  }
+  
+  if (errorStr.includes('token') || errorStr.includes('invalid token')) {
+    return {
+      message: 'Session expired. Please try starting a new chat.',
+      code: ErrorCode.AUTH_FAILED,
     };
   }
   
@@ -236,6 +308,13 @@ export function parseConnectionError(error: unknown): { message: string; code: E
     return {
       message: 'Service temporarily unavailable. Please try again in a moment.',
       code: ErrorCode.BACKEND_UNAVAILABLE,
+    };
+  }
+  
+  if (errorStr.includes('network') || errorStr.includes('offline')) {
+    return {
+      message: 'No internet connection. Please check your network and try again.',
+      code: ErrorCode.CONNECTION_LOST,
     };
   }
   

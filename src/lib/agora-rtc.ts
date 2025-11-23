@@ -234,61 +234,106 @@ export class AgoraRTCService {
       throw new Error('Invalid Agora configuration: missing uid');
     }
 
+    // Validate token (critical for join to succeed)
+    if (!config.token || config.token.trim().length === 0) {
+      throw new Error('Invalid Agora token: Token is required to join channel');
+    }
+
     // Check network connectivity
     if (!navigator.onLine) {
       throw new Error('No internet connection');
     }
 
-    // Quick connection quality check (non-blocking)
+    // Network quality check with warnings
+    let isSlowNetwork = false;
     try {
       const networkInfo = (navigator as any).connection;
-      if (networkInfo?.effectiveType === 'slow-2g' || networkInfo?.effectiveType === '2g') {
-        // Very slow connection detected, but still try
+      if (networkInfo) {
+        const slowTypes = ['slow-2g', '2g'];
+        if (slowTypes.includes(networkInfo.effectiveType)) {
+          isSlowNetwork = true;
+        }
       }
     } catch {
       // Ignore if Network Information API not available
     }
 
-    try {
-      // Set connection timeout with Promise.race for proper error handling
-      let timeoutId: NodeJS.Timeout | null = null;
-      const joinTimeout = new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => {
-          reject(new Error('Connection timeout: Could not join channel'));
-        }, 20000); // 20 second timeout (increased for slow networks and retries)
-      });
+    // Retry logic with exponential backoff
+    const maxRetries = 2; // Total 2 attempts (initial + 1 retry)
+    let lastError: any = null;
 
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        // Join the channel with timeout
-        await Promise.race([
-          this.client.join(
-            config.appId, // App ID is required
-            config.channelName,
-            config.token,
-            config.uid
-          ),
-          joinTimeout
-        ]);
-      } finally {
-        if (timeoutId) clearTimeout(timeoutId);
-      }
+        // Adjust timeout based on network quality and attempt
+        const baseTimeout = isSlowNetwork ? 35000 : 30000; // 35s for slow networks, 30s normal
+        const timeoutDuration = baseTimeout + (attempt * 5000); // Add 5s per retry
 
-      this.isJoined = true;
+        let timeoutId: NodeJS.Timeout | null = null;
+        const joinTimeout = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => {
+            const attemptMsg = attempt > 0 ? ` (Attempt ${attempt + 1}/${maxRetries})` : '';
+            reject(new Error(`Connection timeout: Could not join channel${attemptMsg}. Please check your internet connection.`));
+          }, timeoutDuration);
+        });
 
-      // Create and publish local tracks with initial state
-      await this.createAndPublishTracks(cameraOn, micOn);
-    } catch (error) {
-      // Clean up on error
-      this.isJoined = false;
-      if (this.client) {
         try {
-          await this.client.leave();
-        } catch (leaveError) {
-          // Ignore leave errors
+          // Join the channel with timeout
+          await Promise.race([
+            this.client.join(
+              config.appId, // App ID is required
+              config.channelName,
+              config.token,
+              config.uid
+            ),
+            joinTimeout
+          ]);
+        } finally {
+          if (timeoutId) clearTimeout(timeoutId);
+        }
+
+        this.isJoined = true;
+
+        // Create and publish local tracks with initial state
+        await this.createAndPublishTracks(cameraOn, micOn);
+        
+        // Success - exit retry loop
+        return;
+      } catch (error) {
+        lastError = error;
+        
+        // Don't retry if leaving or on token/permission errors
+        if (this.isLeaving) {
+          throw error;
+        }
+        
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        if (errorMsg.includes('token') || 
+            errorMsg.includes('INVALID_') || 
+            errorMsg.includes('permission') ||
+            errorMsg.includes('DEVICE_NOT_FOUND')) {
+          throw error; // Don't retry on invalid config/permissions
+        }
+        
+        // Clean up before retry
+        this.isJoined = false;
+        if (this.client) {
+          try {
+            await this.client.leave();
+          } catch (leaveError) {
+            // Ignore leave errors
+          }
+        }
+        
+        // Wait before retry (exponential backoff)
+        if (attempt < maxRetries - 1) {
+          const retryDelay = Math.min(2000 * Math.pow(2, attempt), 4000); // 2s, 4s
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
         }
       }
-      throw error;
     }
+
+    // All retries failed - throw last error
+    throw lastError || new Error('Failed to join channel after multiple attempts');
   }
 
   /**
@@ -320,8 +365,10 @@ export class AgoraRTCService {
       } catch (error) {
         lastError = error as Error;
         
-        // Don't retry on device not found errors
-        if (lastError.message.includes('DEVICE_NOT_FOUND')) {
+        // Don't retry on permission, device not found, or device in use errors
+        if (lastError.message.includes('DEVICE_NOT_FOUND') ||
+            lastError.message.includes('PERMISSION_DENIED') ||
+            lastError.message.includes('DEVICE_IN_USE')) {
           throw lastError;
         }
 
@@ -347,13 +394,36 @@ export class AgoraRTCService {
    */
   private async attemptCreateAndPublishTracks(cameraOn: boolean = true, micOn: boolean = true): Promise<void> {
     try {
+      // Detect mobile device for longer timeout (permission prompts take longer on mobile)
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const timeoutDuration = isMobile ? 25000 : 20000; // 25s for mobile, 20s for desktop
+
       // Set track creation timeout
       let timeoutId: NodeJS.Timeout | null = null;
       const trackTimeout = new Promise<never>((_, reject) => {
         timeoutId = setTimeout(() => {
-          reject(new Error('Track creation timeout: Could not access camera or microphone'));
-        }, 15000);
+          reject(new Error('Track creation timeout: Could not access camera or microphone. This may be due to permission denial or device being in use.'));
+        }, timeoutDuration);
       });
+
+      // Check permission state before attempting to create tracks (if API available)
+      try {
+        if (navigator.permissions && navigator.permissions.query) {
+          const cameraPermission = await navigator.permissions.query({ name: 'camera' as PermissionName }).catch(() => null);
+          const micPermission = await navigator.permissions.query({ name: 'microphone' as PermissionName }).catch(() => null);
+          
+          if (cameraPermission?.state === 'denied' || micPermission?.state === 'denied') {
+            if (timeoutId) clearTimeout(timeoutId);
+            throw new Error('PERMISSION_DENIED: Camera or microphone access was denied. Please allow access in your browser settings.');
+          }
+        }
+      } catch (error) {
+        // If permission denied, throw immediately
+        if (error instanceof Error && error.message.includes('PERMISSION_DENIED')) {
+          throw error;
+        }
+        // Otherwise continue (permission API might not be supported)
+      }
 
       // Check if devices are available
       const devices = await AgoraRTC.getDevices().catch(() => []);
@@ -362,6 +432,7 @@ export class AgoraRTCService {
 
       // Only throw error if no devices at all AND tracks don't already exist
       if (!hasMicrophone && !hasCamera && !this.localAudioTrack && !this.localVideoTrack) {
+        if (timeoutId) clearTimeout(timeoutId);
         throw new Error('DEVICE_NOT_FOUND: No camera or microphone found. Please connect a device and grant permissions.');
       }
 
@@ -400,6 +471,19 @@ export class AgoraRTCService {
           ]) as [IMicrophoneAudioTrack, ICameraVideoTrack];
         } catch (error) {
           if (timeoutId) clearTimeout(timeoutId);
+          
+          // Parse error to provide better context
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          const errorLower = errorMsg.toLowerCase();
+          
+          if (errorLower.includes('permission') || errorLower.includes('notallowed')) {
+            throw new Error('PERMISSION_DENIED: Camera or microphone access was denied. Please allow access in your browser settings.');
+          } else if (errorLower.includes('notfound') || errorLower.includes('not found')) {
+            throw new Error('DEVICE_NOT_FOUND: Camera or microphone not found. Please check if device is connected.');
+          } else if (errorLower.includes('notreadable') || errorLower.includes('in use')) {
+            throw new Error('DEVICE_IN_USE: Camera or microphone is being used by another application. Please close other apps.');
+          }
+          
           throw error;
         }
       } else if (needsAudioTrack) {
@@ -416,6 +500,18 @@ export class AgoraRTCService {
           ]) as IMicrophoneAudioTrack;
         } catch (error) {
           if (timeoutId) clearTimeout(timeoutId);
+          
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          const errorLower = errorMsg.toLowerCase();
+          
+          if (errorLower.includes('permission') || errorLower.includes('notallowed')) {
+            throw new Error('PERMISSION_DENIED: Microphone access was denied. Please allow access in your browser settings.');
+          } else if (errorLower.includes('notfound') || errorLower.includes('not found')) {
+            throw new Error('DEVICE_NOT_FOUND: Microphone not found. Please check if device is connected.');
+          } else if (errorLower.includes('notreadable') || errorLower.includes('in use')) {
+            throw new Error('DEVICE_IN_USE: Microphone is being used by another application. Please close other apps.');
+          }
+          
           throw error;
         }
       } else if (needsVideoTrack) {
@@ -437,6 +533,18 @@ export class AgoraRTCService {
           ]) as ICameraVideoTrack;
         } catch (error) {
           if (timeoutId) clearTimeout(timeoutId);
+          
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          const errorLower = errorMsg.toLowerCase();
+          
+          if (errorLower.includes('permission') || errorLower.includes('notallowed')) {
+            throw new Error('PERMISSION_DENIED: Camera access was denied. Please allow access in your browser settings.');
+          } else if (errorLower.includes('notfound') || errorLower.includes('not found')) {
+            throw new Error('DEVICE_NOT_FOUND: Camera not found. Please check if device is connected.');
+          } else if (errorLower.includes('notreadable') || errorLower.includes('in use')) {
+            throw new Error('DEVICE_IN_USE: Camera is being used by another application. Please close other apps.');
+          }
+          
           throw error;
         }
       }

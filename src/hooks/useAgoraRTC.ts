@@ -49,6 +49,19 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
         throw new Error('Missing Agora App ID');
       }
 
+      // Validate match data contains required Agora tokens
+      if (!matchData.rtcToken || matchData.rtcToken.trim().length === 0) {
+        clearTimeout(initTimeout);
+        showError('Invalid session token. Please try again.', ErrorCode.CHANNEL_JOIN_FAILED);
+        throw new Error('Missing or invalid RTC token from match data');
+      }
+
+      if (!matchData.channelName) {
+        clearTimeout(initTimeout);
+        showError('Invalid session data. Please try again.', ErrorCode.CHANNEL_JOIN_FAILED);
+        throw new Error('Missing channel name from match data');
+      }
+
       // Initialize service if not exists or was cleaned up
       if (!rtcServiceRef.current) {
         const { AgoraRTCService } = await import('@/lib/agora-rtc');
