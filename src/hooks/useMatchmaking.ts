@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { getWebSocketService, destroyWebSocketService, WebSocketService } from '@/lib/websocket';
+import { getSocketIOService, destroySocketIOService, type SocketIOService } from '@/lib/socketio';
 import { showError, ErrorCode } from '@/lib/toast';
 import type {
   ConnectionState,
@@ -52,7 +52,7 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const wsRef = useRef<WebSocketService | null>(null);
+  const wsRef = useRef<SocketIOService | null>(null);
   const isJoiningRef = useRef(false);
   const isLeavingRef = useRef(false);
   const lastErrorTimeRef = useRef<number>(0);
@@ -63,7 +63,7 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
   // Initialize WebSocket service only when needed
   const getWs = useCallback(() => {
     if (!wsRef.current) {
-      wsRef.current = getWebSocketService();
+      wsRef.current = getSocketIOService();
     }
     return wsRef.current;
   }, []);
@@ -162,36 +162,26 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
   }, []);
 
   /**
-   * Handle WebSocket close event
+   * Handle Socket.IO disconnect event
    */
-  const handleClose = useCallback((event: CloseEvent) => {
+  const handleClose = useCallback(() => {
     setConnectionState('disconnected');
     setMatchData(null);
 
-    // Don't set error for normal closure
-    if (event.code !== 1000) {
-      let errorMsg = '';
-      let errorCode = ErrorCode.CONNECTION_LOST;
-      
-      if (event.code === 1006 || event.code >= 1011) {
-        // Backend server is down or unavailable
-        errorMsg = 'Service temporarily unavailable. Reconnecting...';
-        errorCode = ErrorCode.BACKEND_UNAVAILABLE;
-      } else {
-        errorMsg = 'Connection lost. Reconnecting...';
-      }
-      
-      // Throttle error messages - only show if different or 5 seconds have passed
-      const now = Date.now();
-      const timeSinceLastError = now - lastErrorTimeRef.current;
-      const isDifferentError = errorMsg !== lastErrorMessageRef.current;
-      
-      if (isDifferentError || timeSinceLastError > 5000) {
-        setError(errorMsg);
-        showError(errorMsg, errorCode);
-        lastErrorTimeRef.current = now;
-        lastErrorMessageRef.current = errorMsg;
-      }
+    // Show connection lost message
+    const errorMsg = 'Connection lost. Reconnecting...';
+    const errorCode = ErrorCode.CONNECTION_LOST;
+    
+    // Throttle error messages - only show if different or 5 seconds have passed
+    const now = Date.now();
+    const timeSinceLastError = now - lastErrorTimeRef.current;
+    const isDifferentError = errorMsg !== lastErrorMessageRef.current;
+    
+    if (isDifferentError || timeSinceLastError > 5000) {
+      setError(errorMsg);
+      showError(errorMsg, errorCode);
+      lastErrorTimeRef.current = now;
+      lastErrorMessageRef.current = errorMsg;
     }
   }, []);
 
@@ -482,7 +472,7 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
 export const useWebSocketCleanup = () => {
   useEffect(() => {
     return () => {
-      destroyWebSocketService();
+      destroySocketIOService();
     };
   }, []);
 };
