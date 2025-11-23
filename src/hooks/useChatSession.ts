@@ -230,6 +230,9 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     // Clear chat messages
     clearMessages();
 
+    // Wait 100ms to ensure any in-flight messages are delivered to backend
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     // Cleanup RTC connection
     await leaveRTC();
 
@@ -276,6 +279,9 @@ export const useChatSession = (options: UseChatSessionOptions) => {
 
       // Clear chat messages
       clearMessages();
+
+      // Wait 100ms to ensure any in-flight messages are delivered to backend
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Sequential cleanup to prevent race conditions
       // Step 1: Leave backend room and wait for confirmation
