@@ -263,7 +263,7 @@ describe('Toast Module', () => {
       const error = new Error('Network error')
       const result = parseConnectionError(error)
       
-      expect(result.message).toContain('Connection failed')
+      expect(result.message).toContain('No internet connection')
       expect(result.code).toBe(ErrorCode.CONNECTION_LOST)
     })
   })

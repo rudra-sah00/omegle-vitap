@@ -287,7 +287,7 @@ describe('OmeglePage', () => {
   });
 
   describe('Network Monitoring', () => {
-    it('should show warning when connection is restored during session', async () => {
+    it('should not show warning when connection is restored during session', async () => {
       mockUseChatSession.isInSession = true;
 
       render(<OmeglePage />);
@@ -296,7 +296,8 @@ describe('OmeglePage', () => {
         window.dispatchEvent(new Event('online'));
       });
 
-      expect(showWarning).toHaveBeenCalledWith('Connection restored. You may need to reconnect.');
+      // No toast is shown for connection restored
+      expect(showWarning).not.toHaveBeenCalled();
     });
 
     it('should not show warning on online event if not in session', async () => {
@@ -383,7 +384,8 @@ describe('OmeglePage', () => {
         document.dispatchEvent(new Event('visibilitychange'));
       });
 
-      expect(showWarning).toHaveBeenCalledWith('Welcome back! Check your connection.');
+      // No toast is shown when returning to tab
+      expect(showWarning).not.toHaveBeenCalled();
     });
 
     it('should not show warning when returning if not in session', () => {
@@ -531,8 +533,9 @@ describe('OmeglePage', () => {
 
 
 
-    it('should show warning if already searching', async () => {
-      mockUseChatSession.connectionState = 'waiting';
+    it('should allow starting search when not in active session', async () => {
+      mockUseChatSession.connectionState = 'disconnected';
+      mockUseChatSession.isInSession = false;
 
       render(<OmeglePage />);
 
@@ -542,8 +545,7 @@ describe('OmeglePage', () => {
         fireEvent.click(startButton);
       });
 
-      expect(showWarning).toHaveBeenCalledWith('Already searching or in a session');
-      expect(mockUseChatSession.startSearch).not.toHaveBeenCalled();
+      expect(mockUseChatSession.startSearch).toHaveBeenCalled();
     });
 
     it('should show warning if already in session', async () => {
@@ -557,7 +559,7 @@ describe('OmeglePage', () => {
         fireEvent.click(startButton);
       });
 
-      expect(showWarning).toHaveBeenCalledWith('Already searching or in a session');
+      expect(showWarning).toHaveBeenCalledWith('Already in an active chat session');
       expect(mockUseChatSession.startSearch).not.toHaveBeenCalled();
     });
 
@@ -613,7 +615,7 @@ describe('OmeglePage', () => {
       expect(mockUseChatSession.stopSearch).toHaveBeenCalled();
     });
 
-    it('should handle stop search errors', async () => {
+    it('should handle stop search errors silently', async () => {
       mockUseChatSession.stopSearch.mockRejectedValue(new Error('Stop failed'));
 
       render(<OmeglePage />);
@@ -624,14 +626,10 @@ describe('OmeglePage', () => {
         fireEvent.click(stopButton);
       });
 
-      await waitFor(() => {
-        expect(showError).toHaveBeenCalledWith(
-          'Failed to stop search. Refreshing...',
-          ErrorCode.CONNECTION_LOST
-        );
-      });
+      // Errors are handled silently, no error toast is shown
+      expect(showError).not.toHaveBeenCalled();
 
-      // Note: window.location.reload() is called after 1s timeout
+      // Note: No page reload happens on stop error
       // Cannot easily test in jsdom without mocking location object
     });
 
@@ -969,7 +967,8 @@ describe('OmeglePage', () => {
         document.dispatchEvent(new Event('visibilitychange'));
       });
 
-      expect(showWarning).toHaveBeenCalledWith('Welcome back! Check your connection.');
+      // No toast is shown when returning to tab during session
+      expect(showWarning).not.toHaveBeenCalled();
     });
   });
 });
