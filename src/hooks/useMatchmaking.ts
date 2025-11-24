@@ -149,6 +149,16 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
           break; // Silently ignore
         }
         
+        // Handle "Not in active chat" error - means session ended but frontend missed it
+        if (errorMsg.includes('not in active chat') || errorMsg.includes('not in a room')) {
+          // Trigger partner left to properly clean up the session
+          setConnectionState('connected');
+          setMatchData(null);
+          setError(null);
+          onPartnerLeft?.();
+          break;
+        }
+        
         setConnectionState('error');
         setError(message.data.message);
         isJoiningRef.current = false;
