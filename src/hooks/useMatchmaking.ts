@@ -18,7 +18,7 @@ interface UseMatchmakingOptions {
   autoConnect?: boolean;
   userData?: UserData; // User data for authentication
   onAuthenticated?: () => void;
-  onMatched?: (matchData: MatchData) => void;
+  onMatched?: (matchData: MatchDataMatched) => void;
   onPartnerLeft?: () => void;
   onError?: (error: string) => void;
 }

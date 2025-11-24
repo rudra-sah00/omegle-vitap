@@ -23,6 +23,8 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
   const [isRemoteCameraOn, setIsRemoteCameraOn] = useState(false); // Track remote user's camera (start false, update when detected)
   const [isRemoteMicOn, setIsRemoteMicOn] = useState(false); // Track remote user's mic (start false, update when detected)
   const hasPreviewRef = useRef(false); // Track if preview is active
+  const [currentCameraId, setCurrentCameraId] = useState<string | undefined>(undefined);
+  const [currentMicId, setCurrentMicId] = useState<string | undefined>(undefined);
 
   // Persist camera state whenever it changes
   useEffect(() => {
@@ -300,6 +302,7 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
     
     try {
       await rtcServiceRef.current.switchCamera(deviceId);
+      setCurrentCameraId(deviceId);
     } catch (error) {
       const { message, code } = parseMediaError(error);
       showError(message, code);
@@ -314,18 +317,41 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
     
     try {
       await rtcServiceRef.current.switchMicrophone(deviceId);
+      setCurrentMicId(deviceId);
     } catch (error) {
       showError('Failed to switch microphone. Please try again.', ErrorCode.MIC_IN_USE);
     }
   }, []);
 
   /**
-   * Get current device IDs (memoized to prevent re-renders)
+   * Get current device IDs (returns stable state values to prevent re-renders)
    */
   const getCurrentDevices = useCallback(() => {
-    if (!rtcServiceRef.current) return { cameraId: undefined, micId: undefined };
-    return rtcServiceRef.current.getCurrentDevices();
-  }, []); // No dependencies as rtcServiceRef is stable
+    return { cameraId: currentCameraId, micId: currentMicId };
+  }, [currentCameraId, currentMicId]);
+
+  /**
+   * Update device IDs when RTC service changes them
+   */
+  useEffect(() => {
+    if (!rtcServiceRef.current || !isRTCInitialized) return;
+
+    const updateDeviceIds = () => {
+      const devices = rtcServiceRef.current?.getCurrentDevices();
+      if (devices) {
+        setCurrentCameraId(devices.cameraId);
+        setCurrentMicId(devices.micId);
+      }
+    };
+
+    // Update immediately
+    updateDeviceIds();
+
+    // Poll for device changes during session
+    const interval = setInterval(updateDeviceIds, 2000);
+
+    return () => clearInterval(interval);
+  }, [isRTCInitialized]);
 
   /**
    * Monitor device changes (plug/unplug)

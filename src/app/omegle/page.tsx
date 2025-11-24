@@ -49,8 +49,8 @@ function OmeglePageContent() {
     remoteVideoElementId: 'remote-video',
   });
   
-  // Memoize devices to prevent re-renders on every component update
-  const devices = useMemo(() => getCurrentDevices(), [getCurrentDevices]);
+  // Get devices - now returns stable state values
+  const devices = getCurrentDevices();
 
   /**
    * Check browser compatibility - only run once on mount
