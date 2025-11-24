@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, memo } from 'react';
 import { DottedGlowBackground } from '@/components/ui/dotted-glow-background';
 
 interface VideoDisplayProps {
@@ -12,7 +12,7 @@ interface VideoDisplayProps {
   children?: ReactNode;
 }
 
-export function VideoDisplay({ 
+const VideoDisplayComponent = ({ 
   id, 
   label, 
   isConnected, 
@@ -119,4 +119,6 @@ export function VideoDisplay({
       {children}
     </div>
   );
-}
+};
+
+export const VideoDisplay = memo(VideoDisplayComponent);

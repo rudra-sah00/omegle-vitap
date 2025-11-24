@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
 import { useChatSession } from '@/hooks/useChatSession';
@@ -52,8 +52,7 @@ function OmeglePageContent() {
   const devices = useMemo(() => getCurrentDevices(), [getCurrentDevices]);
 
   /**
-   * Check browser compatibility
-   * Note: Browser polyfills are already initialized in root layout
+   * Check browser compatibility - only run once on mount
    */
   useEffect(() => {
     try {
@@ -66,10 +65,10 @@ function OmeglePageContent() {
     } catch (error) {
       // Silently handle browser check errors
     }
-  }, [router]);
+  }, []); // Only run on mount
 
   /**
-   * Check user status on mount
+   * Check user status on mount and when name changes
    */
   useEffect(() => {
     try {
@@ -82,7 +81,7 @@ function OmeglePageContent() {
       // Silently handle navigation errors
       setCheckingStatus(false);
     }
-  }, [name, router]);
+  }, [name]); // router is stable, no need to include
 
   /**
    * Monitor network status
@@ -152,7 +151,7 @@ function OmeglePageContent() {
   /**
    * Handle start button click
    */
-  const handleStart = async () => {
+  const handleStart = useCallback(async () => {
     try {
       // Validate user data
       if (!name || !gender) {
@@ -182,24 +181,24 @@ function OmeglePageContent() {
     } catch (error) {
       showError('Failed to start search. Please try again.', ErrorCode.CONNECTION_LOST);
     }
-  };
+  }, [name, gender, isInSession, startSearch]);
 
   /**
    * Handle stop searching
    */
-  const handleStop = async () => {
+  const handleStop = useCallback(async () => {
     try {
       await stopSearch();
     } catch (error) {
       // Silently handle cancel errors - no need to reload page
       // The cancelSearch function already handles cleanup
     }
-  };
+  }, [stopSearch]);
 
   /**
    * Handle next button (find new partner)
    */
-  const handleNext = async () => {
+  const handleNext = useCallback(async () => {
     try {
       if (!navigator.onLine) {
         showError('No internet connection. Please check your network.', ErrorCode.CONNECTION_LOST);
@@ -209,16 +208,16 @@ function OmeglePageContent() {
     } catch (error) {
       showError('Failed to find next partner. Please try again.', ErrorCode.CONNECTION_LOST);
     }
-  };
+  }, [findNext]);
 
   /**
    * Handle message input typing
    */
-  const handleTyping = (isTyping: boolean) => {
+  const handleTyping = useCallback((isTyping: boolean) => {
     if (isInSession) {
       sendTypingIndicator(isTyping);
     }
-  };
+  }, [isInSession, sendTypingIndicator]);
 
   // Show loading while checking status or connecting
   if (!name || checkingStatus || connectionState === 'connecting') {
@@ -236,7 +235,7 @@ function OmeglePageContent() {
     );
   }
 
-  const isSearching = connectionState === 'waiting' && !isMatched;
+  const isSearching = useMemo(() => connectionState === 'waiting' && !isMatched, [connectionState, isMatched]);
 
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#e8f4f8' }}>

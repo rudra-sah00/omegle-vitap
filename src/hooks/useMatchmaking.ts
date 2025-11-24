@@ -125,6 +125,28 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
         onPartnerLeft?.();
         break;
 
+      case 'kicked':
+        // User was kicked by admin
+        setConnectionState('disconnected');
+        setMatchData(null);
+        setError(null);
+        showError(message.data.message || 'You have been removed from the chat', ErrorCode.AUTH_FAILED);
+        // Force disconnect
+        const ws = wsRef.current;
+        if (ws) {
+          ws.disconnect();
+        }
+        break;
+
+      case 'room_closed':
+        // Room was closed by admin
+        setConnectionState('connected');
+        setMatchData(null);
+        setError(null);
+        showError(message.data.message || 'Chat room was closed', ErrorCode.CONNECTION_LOST);
+        onPartnerLeft?.();
+        break;
+
       case 'error':
         // Silently ignore typing-related errors (backend doesn't support it yet on production)
         const errorMsg = message.data.message.toLowerCase();

@@ -88,9 +88,9 @@ export const useChatSession = (options: UseChatSessionOptions) => {
   });
 
   /**
-   * Handle successful match
+   * Handle successful match (memoized to prevent re-creation)
    */
-  async function handleMatched(matchData: MatchDataMatched) {
+  const handleMatched = useCallback(async (matchData: MatchDataMatched) => {
     if (isLeavingRef.current || isInSession || isRTCInitialized) {
       return;
     }
@@ -146,18 +146,18 @@ export const useChatSession = (options: UseChatSessionOptions) => {
       showError('Failed to connect. Please try again.', ErrorCode.CHANNEL_JOIN_FAILED);
     }
     await endSession();
-  }
+  }, [isInSession, isRTCInitialized, initializeRTC, localVideoElementId, remoteVideoElementId, endSession]);
 
   /**
-   * Handle matchmaking errors
+   * Handle matchmaking errors (memoized)
    */
-  function handleMatchmakingError(error: string) {
+  const handleMatchmakingError = useCallback((error: string) => {
     if (error.toLowerCase().includes('backend') || error.toLowerCase().includes('unavailable')) {
       showError('Service temporarily unavailable. Please try again.', ErrorCode.BACKEND_UNAVAILABLE);
     } else {
       showError('Connection error. Please check your internet.', ErrorCode.CONNECTION_LOST);
     }
-  }
+  }, []);
 
   /**
    * Start searching for a match

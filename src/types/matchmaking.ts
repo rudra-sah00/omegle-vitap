@@ -235,6 +235,20 @@ export interface IncomingTypingIndicatorMessage {
   };
 }
 
+export interface KickedMessage {
+  type: 'kicked';
+  data: {
+    message: string;
+  };
+}
+
+export interface RoomClosedMessage {
+  type: 'room_closed';
+  data: {
+    message: string;
+  };
+}
+
 export type ServerMessage = 
   | MatchMessage
   | ReconnectedMessage
@@ -246,7 +260,9 @@ export type ServerMessage =
   | IncomingChatMessage
   | IncomingTypingIndicatorMessage
   | IncomingSignalMessage
-  | PongMessage;
+  | PongMessage
+  | KickedMessage
+  | RoomClosedMessage;
 
 // WebSocket Connection States
 export type ConnectionState = 

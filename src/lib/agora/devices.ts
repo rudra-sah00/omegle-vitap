@@ -61,12 +61,23 @@ export async function toggleCamera(
       
       return newTrack;
     } else {
-      // Just enable
+      // Track exists, just enable it
       await localVideoTrack.setEnabled(true);
-      localVideoTrack.play('local-video');
       
+      // Play video locally
+      try {
+        localVideoTrack.play('local-video');
+      } catch (playError) {
+        // Video element might not exist yet
+      }
+      
+      // Only publish if in call and not already published
       if (isJoined && client) {
-        await client.publish([localVideoTrack]);
+        // Check if already published to avoid double publish
+        const publishedTracks = client.localTracks;
+        if (!publishedTracks.includes(localVideoTrack)) {
+          await client.publish([localVideoTrack]);
+        }
       }
       
       return localVideoTrack;
@@ -74,14 +85,19 @@ export async function toggleCamera(
   } else {
     // Turn OFF
     if (localVideoTrack) {
+      // Disable track first to stop sending
+      await localVideoTrack.setEnabled(false);
+      
+      // Unpublish if in call
       if (isJoined && client) {
         try {
           await client.unpublish([localVideoTrack]);
         } catch (unpublishError) {
-          // Ignore
+          // Ignore unpublish errors
         }
       }
       
+      // Stop and close track
       localVideoTrack.stop();
       localVideoTrack.close();
       
@@ -144,11 +160,16 @@ export async function toggleMicrophone(
       
       return newTrack;
     } else {
-      // Just enable
+      // Track exists, just enable it
       await localAudioTrack.setEnabled(true);
       
+      // Only publish if in call and not already published
       if (isJoined && client) {
-        await client.publish([localAudioTrack]);
+        // Check if already published to avoid double publish
+        const publishedTracks = client.localTracks;
+        if (!publishedTracks.includes(localAudioTrack)) {
+          await client.publish([localAudioTrack]);
+        }
       }
       
       return localAudioTrack;
@@ -156,14 +177,19 @@ export async function toggleMicrophone(
   } else {
     // Turn OFF
     if (localAudioTrack) {
+      // Disable track first to stop sending audio
+      await localAudioTrack.setEnabled(false);
+      
+      // Unpublish if in call
       if (isJoined && client) {
         try {
           await client.unpublish([localAudioTrack]);
         } catch (unpublishError) {
-          // Ignore
+          // Ignore unpublish errors
         }
       }
       
+      // Stop and close track
       localAudioTrack.stop();
       localAudioTrack.close();
     }
@@ -188,14 +214,20 @@ export async function switchCamera(
   const wasEnabled = !!localVideoTrack;
   
   if (wasEnabled && localVideoTrack) {
-    // Close old track
+    // Unpublish old track first if in call
     if (isJoined && client) {
-      await client.unpublish([localVideoTrack]);
+      try {
+        await client.unpublish([localVideoTrack]);
+      } catch (err) {
+        // Ignore unpublish errors
+      }
     }
+    
+    // Stop and close old track
     localVideoTrack.stop();
     localVideoTrack.close();
     
-    // Create new track
+    // Create new track with new device
     const newTrack = await AgoraRTC.createCameraVideoTrack({
       cameraId: deviceId,
     });

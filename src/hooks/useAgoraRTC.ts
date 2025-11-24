@@ -152,7 +152,13 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
   /**
    * Toggle camera on/off
    */
+  const isTogglingCameraRef = useRef(false);
+  
   const toggleCamera = useCallback(async () => {
+    // Prevent concurrent toggle operations
+    if (isTogglingCameraRef.current) return;
+    
+    isTogglingCameraRef.current = true;
     const newState = !isCameraOn;
     setIsCameraOn(newState);
     
@@ -172,6 +178,8 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
           }, 1000);
         }
         setIsCameraOn(!newState); // Revert on error
+      } finally {
+        isTogglingCameraRef.current = false;
       }
     } else {
       // Not in a call, create/update preview only if turning ON
@@ -193,7 +201,11 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
             showError(message, ErrorCode.CAMERA_PERMISSION_DENIED);
           }
           setIsCameraOn(false);
+        } finally {
+          isTogglingCameraRef.current = false;
         }
+      } else {
+        isTogglingCameraRef.current = false;
       }
     }
   }, [isCameraOn, isMicOn, isRTCInitialized]);
@@ -201,7 +213,13 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
   /**
    * Toggle microphone on/off
    */
+  const isTogglingMicRef = useRef(false);
+  
   const toggleMicrophone = useCallback(async () => {
+    // Prevent concurrent toggle operations
+    if (isTogglingMicRef.current) return;
+    
+    isTogglingMicRef.current = true;
     const newState = !isMicOn;
     setIsMicOn(newState);
     
@@ -217,6 +235,8 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
           showError(message, code);
         }
         setIsMicOn(!newState); // Revert on error
+      } finally {
+        isTogglingMicRef.current = false;
       }
     } else {
       // Not in a call, create/update preview only if needed
@@ -231,7 +251,12 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
           await rtcServiceRef.current.createLocalPreview(isCameraOn, newState);
           hasPreviewRef.current = true;
         } catch (error) {
+          // Silent error
+        } finally {
+          isTogglingMicRef.current = false;
         }
+      } else {
+        isTogglingMicRef.current = false;
       }
     }
   }, [isCameraOn, isMicOn, isRTCInitialized]);
@@ -295,12 +320,12 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
   }, []);
 
   /**
-   * Get current device IDs
+   * Get current device IDs (memoized to prevent re-renders)
    */
   const getCurrentDevices = useCallback(() => {
     if (!rtcServiceRef.current) return { cameraId: undefined, micId: undefined };
     return rtcServiceRef.current.getCurrentDevices();
-  }, []);
+  }, []); // No dependencies as rtcServiceRef is stable
 
   /**
    * Monitor device changes (plug/unplug)

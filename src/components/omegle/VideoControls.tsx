@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, memo } from 'react';
 import { DeviceSelector } from './DeviceSelector';
 
 interface VideoControlsProps {
@@ -20,7 +20,7 @@ interface VideoControlsProps {
   onLeave: () => void;
 }
 
-export function VideoControls({
+const VideoControlsComponent = ({
   isMatched,
   isSearching,
   isCameraOn,
@@ -281,4 +281,6 @@ export function VideoControls({
       )}
     </div>
   );
-}
+};
+
+export const VideoControls = memo(VideoControlsComponent);
