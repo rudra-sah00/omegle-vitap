@@ -2,11 +2,27 @@
 
 import Link from 'next/link';
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+const MAINTENANCE_MODE = process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true';
 
 export default function MaintenancePage() {
+  const router = useRouter();
+
   useEffect(() => {
     document.title = 'Under Maintenance - Omegle VITAP';
-  }, []);
+    
+    // If maintenance mode is off, redirect immediately
+    if (!MAINTENANCE_MODE) {
+      router.replace('/welcome');
+    }
+  }, [router]);
+
+  // Don't render content if maintenance mode is off
+  if (!MAINTENANCE_MODE) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-white">
       <div className="max-w-2xl w-full text-center space-y-8">

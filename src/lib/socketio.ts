@@ -68,9 +68,10 @@ class SocketIOService {
       this.socket = io(this.url, {
         transports: ['websocket', 'polling'],
         auth: { apiKey: this.apiKey },
-        reconnection: false,
+        reconnection: false, // Disable auto-reconnection to prevent unwanted reconnects during idle
         autoConnect: false, // Don't auto-connect, we'll call connect() manually
         timeout: 10000,
+        closeOnBeforeunload: false, // Keep connection alive during page navigation
       });
 
       // Manually connect

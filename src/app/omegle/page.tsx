@@ -19,6 +19,7 @@ function OmeglePageContent() {
   const router = useRouter();
   const [checkingStatus, setCheckingStatus] = useState(true);
   
+  // ALL HOOKS MUST BE CALLED UNCONDITIONALLY - Rules of Hooks
   // Chat session hook (handles matchmaking, RTC, and RTM)
   const {
     connectionState,
@@ -81,7 +82,7 @@ function OmeglePageContent() {
       // Silently handle navigation errors
       setCheckingStatus(false);
     }
-  }, [name]); // router is stable, no need to include
+  }, [name, router]);
 
   /**
    * Monitor network status
@@ -219,6 +220,9 @@ function OmeglePageContent() {
     }
   }, [isInSession, sendTypingIndicator]);
 
+  // Calculate isSearching BEFORE any conditional returns
+  const isSearching = useMemo(() => connectionState === 'waiting' && !isMatched, [connectionState, isMatched]);
+
   // Show loading while checking status or connecting
   if (!name || checkingStatus || connectionState === 'connecting') {
     return <LoadingState state={connectionState} />;
@@ -235,53 +239,55 @@ function OmeglePageContent() {
     );
   }
 
-  const isSearching = useMemo(() => connectionState === 'waiting' && !isMatched, [connectionState, isMatched]);
-
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: '#e8f4f8' }}>
+    <div className="h-screen flex" style={{ backgroundColor: '#e8f4f8' }}>
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col lg:flex-row">
-        {/* Left Side - Video Areas */}
-        <div className="flex-1 flex flex-col p-4 gap-4">
-          {/* Stranger Video */}
-          <VideoDisplay
-            id="remote-video"
-            label={matchData?.partnerName || "Stranger"}
-            isConnected={isMatched}
-            isSearching={isSearching}
-            showConnectionIndicator={true}
-            isCameraOn={isRemoteCameraOn}
-            isMicOn={isRemoteMicOn}
-          />
-
-          {/* Your Video */}
-          <VideoDisplay
-            id="local-video"
-            label="Your camera"
-            isConnected={isMatched}
-            isCameraOn={isCameraOn}
-            isMicOn={isMicOn}
-            isSearching={false}
-            showConnectionIndicator={false}
-          >
-            {/* Control Buttons */}
-            <VideoControls
-              isMatched={isMatched}
+        {/* Video Areas - Fill screen on mobile, 55% on desktop */}
+        <div className="w-full lg:w-[55%] flex flex-col p-2 gap-2 lg:p-4 lg:gap-4 h-full">
+          {/* Stranger Video - Takes 50% height on mobile */}
+          <div className="flex-1">
+            <VideoDisplay
+              id="remote-video"
+              label={matchData?.partnerName || "Stranger"}
+              isConnected={isMatched}
               isSearching={isSearching}
+              showConnectionIndicator={true}
+              isCameraOn={isRemoteCameraOn}
+              isMicOn={isRemoteMicOn}
+            />
+          </div>
+
+          {/* Your Video - Takes 50% height on mobile */}
+          <div className="flex-1">
+            <VideoDisplay
+              id="local-video"
+              label="Your camera"
+              isConnected={isMatched}
               isCameraOn={isCameraOn}
               isMicOn={isMicOn}
-              currentCameraId={devices.cameraId}
-              currentMicId={devices.micId}
-              onStart={handleStart}
-              onStop={handleStop}
-              onNext={handleNext}
-              onToggleCamera={toggleCamera}
-              onToggleMicrophone={toggleMicrophone}
-              onSwitchCamera={switchCamera}
-              onSwitchMicrophone={switchMicrophone}
-              onLeave={endSession}
-            />
-          </VideoDisplay>
+              isSearching={false}
+              showConnectionIndicator={false}
+            >
+              {/* Control Buttons */}
+              <VideoControls
+                isMatched={isMatched}
+                isSearching={isSearching}
+                isCameraOn={isCameraOn}
+                isMicOn={isMicOn}
+                currentCameraId={devices.cameraId}
+                currentMicId={devices.micId}
+                onStart={handleStart}
+                onStop={handleStop}
+                onNext={handleNext}
+                onToggleCamera={toggleCamera}
+                onToggleMicrophone={toggleMicrophone}
+                onSwitchCamera={switchCamera}
+                onSwitchMicrophone={switchMicrophone}
+                onLeave={endSession}
+              />
+            </VideoDisplay>
+          </div>
         </div>
 
         {/* Right Side - Desktop Chat Window */}

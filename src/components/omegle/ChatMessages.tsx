@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { TypingIndicator } from './TypingIndicator';
 import { EncryptedText } from '@/components/ui/encrypted-text';
 import { formatMessage } from '@/utils/messageFormatter';
@@ -13,8 +14,21 @@ interface ChatMessagesProps {
 }
 
 export const ChatMessages = ({ isConnected, isStrangerTyping = false, messages = [], partnerName }: ChatMessagesProps) => {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isStrangerTyping]);
+
   return (
-    <div className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-white to-slate-50/30">
+    <div 
+      ref={containerRef}
+      className="flex-1 overflow-y-auto overflow-x-hidden p-4 bg-gradient-to-b from-white to-slate-50/30"
+    >
       {!isConnected ? (
         <div className="h-full flex items-center justify-center">
           <div className="text-center space-y-3">
@@ -39,27 +53,29 @@ export const ChatMessages = ({ isConnected, isStrangerTyping = false, messages =
             return (
               <div 
                 key={message.id} 
-                className="flex items-start gap-2"
+                className="flex items-start gap-2 max-w-full"
               >
-                <span className={`text-sm font-semibold min-w-[70px] ${
+                <span className={`text-sm font-semibold min-w-[70px] flex-shrink-0 ${
                   isYou ? 'text-blue-600' : 'text-slate-600'
                 }`}>
                   {isYou ? 'You:' : `${partnerName || 'Stranger'}:`}
                 </span>
-                <div className="flex-1 text-sm text-slate-800 break-words whitespace-pre-wrap">
+                <div className="flex-1 text-sm text-slate-800 break-words overflow-wrap-anywhere whitespace-pre-wrap min-w-0">
                   {formatMessage(message.text)}
                 </div>
               </div>
             );
           })}
           {isStrangerTyping && (
-            <div className="flex items-start gap-2">
-              <span className="text-sm font-semibold min-w-[70px] text-slate-600">
+            <div className="flex items-start gap-2 max-w-full">
+              <span className="text-sm font-semibold min-w-[70px] flex-shrink-0 text-slate-600">
                 {partnerName || 'Stranger'}:
               </span>
               <TypingIndicator />
             </div>
           )}
+          {/* Invisible element to scroll to */}
+          <div ref={messagesEndRef} />
         </div>
       )}
     </div>

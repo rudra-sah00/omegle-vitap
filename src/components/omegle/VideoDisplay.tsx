@@ -21,16 +21,16 @@ const VideoDisplayComponent = ({
   isCameraOn = true,
   isMicOn = true,
   children 
-}: VideoDisplayProps) {
+}: VideoDisplayProps) => {
   // For local video: show placeholder only when camera is off
   // For remote video: show placeholder when not connected OR when partner's camera is off
   const showPlaceholder = id === 'local-video' ? !isCameraOn : (!isConnected || !isCameraOn);
   
   return (
-    <div className="flex-1 relative overflow-hidden rounded-lg" style={{ backgroundColor: '#c8e6f5', minHeight: '300px' }}>
+    <div className="h-full w-full relative overflow-hidden rounded-lg" style={{ backgroundColor: '#c8e6f5', minHeight: '200px' }}>
       {/* Dotted Glow Background - always visible */}
       <DottedGlowBackground
-        className="absolute inset-0"
+        className="absolute inset-0 w-full h-full"
         gap={20}
         radius={1.5}
         color="rgba(0, 132, 209, 0.5)"

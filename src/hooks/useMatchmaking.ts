@@ -127,15 +127,10 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
 
       case 'kicked':
         // User was kicked by admin
-        setConnectionState('disconnected');
-        setMatchData(null);
-        setError(null);
         showError(message.data.message || 'You have been removed from the chat', ErrorCode.AUTH_FAILED);
-        // Force disconnect
-        const ws = wsRef.current;
-        if (ws) {
-          ws.disconnect();
-        }
+        // Trigger full cleanup (will handle disconnect internally)
+        onPartnerLeft?.();
+        // Backend will disconnect socket, which will trigger handleClose
         break;
 
       case 'room_closed':
@@ -187,25 +182,30 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
    * Handle Socket.IO disconnect event
    */
   const handleClose = useCallback(() => {
+    const wasInActiveState = connectionState === 'waiting' || connectionState === 'matched';
+    
     setConnectionState('disconnected');
     setMatchData(null);
 
-    // Show connection lost message
-    const errorMsg = 'Connection lost. Reconnecting...';
-    const errorCode = ErrorCode.CONNECTION_LOST;
-    
-    // Throttle error messages - only show if different or 5 seconds have passed
-    const now = Date.now();
-    const timeSinceLastError = now - lastErrorTimeRef.current;
-    const isDifferentError = errorMsg !== lastErrorMessageRef.current;
-    
-    if (isDifferentError || timeSinceLastError > 5000) {
-      setError(errorMsg);
-      showError(errorMsg, errorCode);
-      lastErrorTimeRef.current = now;
-      lastErrorMessageRef.current = errorMsg;
+    // Only show error if user was in an active state (waiting/matched)
+    // Don't show errors during idle state to prevent unnecessary reconnection messages
+    if (wasInActiveState) {
+      const errorMsg = 'Connection lost. Please try again.';
+      const errorCode = ErrorCode.CONNECTION_LOST;
+      
+      // Throttle error messages - only show if different or 5 seconds have passed
+      const now = Date.now();
+      const timeSinceLastError = now - lastErrorTimeRef.current;
+      const isDifferentError = errorMsg !== lastErrorMessageRef.current;
+      
+      if (isDifferentError || timeSinceLastError > 5000) {
+        setError(errorMsg);
+        showError(errorMsg, errorCode);
+        lastErrorTimeRef.current = now;
+        lastErrorMessageRef.current = errorMsg;
+      }
     }
-  }, []);
+  }, [connectionState]);
 
   /**
    * Handle WebSocket error
@@ -253,11 +253,13 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
   const join = useCallback((userData: UserData) => {
     const ws = getWs();
 
+    // Connect if not already connected (lazy connection)
     if (!ws.isConnected()) {
       // Queue the join request for when connection is established
       pendingJoinRef.current = userData;
       setConnectionState('connecting');
       setError(null);
+      ws.connect(); // Initiate connection
       return;
     }
 
@@ -275,6 +277,10 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
       clearTimeout(searchTimeoutRef.current);
       searchTimeoutRef.current = null;
     }
+
+    // Set to waiting state immediately when sending join request
+    setConnectionState('waiting');
+    setError(null);
 
     const success = ws.send({
       type: 'join',
@@ -376,20 +382,16 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
    * Setup WebSocket event listeners
    */
   useEffect(() => {
-    // Only initialize WebSocket if autoConnect is enabled
-    if (!autoConnect) {
-      return;
-    }
-
     const ws = getWs();
 
+    // Always set up event listeners regardless of autoConnect
     const unsubscribeMessage = ws.onMessage(handleMessage);
     const unsubscribeOpen = ws.onOpen(handleOpen);
     const unsubscribeClose = ws.onClose(handleClose);
     const unsubscribeError = ws.onError(handleError);
 
-    // Connect if not already connected
-    if (!ws.isConnected()) {
+    // Only auto-connect if autoConnect is enabled
+    if (autoConnect && !ws.isConnected()) {
       setConnectionState('connecting');
       ws.connect();
     }

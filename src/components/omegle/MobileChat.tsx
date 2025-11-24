@@ -103,10 +103,10 @@ export const MobileChat = ({ isConnected, isStrangerTyping = false, onSendMessag
       {/* Mobile Chat Panel */}
       <div 
         id="mobile-chat" 
-        className="lg:hidden hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-slate-300 z-30 rounded-t-3xl shadow-2xl animate-slide-up" 
+        className="lg:hidden hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-slate-300 z-30 rounded-t-3xl shadow-2xl animate-slide-up overflow-hidden" 
         style={{ height: '65vh' }}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full overflow-hidden">
           {/* Mobile Header with Close Button */}
           <div className="px-4 py-3 flex items-center justify-between border-b border-slate-200">
             <div className="flex items-center gap-2">

@@ -35,7 +35,7 @@ const VideoControlsComponent = ({
   onSwitchCamera,
   onSwitchMicrophone,
   onLeave,
-}: VideoControlsProps) {
+}: VideoControlsProps) => {
   const [showCameraMenu, setShowCameraMenu] = useState(false);
   const [showMicMenu, setShowMicMenu] = useState(false);
   const cameraButtonRef = useRef<HTMLDivElement>(null);

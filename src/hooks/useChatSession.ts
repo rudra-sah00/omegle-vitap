@@ -25,32 +25,13 @@ export const useChatSession = (options: UseChatSessionOptions) => {
   const isLeavingRef = useRef(false);
   const pendingSearchGenderRef = useRef<'male' | 'female' | 'other' | 'any' | null>(null);
   const handlePartnerLeftRef = useRef<(() => Promise<void>) | null>(null);
+  const endSessionRef = useRef<(() => Promise<void>) | null>(null);
 
   // State
   const [isInSession, setIsInSession] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Matchmaking
-  const {
-    connectionState,
-    matchData,
-    error: matchmakingError,
-    isMatched,
-    isAuthenticated,
-    join,
-    leaveRoom,
-    cancelSearch,
-    disconnect,
-  } = useMatchmaking({
-    autoConnect: true,
-    onMatched: handleMatched as any, // Type cast needed due to union type
-    onPartnerLeft: () => {
-      handlePartnerLeftRef.current?.();
-    },
-    onError: handleMatchmakingError,
-  });
-
-  // Agora RTC (Video/Audio)
+  // Agora RTC (Video/Audio) - initialize first
   const {
     isCameraOn,
     isMicOn,
@@ -74,18 +55,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     },
   });
 
-  const {
-    messages,
-    isPartnerTyping,
-    sendMessage,
-    sendTypingIndicator,
-    clearMessages,
-  } = useWebSocketChat({
-    ws: getSocketIOService(),
-    isInSession,
-    onMessageReceived: () => {},
-    onTypingIndicator: () => {},
-  });
+
 
   /**
    * Handle successful match (memoized to prevent re-creation)
@@ -145,8 +115,8 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     } else {
       showError('Failed to connect. Please try again.', ErrorCode.CHANNEL_JOIN_FAILED);
     }
-    await endSession();
-  }, [isInSession, isRTCInitialized, initializeRTC, localVideoElementId, remoteVideoElementId, endSession]);
+    await endSessionRef.current?.();
+  }, [isInSession, isRTCInitialized, initializeRTC, localVideoElementId, remoteVideoElementId]);
 
   /**
    * Handle matchmaking errors (memoized)
@@ -158,6 +128,39 @@ export const useChatSession = (options: UseChatSessionOptions) => {
       showError('Connection error. Please check your internet.', ErrorCode.CONNECTION_LOST);
     }
   }, []);
+
+  // Matchmaking - now defined after callbacks it depends on
+  const {
+    connectionState,
+    matchData,
+    error: matchmakingError,
+    isMatched,
+    isAuthenticated,
+    join,
+    leaveRoom,
+    cancelSearch,
+    disconnect,
+  } = useMatchmaking({
+    autoConnect: false, // Don't auto-connect on page load - only connect when user starts matching
+    onMatched: handleMatched,
+    onPartnerLeft: () => {
+      handlePartnerLeftRef.current?.();
+    },
+    onError: handleMatchmakingError,
+  });
+
+  const {
+    messages,
+    isPartnerTyping,
+    sendMessage,
+    sendTypingIndicator,
+    clearMessages,
+  } = useWebSocketChat({
+    ws: getSocketIOService(),
+    isInSession,
+    onMessageReceived: () => {},
+    onTypingIndicator: () => {},
+  });
 
   /**
    * Start searching for a match
@@ -210,7 +213,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
   /**
    * End current session and cleanup - ensure both users leave channel
    */
-  const endSession = useCallback(async () => {
+  const endSessionFinal = useCallback(async () => {
     if (isLeavingRef.current) {
       return;
     }
@@ -236,6 +239,11 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     isLeavingRef.current = false;
   }, [leaveRTC, leaveRoom, clearMessages]);
 
+  // Update ref whenever endSessionFinal changes
+  useEffect(() => {
+    endSessionRef.current = endSessionFinal;
+  }, [endSessionFinal]);
+
   /**
    * Handle partner leaving - force cleanup for both users
    */
@@ -248,8 +256,8 @@ export const useChatSession = (options: UseChatSessionOptions) => {
       : 'Your partner';
     
     showInfo(`${partnerName} left`);
-    await endSession();
-  }, [endSession]);
+    await endSessionFinal();
+  }, [endSessionFinal]);
 
   // Update ref whenever handlePartnerLeft changes
   useEffect(() => {
@@ -378,7 +386,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     // Actions
     startSearch: beginSearch, // Expose beginSearch as startSearch
     stopSearch,
-    endSession,
+    endSession: endSessionFinal,
     findNext,
     toggleCamera,
     toggleMicrophone,

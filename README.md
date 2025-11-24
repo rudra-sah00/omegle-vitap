@@ -1,4 +1,10 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Omegle VITAP - Main Frontend
+
+This is the main user-facing frontend for Omegle VITAP, built with Next.js.
+
+## 🚀 Development URL
+
+**[http://localhost:3000](http://localhost:3000)**
 
 ## Getting Started
 

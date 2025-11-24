@@ -22,6 +22,8 @@ export const useWebSocketChat = (options: UseWebSocketChatOptions) => {
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingMessages = useRef<Set<string>>(new Set()); // Prevent duplicate sends during lag
+  const messageIdCounter = useRef<number>(0);
 
   /**
    * Listen for incoming chat messages and typing indicators
@@ -89,6 +91,18 @@ export const useWebSocketChat = (options: UseWebSocketChatOptions) => {
 
     const trimmedText = text.trim();
     
+    // Check if message is already being sent (prevent duplicates during lag)
+    if (pendingMessages.current.has(trimmedText)) {
+      console.log('[useWebSocketChat] Message already pending, skipping duplicate:', trimmedText);
+      return;
+    }
+    
+    // Mark as pending
+    pendingMessages.current.add(trimmedText);
+    
+    // Generate message ID for deduplication
+    const messageId = `msg-${Date.now()}-${messageIdCounter.current++}`;
+    
     // Send to backend
     console.log('[useWebSocketChat] Sending message to backend:', { type: 'message', data: { text: trimmedText } });
     const sent = ws.send({ 
@@ -102,7 +116,7 @@ export const useWebSocketChat = (options: UseWebSocketChatOptions) => {
       // Add to local messages immediately (optimistic update)
       const timestamp = Date.now();
       const messageData: MessageData = {
-        id: `self-${timestamp}-${Math.random()}`,
+        id: messageId,
         text: trimmedText,
         senderId: 'self',
         senderName: 'You',
@@ -111,6 +125,14 @@ export const useWebSocketChat = (options: UseWebSocketChatOptions) => {
       
       setMessages((prev) => [...prev, messageData]);
       console.log('[useWebSocketChat] Message added to local messages');
+      
+      // Remove from pending after 1 second
+      setTimeout(() => {
+        pendingMessages.current.delete(trimmedText);
+      }, 1000);
+    } else {
+      // Remove from pending if send failed
+      pendingMessages.current.delete(trimmedText);
     }
   }, [ws, isInSession]);
 
@@ -165,6 +187,8 @@ export const useWebSocketChat = (options: UseWebSocketChatOptions) => {
       typingDebounceRef.current = null;
     }
     lastTypingStateRef.current = false;
+    pendingMessages.current.clear(); // Clear pending message tracking
+    messageIdCounter.current = 0; // Reset counter
   }, []);
 
   return {
