@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { JoinButton } from './JoinButton';
 import { useUser } from '@/context/UserContext';
+import { Autocomplete, AutocompleteItem } from '@heroui/autocomplete';
 
 export const WelcomeForm = () => {
   const { name, setName, gender, setGender } = useUser();
@@ -25,7 +26,7 @@ export const WelcomeForm = () => {
         if (wsUrl) {
           const httpUrl = wsUrl.replace('ws://', 'http://').replace('wss://', 'https://');
           const baseUrl = httpUrl.split('/ws')[0];
-          
+
           const res = await fetch(`${baseUrl}/status`);
           const data = await res.json();
           setIsOnline(data.status);
@@ -50,13 +51,13 @@ export const WelcomeForm = () => {
     if (!name.trim() || isLoading) {
       return;
     }
-    
+
     try {
       setIsLoading(true);
       setIsCheckingService(true);
       setServiceAvailable(true);
       setServiceMessage('');
-      
+
       // Check backend status before navigating
       const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
       if (!wsUrl) {
@@ -70,17 +71,17 @@ export const WelcomeForm = () => {
       // Convert WebSocket URL to HTTP for status check
       const httpUrl = wsUrl.replace('ws://', 'http://').replace('wss://', 'https://');
       const baseUrl = httpUrl.split('/ws')[0];
-      
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
+
       const res = await fetch(`${baseUrl}/status`, {
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
       const data = await res.json();
-      
+
       if (!data.status) {
         setServiceAvailable(false);
         setServiceMessage('Backend service is currently unavailable. Please try again later.');
@@ -88,7 +89,7 @@ export const WelcomeForm = () => {
         setIsCheckingService(false);
         return;
       }
-      
+
       // Service is available, navigate to chat
       setIsCheckingService(false);
       router.push('/omegle');
@@ -106,7 +107,7 @@ export const WelcomeForm = () => {
       <div className="bg-white/15 backdrop-blur-2xl rounded-[2rem] pt-4 px-8 pb-8 sm:pt-6 sm:px-10 sm:pb-10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] border border-white/30 relative overflow-hidden">
         {/* Subtle gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-purple-500/10 pointer-events-none"></div>
-        
+
         {/* Content */}
         <div className="relative z-10 space-y-4">
           {/* Logo */}
@@ -160,24 +161,51 @@ export const WelcomeForm = () => {
               </svg>
               Gender
             </label>
-            <div className="grid grid-cols-3 gap-3">
-              {['Male', 'Female', 'Other'].map((g) => (
-                <button
-                  key={g}
-                  onClick={() => setGender(g)}
-                  className={`py-4 sm:py-4 rounded-2xl font-bold transition-all text-sm sm:text-base shadow-xl relative overflow-hidden group ${
-                    gender === g
-                      ? 'bg-white text-blue-600 scale-105 shadow-2xl'
-                      : 'bg-white/25 text-white hover:bg-white/35 border-2 border-white/40 hover:scale-[1.02]'
-                  }`}
-                >
-                  {gender !== g && (
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  )}
-                  <span className="relative">{g}</span>
-                </button>
-              ))}
-            </div>
+            <Autocomplete
+              placeholder="Select your gender"
+              selectedKey={gender}
+              onSelectionChange={(key) => setGender(key as string)}
+              allowsCustomValue={false}
+              className="w-full"
+              classNames={{
+                base: "w-full",
+                listboxWrapper: "max-h-[400px]",
+                selectorButton: "text-gray-900",
+              }}
+              inputProps={{
+                classNames: {
+                  input: "text-gray-900 font-medium cursor-pointer",
+                  inputWrapper: "bg-white/95 backdrop-blur-sm border-2 border-white/40 hover:bg-white shadow-xl rounded-2xl h-14 px-5 cursor-pointer",
+                },
+                readOnly: true,
+              }}
+              listboxProps={{
+                itemClasses: {
+                  base: [
+                    "rounded-lg",
+                    "text-gray-900",
+                    "transition-colors",
+                    "data-[hover=true]:bg-blue-50",
+                    "data-[selectable=true]:focus:bg-blue-100",
+                    "data-[pressed=true]:opacity-70",
+                    "data-[focus-visible=true]:ring-2",
+                    "data-[focus-visible=true]:ring-blue-500",
+                  ],
+                },
+              }}
+              popoverProps={{
+                classNames: {
+                  content: "bg-white rounded-2xl shadow-2xl border-2 border-gray-100",
+                },
+              }}
+            >
+              <AutocompleteItem key="Male">
+                Male
+              </AutocompleteItem>
+              <AutocompleteItem key="Female">
+                Female
+              </AutocompleteItem>
+            </Autocomplete>
           </div>
 
           {/* Service Unavailable Error Banner - Only shown after check fails */}
@@ -198,8 +226,8 @@ export const WelcomeForm = () => {
           )}
 
           <div className="pt-1">
-            <JoinButton 
-              isOnline={isOnline} 
+            <JoinButton
+              isOnline={isOnline}
               onClick={handleJoin}
               disabled={!name.trim() || isLoading}
               isChecking={isCheckingService}

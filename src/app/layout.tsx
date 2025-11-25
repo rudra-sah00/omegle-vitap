@@ -6,7 +6,8 @@ import { MaintenanceGuard } from "@/components/MaintenanceGuard";
 import { FirebaseProvider } from "@/components/FirebaseProvider";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Toaster } from "react-hot-toast";
+import { HeroUIProvider } from "@heroui/system";
+import { HeroUIToastProvider } from "@/components/HeroUIToastProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,7 +34,7 @@ export const metadata: Metadata = {
     "chat with strangers",
     "omegle alternative",
     "random stranger chat",
-    
+
     // Video chat keywords
     "random video call",
     "video chat with strangers",
@@ -42,7 +43,7 @@ export const metadata: Metadata = {
     "cam chat",
     "video chat online",
     "random cam chat",
-    
+
     // Text chat keywords
     "random text chat",
     "anonymous chat",
@@ -50,7 +51,7 @@ export const metadata: Metadata = {
     "anonymous messaging",
     "text chat strangers",
     "instant chat",
-    
+
     // Omegle-related
     "omegle chat",
     "omegle video",
@@ -58,7 +59,7 @@ export const metadata: Metadata = {
     "omegle app",
     "omegle online",
     "omegle free",
-    
+
     // Social/Meeting keywords
     "meet strangers",
     "meet new people",
@@ -67,7 +68,7 @@ export const metadata: Metadata = {
     "online friends",
     "meet random people",
     "anonymous friends",
-    
+
     // General chat keywords
     "free chat",
     "online chat",
@@ -76,13 +77,13 @@ export const metadata: Metadata = {
     "chat rooms",
     "random chat app",
     "stranger video chat",
-    
+
     // Location-specific
     "vitap",
     "vellore chat",
     "indian chat",
     "chat india",
-    
+
     // Features
     "anonymous",
     "no registration chat",
@@ -191,16 +192,19 @@ export default function RootLayout({
       >
         <BrowserInit />
         <ErrorBoundaryHandler />
-        <Toaster />
-        <MaintenanceGuard>
-          <FirebaseProvider>
-            <UserProvider>
-              <MediaStateProvider>
-                {children}
-              </MediaStateProvider>
-            </UserProvider>
-          </FirebaseProvider>
-        </MaintenanceGuard>
+        <HeroUIProvider>
+          <HeroUIToastProvider>
+            <MaintenanceGuard>
+              <FirebaseProvider>
+                <UserProvider>
+                  <MediaStateProvider>
+                    {children}
+                  </MediaStateProvider>
+                </UserProvider>
+              </FirebaseProvider>
+            </MaintenanceGuard>
+          </HeroUIToastProvider>
+        </HeroUIProvider>
       </body>
     </html>
   );

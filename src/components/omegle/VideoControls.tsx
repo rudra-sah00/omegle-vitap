@@ -2,6 +2,7 @@
 
 import { useRef, useState, memo } from 'react';
 import { DeviceSelector } from './DeviceSelector';
+import { Button } from '@heroui/button';
 
 interface VideoControlsProps {
   isMatched: boolean;
@@ -47,11 +48,10 @@ const VideoControlsComponent = ({
         <>
           {/* Camera Toggle with Device Selector */}
           <div ref={cameraButtonRef} className="relative device-selector-button">
-            <button 
+            <button
               onClick={onToggleCamera}
-              className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors ${
-                isCameraOn ? 'bg-slate-600 hover:bg-slate-700' : 'bg-red-500 hover:bg-red-600'
-              }`}
+              className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors ${isCameraOn ? 'bg-slate-600 hover:bg-slate-700' : 'bg-red-500 hover:bg-red-600'
+                }`}
               title={isCameraOn ? 'Turn off camera (stays off until you turn it back on)' : 'Turn on camera (stays on for next matches)'}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,11 +94,10 @@ const VideoControlsComponent = ({
 
           {/* Microphone Toggle with Device Selector */}
           <div ref={micButtonRef} className="relative device-selector-button">
-            <button 
+            <button
               onClick={onToggleMicrophone}
-              className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors ${
-                isMicOn ? 'bg-slate-600 hover:bg-slate-700' : 'bg-red-500 hover:bg-red-600'
-              }`}
+              className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors ${isMicOn ? 'bg-slate-600 hover:bg-slate-700' : 'bg-red-500 hover:bg-red-600'
+                }`}
               title={isMicOn ? 'Turn off microphone (stays off until you turn it back on)' : 'Turn on microphone (stays on for next matches)'}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -140,37 +139,40 @@ const VideoControlsComponent = ({
           </div>
 
           {/* Next Button */}
-          <button 
+          <Button
             onClick={onNext}
-            className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors"
+            isIconOnly
+            radius="full"
+            className="w-12 h-12 min-w-12"
             style={{ backgroundColor: '#0084d1' }}
             title="Next stranger"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
             </svg>
-          </button>
+          </Button>
 
           {/* Leave Button */}
-          <button 
+          <Button
             onClick={onLeave}
-            className="w-12 h-12 rounded-full flex items-center justify-center text-white bg-red-500 hover:bg-red-600 transition-colors"
+            isIconOnly
+            radius="full"
+            className="w-12 h-12 min-w-12 bg-red-500 hover:bg-red-600"
             title="Leave room"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-          </button>
+          </Button>
         </>
       ) : (
         <>
           {/* Camera Toggle with Device Selector */}
           <div ref={cameraButtonRef} className="relative device-selector-button">
-            <button 
+            <button
               onClick={onToggleCamera}
-              className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors ${
-                isCameraOn ? 'bg-slate-600 hover:bg-slate-700' : 'bg-red-500 hover:bg-red-600'
-              }`}
+              className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors ${isCameraOn ? 'bg-slate-600 hover:bg-slate-700' : 'bg-red-500 hover:bg-red-600'
+                }`}
               title={isCameraOn ? 'Turn off camera (stays off until you turn it back on)' : 'Turn on camera (stays on for next matches)'}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -213,11 +215,10 @@ const VideoControlsComponent = ({
 
           {/* Microphone Toggle with Device Selector */}
           <div ref={micButtonRef} className="relative device-selector-button">
-            <button 
+            <button
               onClick={onToggleMicrophone}
-              className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors ${
-                isMicOn ? 'bg-slate-600 hover:bg-slate-700' : 'bg-red-500 hover:bg-red-600'
-              }`}
+              className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors ${isMicOn ? 'bg-slate-600 hover:bg-slate-700' : 'bg-red-500 hover:bg-red-600'
+                }`}
               title={isMicOn ? 'Turn off microphone (stays off until you turn it back on)' : 'Turn on microphone (stays on for next matches)'}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -259,24 +260,24 @@ const VideoControlsComponent = ({
           </div>
 
           {/* Start/Stop Button */}
-          <button 
+          <Button
             onClick={isSearching ? onStop : onStart}
-            className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors ${
-              isSearching ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'
-            }`}
+            isIconOnly
+            radius="full"
+            className={`w-12 h-12 min-w-12 ${isSearching ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}
             title={isSearching ? 'Stop searching' : 'Start matching'}
           >
             {isSearching ? (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             ) : (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             )}
-          </button>
+          </Button>
         </>
       )}
     </div>
