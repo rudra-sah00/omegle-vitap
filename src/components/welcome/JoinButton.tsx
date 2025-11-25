@@ -49,10 +49,9 @@ export const JoinButton: React.FC<JoinButtonProps> = ({ isOnline, onClick, disab
     return (
       <Button
         isDisabled
-        className="w-full py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold text-sm sm:text-base shadow-xl border-2 border-red-400/50 relative overflow-hidden"
+        className="w-full py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold text-sm sm:text-base shadow-xl border-2 border-red-400/50 relative overflow-hidden h-auto min-h-[4rem]"
       >
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="relative flex flex-col items-center justify-center gap-2">
+        <div className="flex flex-col items-center justify-center gap-1 w-full">
           <span className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse shadow-lg" />
             Service Offline
@@ -68,8 +67,8 @@ export const JoinButton: React.FC<JoinButtonProps> = ({ isOnline, onClick, disab
       onClick={onClick}
       isDisabled={disabled}
       className={`w-full py-4 sm:py-5 rounded-2xl font-bold text-white text-sm sm:text-base shadow-xl relative overflow-hidden group ${disabled
-          ? 'bg-gray-400 opacity-70'
-          : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 hover:scale-[1.02] active:scale-[0.98]'
+        ? 'bg-gray-400 opacity-70'
+        : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 hover:scale-[1.02] active:scale-[0.98]'
         }`}
     >
       {!disabled && (
