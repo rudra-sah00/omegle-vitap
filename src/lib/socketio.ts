@@ -6,8 +6,8 @@ type ErrorHandler = (error: Error) => void;
 type CloseHandler = () => void;
 type OpenHandler = () => void;
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:8080';
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY || 'dev-api-key-2024';
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL!;
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY!;
 
 let socketIOInstance: SocketIOService | null = null;
 let isCreating = false;

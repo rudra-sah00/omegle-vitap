@@ -9,14 +9,14 @@ export interface MessageData {
   timestamp: number;
 }
 
-interface UseWebSocketChatOptions {
+interface UseSocketIOChatOptions {
   ws: SocketIOService | null;
   isInSession: boolean;
   onMessageReceived?: (message: MessageData) => void;
   onTypingIndicator?: (isTyping: boolean) => void;
 }
 
-export const useWebSocketChat = (options: UseWebSocketChatOptions) => {
+export const useSocketIOChat = (options: UseSocketIOChatOptions) => {
   const { ws, isInSession, onMessageReceived, onTypingIndicator } = options;
 
   const [messages, setMessages] = useState<MessageData[]>([]);
@@ -82,10 +82,10 @@ export const useWebSocketChat = (options: UseWebSocketChatOptions) => {
    * Send a text message to partner
    */
   const sendMessage = useCallback((text: string) => {
-    console.log('[useWebSocketChat] sendMessage called:', { text, hasWs: !!ws, isInSession, connected: ws?.isConnected() });
+    console.log('[useSocketIOChat] sendMessage called:', { text, hasWs: !!ws, isInSession, connected: ws?.isConnected() });
     
     if (!ws || !text.trim() || !isInSession) {
-      console.log('[useWebSocketChat] sendMessage blocked:', { hasWs: !!ws, hasTrimmedText: !!text.trim(), isInSession });
+      console.log('[useSocketIOChat] sendMessage blocked:', { hasWs: !!ws, hasTrimmedText: !!text.trim(), isInSession });
       return;
     }
 
@@ -93,7 +93,7 @@ export const useWebSocketChat = (options: UseWebSocketChatOptions) => {
     
     // Check if message is already being sent (prevent duplicates during lag)
     if (pendingMessages.current.has(trimmedText)) {
-      console.log('[useWebSocketChat] Message already pending, skipping duplicate:', trimmedText);
+      console.log('[useSocketIOChat] Message already pending, skipping duplicate:', trimmedText);
       return;
     }
     
@@ -104,13 +104,13 @@ export const useWebSocketChat = (options: UseWebSocketChatOptions) => {
     const messageId = `msg-${Date.now()}-${messageIdCounter.current++}`;
     
     // Send to backend
-    console.log('[useWebSocketChat] Sending message to backend:', { type: 'message', data: { text: trimmedText } });
+    console.log('[useSocketIOChat] Sending message to backend:', { type: 'message', data: { text: trimmedText } });
     const sent = ws.send({ 
       type: 'message', 
       data: { text: trimmedText } 
     });
 
-    console.log('[useWebSocketChat] Message sent result:', sent);
+    console.log('[useSocketIOChat] Message sent result:', sent);
 
     if (sent) {
       // Add to local messages immediately (optimistic update)
@@ -124,7 +124,7 @@ export const useWebSocketChat = (options: UseWebSocketChatOptions) => {
       };
       
       setMessages((prev) => [...prev, messageData]);
-      console.log('[useWebSocketChat] Message added to local messages');
+      console.log('[useSocketIOChat] Message added to local messages');
       
       // Remove from pending after 1 second
       setTimeout(() => {

@@ -1,7 +1,9 @@
 import { UserProvider } from "@/context/UserContext";
+import { MediaStateProvider } from "@/context/MediaStateContext";
 import { BrowserInit } from "@/components/BrowserInit";
 import { ErrorBoundaryHandler } from "@/components/ErrorBoundaryHandler";
 import { MaintenanceGuard } from "@/components/MaintenanceGuard";
+import { FirebaseProvider } from "@/components/FirebaseProvider";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
@@ -191,9 +193,13 @@ export default function RootLayout({
         <ErrorBoundaryHandler />
         <Toaster />
         <MaintenanceGuard>
-          <UserProvider>
-            {children}
-          </UserProvider>
+          <FirebaseProvider>
+            <UserProvider>
+              <MediaStateProvider>
+                {children}
+              </MediaStateProvider>
+            </UserProvider>
+          </FirebaseProvider>
         </MaintenanceGuard>
       </body>
     </html>

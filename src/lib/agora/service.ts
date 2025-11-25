@@ -65,7 +65,16 @@ export class AgoraRTCService {
       this.localVideoTrack = result.videoTrack;
       this.localAudioTrack = result.audioTrack;
       this.isPreviewMode = true;
+      
+      // Update current device IDs by matching track labels with available devices
+      await this.updateDeviceIdsFromTracks();
     } catch (error) {
+      // Clear device IDs if device not found
+      const errorStr = String(error);
+      if (errorStr.includes('DEVICE_NOT_FOUND') || errorStr.includes('NotFoundError')) {
+        this.currentCameraId = undefined;
+        this.currentMicId = undefined;
+      }
       throw error;
     }
   }
@@ -100,6 +109,9 @@ export class AgoraRTCService {
       this.localVideoTrack = tracks.videoTrack;
       this.localAudioTrack = tracks.audioTrack;
       this.isJoined = true;
+      
+      // Update current device IDs by matching track labels with available devices
+      await this.updateDeviceIdsFromTracks();
     } catch (error) {
       this.isJoined = false;
       if (this.client) {
@@ -215,6 +227,11 @@ export class AgoraRTCService {
         this.isLeaving,
         this.currentCameraId
       );
+      
+      // Update current device ID from the actual track created
+      if (enabled && this.localVideoTrack) {
+        await this.updateDeviceIdsFromTracks();
+      }
     } catch (error) {
       if (this.localVideoTrack) {
         try {
@@ -250,6 +267,11 @@ export class AgoraRTCService {
         this.isLeaving,
         this.currentMicId
       );
+      
+      // Update current device ID from the actual track created
+      if (enabled && this.localAudioTrack) {
+        await this.updateDeviceIdsFromTracks();
+      }
     } catch (error) {
       if (this.localAudioTrack) {
         try {
@@ -314,6 +336,41 @@ export class AgoraRTCService {
       cameraId: this.currentCameraId,
       micId: this.currentMicId,
     };
+  }
+
+  /**
+   * Update device IDs by matching track labels with device list
+   */
+  private async updateDeviceIdsFromTracks(): Promise<void> {
+    try {
+      const devices = await AgoraRTC.getDevices();
+      
+      // Match video track
+      if (this.localVideoTrack) {
+        const trackLabel = this.localVideoTrack.getTrackLabel();
+        const matchingDevice = devices.find(
+          d => d.kind === 'videoinput' && d.label === trackLabel
+        );
+        
+        if (matchingDevice?.deviceId) {
+          this.currentCameraId = matchingDevice.deviceId;
+        }
+      }
+      
+      // Match audio track
+      if (this.localAudioTrack) {
+        const trackLabel = this.localAudioTrack.getTrackLabel();
+        const matchingDevice = devices.find(
+          d => d.kind === 'audioinput' && d.label === trackLabel
+        );
+        
+        if (matchingDevice?.deviceId) {
+          this.currentMicId = matchingDevice.deviceId;
+        }
+      }
+    } catch (error) {
+      // Silently ignore - device ID detection is not critical
+    }
   }
 
   /**

@@ -40,43 +40,65 @@ export async function toggleCamera(
         throw new Error('Camera timeout: Could not access camera');
       }, AGORA_CONFIG.TIMEOUTS.TRACK_TOGGLE);
 
-      const newTrack = await AgoraRTC.createCameraVideoTrack({
-        cameraId: currentCameraId,
-      });
+      // Only specify cameraId if explicitly set, otherwise Agora auto-selects default
+      const newTrack = await AgoraRTC.createCameraVideoTrack(
+        currentCameraId ? { cameraId: currentCameraId } : {}
+      );
 
       clearTimeout(createTimeout);
       
       // Play video
       newTrack.play('local-video');
       
-      // Publish if in call
-      if (isJoined && client) {
+      // Publish if in call and connection is stable
+      if (isJoined && client && client.connectionState === 'CONNECTED') {
         const publishTimeout = setTimeout(() => {
           throw new Error('Publish timeout: Could not publish camera');
         }, 5000);
 
-        await client.publish([newTrack]);
-        clearTimeout(publishTimeout);
+        try {
+          await client.publish([newTrack]);
+          clearTimeout(publishTimeout);
+        } catch (error: any) {
+          clearTimeout(publishTimeout);
+          // If publish fails due to disconnection, just keep track locally
+          if (error?.code === 'INVALID_OPERATION' || client.connectionState !== 'CONNECTED') {
+            console.warn('Cannot publish - connection not stable, keeping track locally');
+          } else {
+            throw error;
+          }
+        }
       }
       
       return newTrack;
     } else {
-      // Track exists, just enable it
+      // Track exists, re-enable it
       await localVideoTrack.setEnabled(true);
       
-      // Play video locally
+      // Always re-play video to ensure it displays
+      // Stop first to reset any stale state, then play again
       try {
-        localVideoTrack.play('local-video');
-      } catch (playError) {
-        // Video element might not exist yet
+        localVideoTrack.stop();
+      } catch (e) {
+        // Ignore stop errors
       }
       
-      // Only publish if in call and not already published
-      if (isJoined && client) {
+      // Play video locally - this ensures fresh rendering
+      localVideoTrack.play('local-video');
+      
+      // Only publish if in call, connected, and not already published
+      if (isJoined && client && client.connectionState === 'CONNECTED') {
         // Check if already published to avoid double publish
         const publishedTracks = client.localTracks;
         if (!publishedTracks.includes(localVideoTrack)) {
-          await client.publish([localVideoTrack]);
+          try {
+            await client.publish([localVideoTrack]);
+          } catch (error: any) {
+            // If publish fails due to disconnection, just keep track locally
+            if (error?.code !== 'INVALID_OPERATION' && client.connectionState === 'CONNECTED') {
+              throw error;
+            }
+          }
         }
       }
       
@@ -100,12 +122,6 @@ export async function toggleCamera(
       // Stop and close track
       localVideoTrack.stop();
       localVideoTrack.close();
-      
-      // Clear the video element to remove last frame
-      const videoElement = document.getElementById('local-video');
-      if (videoElement) {
-        videoElement.innerHTML = '';
-      }
     }
     return null;
   }
@@ -142,33 +158,51 @@ export async function toggleMicrophone(
         throw new Error('Microphone timeout: Could not access microphone');
       }, AGORA_CONFIG.TIMEOUTS.TRACK_TOGGLE);
 
-      const newTrack = await AgoraRTC.createMicrophoneAudioTrack({
-        microphoneId: currentMicId,
-      });
+      // Only specify microphoneId if explicitly set, otherwise Agora auto-selects default
+      const newTrack = await AgoraRTC.createMicrophoneAudioTrack(
+        currentMicId ? { microphoneId: currentMicId } : {}
+      );
 
       clearTimeout(createTimeout);
       
-      // Publish if in call
-      if (isJoined && client) {
+      // Publish if in call and connection is stable
+      if (isJoined && client && client.connectionState === 'CONNECTED') {
         const publishTimeout = setTimeout(() => {
           throw new Error('Publish timeout: Could not publish microphone');
         }, 5000);
 
-        await client.publish([newTrack]);
-        clearTimeout(publishTimeout);
+        try {
+          await client.publish([newTrack]);
+          clearTimeout(publishTimeout);
+        } catch (error: any) {
+          clearTimeout(publishTimeout);
+          // If publish fails due to disconnection, just keep track locally
+          if (error?.code === 'INVALID_OPERATION' || client.connectionState !== 'CONNECTED') {
+            console.warn('Cannot publish - connection not stable, keeping track locally');
+          } else {
+            throw error;
+          }
+        }
       }
       
       return newTrack;
     } else {
-      // Track exists, just enable it
+      // Track exists, re-enable it
       await localAudioTrack.setEnabled(true);
       
-      // Only publish if in call and not already published
-      if (isJoined && client) {
+      // Only publish if in call, connected, and not already published
+      if (isJoined && client && client.connectionState === 'CONNECTED') {
         // Check if already published to avoid double publish
         const publishedTracks = client.localTracks;
         if (!publishedTracks.includes(localAudioTrack)) {
-          await client.publish([localAudioTrack]);
+          try {
+            await client.publish([localAudioTrack]);
+          } catch (error: any) {
+            // If publish fails due to disconnection, just keep track locally
+            if (error?.code !== 'INVALID_OPERATION' && client.connectionState === 'CONNECTED') {
+              throw error;
+            }
+          }
         }
       }
       

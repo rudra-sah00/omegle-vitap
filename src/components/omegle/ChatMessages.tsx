@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { TypingIndicator } from './TypingIndicator';
 import { EncryptedText } from '@/components/ui/encrypted-text';
 import { formatMessage } from '@/utils/messageFormatter';
-import type { MessageData } from '@/hooks/useWebSocketChat';
+import type { MessageData } from '@/hooks/useSocketIOChat';
 
 interface ChatMessagesProps {
   isConnected: boolean;

@@ -1,6 +1,7 @@
 /**
- * Utility to persist user's media device preferences across sessions
- * Camera and mic states remain ON/OFF across multiple matches until user manually changes them
+ * Utility to persist user's media device preferences within the current page session only
+ * Camera and mic states remain ON/OFF during page usage but reset on page reload
+ * Uses sessionStorage instead of localStorage to ensure fresh start on each page load
  */
 
 const STORAGE_KEYS = {
@@ -14,60 +15,60 @@ const DEFAULT_CAMERA_STATE = false;
 const DEFAULT_MIC_STATE = false;
 
 /**
- * Get persisted camera state
+ * Get persisted camera state from current session only
  */
 export function getPersistedCameraState(): boolean {
   if (typeof window === 'undefined') return DEFAULT_CAMERA_STATE;
   
   try {
-    const stored = localStorage.getItem(STORAGE_KEYS.CAMERA_STATE);
+    const stored = sessionStorage.getItem(STORAGE_KEYS.CAMERA_STATE);
     return stored !== null ? stored === 'true' : DEFAULT_CAMERA_STATE;
   } catch (error) {
-    console.warn('Failed to read camera state from localStorage:', error);
+    console.warn('Failed to read camera state from sessionStorage:', error);
     return DEFAULT_CAMERA_STATE;
   }
 }
 
 /**
- * Get persisted microphone state
+ * Get persisted microphone state from current session only
  */
 export function getPersistedMicState(): boolean {
   if (typeof window === 'undefined') return DEFAULT_MIC_STATE;
   
   try {
-    const stored = localStorage.getItem(STORAGE_KEYS.MIC_STATE);
+    const stored = sessionStorage.getItem(STORAGE_KEYS.MIC_STATE);
     return stored !== null ? stored === 'true' : DEFAULT_MIC_STATE;
   } catch (error) {
-    console.warn('Failed to read mic state from localStorage:', error);
+    console.warn('Failed to read mic state from sessionStorage:', error);
     return DEFAULT_MIC_STATE;
   }
 }
 
 /**
- * Persist camera state
+ * Persist camera state to current session only
  */
 export function persistCameraState(isOn: boolean): void {
   if (typeof window === 'undefined') return;
   
   try {
-    localStorage.setItem(STORAGE_KEYS.CAMERA_STATE, String(isOn));
-    localStorage.setItem(STORAGE_KEYS.LAST_UPDATED, new Date().toISOString());
+    sessionStorage.setItem(STORAGE_KEYS.CAMERA_STATE, String(isOn));
+    sessionStorage.setItem(STORAGE_KEYS.LAST_UPDATED, new Date().toISOString());
   } catch (error) {
-    console.warn('Failed to save camera state to localStorage:', error);
+    console.warn('Failed to save camera state to sessionStorage:', error);
   }
 }
 
 /**
- * Persist microphone state
+ * Persist microphone state to current session only
  */
 export function persistMicState(isOn: boolean): void {
   if (typeof window === 'undefined') return;
   
   try {
-    localStorage.setItem(STORAGE_KEYS.MIC_STATE, String(isOn));
-    localStorage.setItem(STORAGE_KEYS.LAST_UPDATED, new Date().toISOString());
+    sessionStorage.setItem(STORAGE_KEYS.MIC_STATE, String(isOn));
+    sessionStorage.setItem(STORAGE_KEYS.LAST_UPDATED, new Date().toISOString());
   } catch (error) {
-    console.warn('Failed to save mic state to localStorage:', error);
+    console.warn('Failed to save mic state to sessionStorage:', error);
   }
 }
 
@@ -88,10 +89,10 @@ export function clearPersistedMediaStates(): void {
   if (typeof window === 'undefined') return;
   
   try {
-    localStorage.removeItem(STORAGE_KEYS.CAMERA_STATE);
-    localStorage.removeItem(STORAGE_KEYS.MIC_STATE);
-    localStorage.removeItem(STORAGE_KEYS.LAST_UPDATED);
+    sessionStorage.removeItem(STORAGE_KEYS.CAMERA_STATE);
+    sessionStorage.removeItem(STORAGE_KEYS.MIC_STATE);
+    sessionStorage.removeItem(STORAGE_KEYS.LAST_UPDATED);
   } catch (error) {
-    console.warn('Failed to clear media states from localStorage:', error);
+    console.warn('Failed to clear media states from sessionStorage:', error);
   }
 }

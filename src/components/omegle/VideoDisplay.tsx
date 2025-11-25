@@ -73,16 +73,82 @@ const VideoDisplayComponent = ({
         </div>
       )}
 
-      {/* Searching Overlay - Full screen popup */}
+      {/* Searching Overlay - Enhanced aesthetic animation */}
       {isSearching && id === 'remote-video' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm z-10">
-          <div className="bg-white/90 backdrop-blur-md rounded-2xl px-8 py-6 shadow-2xl flex flex-col items-center">
-            <div className="relative w-16 h-16 mb-4">
-              <div className="absolute inset-0 rounded-full border-4 border-blue-200"></div>
-              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 animate-spin"></div>
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-black/30 via-blue-900/20 to-black/30 backdrop-blur-md z-10">
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl px-10 py-8 shadow-[0_20px_60px_rgba(0,132,209,0.3)] flex flex-col items-center relative overflow-hidden">
+            {/* Animated gradient background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-cyan-50 animate-pulse opacity-50"></div>
+            
+            {/* Multi-ring spinner with staggered animations */}
+            <div className="relative w-20 h-20 mb-6 z-10">
+              {/* Outer ring - slow rotation */}
+              <div 
+                className="absolute inset-0 rounded-full border-[3px] border-transparent opacity-30"
+                style={{
+                  borderTopColor: '#0084d1',
+                  borderRightColor: '#0084d1',
+                  animation: 'spin 3s linear infinite'
+                }}
+              ></div>
+              
+              {/* Middle ring - medium rotation opposite direction */}
+              <div 
+                className="absolute inset-2 rounded-full border-[3px] border-transparent opacity-50"
+                style={{
+                  borderTopColor: '#00a8e8',
+                  borderBottomColor: '#00a8e8',
+                  animation: 'spin 2s linear infinite reverse'
+                }}
+              ></div>
+              
+              {/* Inner ring - fast rotation */}
+              <div 
+                className="absolute inset-4 rounded-full border-[3px] border-transparent"
+                style={{
+                  borderTopColor: '#0084d1',
+                  borderLeftColor: '#0084d1',
+                  animation: 'spin 1.5s linear infinite'
+                }}
+              ></div>
+              
+              {/* Center pulsing dot */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div 
+                  className="w-3 h-3 rounded-full"
+                  style={{
+                    backgroundColor: '#0084d1',
+                    boxShadow: '0 0 20px rgba(0, 132, 209, 0.6)',
+                    animation: 'pulse 1.5s ease-in-out infinite'
+                  }}
+                ></div>
+              </div>
             </div>
-            <p className="text-lg font-semibold text-gray-800 mb-1">Searching for a match...</p>
-            <p className="text-sm text-gray-500">This may take a few moments</p>
+            
+            {/* Text content with animations */}
+            <div className="text-center z-10">
+              <p className="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">
+                Searching for a match
+                <span className="inline-block animate-pulse">...</span>
+              </p>
+              <p className="text-sm text-gray-600 font-medium">Finding someone interesting for you</p>
+            </div>
+            
+            {/* Animated dots indicator */}
+            <div className="flex gap-2 mt-4 z-10">
+              <div 
+                className="w-2 h-2 rounded-full bg-blue-500"
+                style={{ animation: 'bounce 1.4s infinite ease-in-out' }}
+              ></div>
+              <div 
+                className="w-2 h-2 rounded-full bg-blue-500"
+                style={{ animation: 'bounce 1.4s infinite ease-in-out 0.2s' }}
+              ></div>
+              <div 
+                className="w-2 h-2 rounded-full bg-blue-500"
+                style={{ animation: 'bounce 1.4s infinite ease-in-out 0.4s' }}
+              ></div>
+            </div>
           </div>
         </div>
       )}

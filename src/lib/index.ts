@@ -27,4 +27,4 @@ export { cn } from './utils';
 
 // Types
 export type { AgoraRTCConfig } from './agora/agora-rtc';
-export type { MessageData } from '@/hooks/useWebSocketChat';
+export type { MessageData } from '@/hooks/useSocketIOChat';

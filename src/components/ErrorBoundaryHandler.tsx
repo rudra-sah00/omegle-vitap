@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import * as Sentry from '@sentry/nextjs';
 
 export function ErrorBoundaryHandler() {
   useEffect(() => {
@@ -10,15 +9,10 @@ export function ErrorBoundaryHandler() {
       // Prevent the default browser behavior
       event.preventDefault();
       
-      // Log to Sentry
-      Sentry.captureException(event.reason, {
-        contexts: {
-          rejection: {
-            promise: String(event.promise),
-            reason: String(event.reason),
-          },
-        },
-      });
+      // Log to console in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Unhandled promise rejection:', event.reason);
+      }
       
       // Silently handle in production
     };
@@ -27,16 +21,10 @@ export function ErrorBoundaryHandler() {
     const handleError = (event: ErrorEvent) => {
       event.preventDefault();
       
-      Sentry.captureException(event.error, {
-        contexts: {
-          error: {
-            message: event.message,
-            filename: event.filename,
-            lineno: event.lineno,
-            colno: event.colno,
-          },
-        },
-      });
+      // Log to console in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Uncaught error:', event.error);
+      }
       
       // Silently handle error
     };

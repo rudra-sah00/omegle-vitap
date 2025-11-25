@@ -63,18 +63,33 @@ export async function createLocalPreview(
     throw new Error('No microphone device found');
   }
 
-  // Create tracks
-  const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
-    AGORA_CONFIG.AUDIO,
-    {
-      encoderConfig: AGORA_CONFIG.VIDEO,
-      optimizationMode: AGORA_CONFIG.VIDEO_OPTIMIZATION_MODE,
-    }
-  );
+  // Create tracks individually based on what's needed
+  let videoTrack: ICameraVideoTrack | null = null;
+  let audioTrack: IMicrophoneAudioTrack | null = null;
 
-  // Set initial state
-  await videoTrack.setEnabled(cameraOn);
-  await audioTrack.setEnabled(micOn);
+  if (cameraOn && micOn) {
+    // Create both tracks together (more efficient)
+    const [audio, video] = await AgoraRTC.createMicrophoneAndCameraTracks(
+      AGORA_CONFIG.AUDIO,
+      {
+        encoderConfig: AGORA_CONFIG.VIDEO,
+        optimizationMode: AGORA_CONFIG.VIDEO_OPTIMIZATION_MODE,
+      }
+    );
+    audioTrack = audio;
+    videoTrack = video;
+  } else {
+    // Create only the requested tracks
+    if (micOn) {
+      audioTrack = await AgoraRTC.createMicrophoneAudioTrack(AGORA_CONFIG.AUDIO);
+    }
+    if (cameraOn) {
+      videoTrack = await AgoraRTC.createCameraVideoTrack({
+        encoderConfig: AGORA_CONFIG.VIDEO,
+        optimizationMode: AGORA_CONFIG.VIDEO_OPTIMIZATION_MODE,
+      });
+    }
+  }
   
   // Play preview
   if (cameraOn && videoTrack) {

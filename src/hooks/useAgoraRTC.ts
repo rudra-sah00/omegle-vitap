@@ -4,8 +4,9 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { showError, showWarning, parseMediaError, ErrorCode } from '@/lib/toast';
-import { getPersistedCameraState, getPersistedMicState, persistCameraState, persistMicState } from '@/lib/mediaState';
+import { useMediaState } from '@/context/MediaStateContext';
 import type { MatchData } from '@/types/matchmaking';
+import { analytics } from '@/lib/firebase/analytics';
 
 interface UseAgoraRTCOptions {
   onRemoteVideoReady?: (userId: string) => void;
@@ -16,25 +17,18 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
   const { onRemoteVideoReady, onRemoteUserLeft } = options;
 
   const rtcServiceRef = useRef<any>(null);
-  // Initialize with persisted states from localStorage
-  const [isCameraOn, setIsCameraOn] = useState(() => getPersistedCameraState());
-  const [isMicOn, setIsMicOn] = useState(() => getPersistedMicState());
+  
+  // Use MediaStateContext for camera/mic state
+  // - On page load/reload: Always starts OFF (context resets)
+  // - Between matches: State persists (context stays alive)
+  const { isCameraOn, isMicOn, setCameraOn, setMicOn } = useMediaState();
+  
   const [isRTCInitialized, setIsRTCInitialized] = useState(false);
   const [isRemoteCameraOn, setIsRemoteCameraOn] = useState(false); // Track remote user's camera (start false, update when detected)
   const [isRemoteMicOn, setIsRemoteMicOn] = useState(false); // Track remote user's mic (start false, update when detected)
   const hasPreviewRef = useRef(false); // Track if preview is active
   const [currentCameraId, setCurrentCameraId] = useState<string | undefined>(undefined);
   const [currentMicId, setCurrentMicId] = useState<string | undefined>(undefined);
-
-  // Persist camera state whenever it changes
-  useEffect(() => {
-    persistCameraState(isCameraOn);
-  }, [isCameraOn]);
-
-  // Persist mic state whenever it changes
-  useEffect(() => {
-    persistMicState(isMicOn);
-  }, [isMicOn]);
 
   /**
    * Initialize RTC with match data
@@ -76,6 +70,9 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
         throw new Error('Missing channel name from match data');
       }
 
+      // Track RTC connection start time
+      const rtcConnectionStart = Date.now();
+      
       // Initialize service if not exists or was cleaned up
       if (!rtcServiceRef.current) {
         const { AgoraRTCService } = await import('@/lib/agora/agora-rtc');
@@ -117,6 +114,16 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
         token: matchData.rtcToken,
         uid: typeof uid === 'number' ? uid.toString() : uid,
       }, isCameraOn, isMicOn);
+
+      // Update device IDs after joining
+      const devices = rtcServiceRef.current.getCurrentDevices();
+      if (devices.cameraId) setCurrentCameraId(devices.cameraId);
+      if (devices.micId) setCurrentMicId(devices.micId);
+
+      // Track RTC join and connection time
+      const connectionTime = Date.now() - rtcConnectionStart;
+      analytics.trackRTCJoin();
+      analytics.trackRTCConnectionTime(connectionTime);
 
       // Play local video if camera is on
       if (isCameraOn && rtcServiceRef.current) {
@@ -162,12 +169,18 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
     
     isTogglingCameraRef.current = true;
     const newState = !isCameraOn;
-    setIsCameraOn(newState);
+    setCameraOn(newState);
     
     // If already in a call, toggle the track (it handles publish/unpublish internally)
     if (isRTCInitialized && rtcServiceRef.current) {
       try {
         await rtcServiceRef.current.toggleCamera(newState);
+        // Update device IDs after toggling
+        const devices = rtcServiceRef.current.getCurrentDevices();
+        if (devices.cameraId) setCurrentCameraId(devices.cameraId);
+        
+        // Track analytics
+        analytics.trackCameraToggle(newState, 'call');
       } catch (error) {
         // Silent failure - user toggled off or device unavailable
         // Only show error if explicitly denied by user
@@ -179,7 +192,7 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
             showWarning('Please allow camera access in your browser settings and try again.');
           }, 1000);
         }
-        setIsCameraOn(!newState); // Revert on error
+        setCameraOn(!newState); // Revert on error
       } finally {
         isTogglingCameraRef.current = false;
       }
@@ -189,12 +202,20 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
         try {
           // Initialize RTC service for preview if needed
           if (!rtcServiceRef.current) {
-            const { AgoraRTCService } = await import('@/lib/agora-rtc');
+            const { AgoraRTCService } = await import('@/lib/agora/agora-rtc');
             rtcServiceRef.current = new AgoraRTCService();
           }
           
           await rtcServiceRef.current.createLocalPreview(true, isMicOn);
           hasPreviewRef.current = true;
+          
+          // Update device IDs after preview is created
+          const devices = rtcServiceRef.current.getCurrentDevices();
+          if (devices.cameraId) setCurrentCameraId(devices.cameraId);
+          if (devices.micId) setCurrentMicId(devices.micId);
+          
+          // Track analytics
+          analytics.trackCameraToggle(true, 'preview');
         } catch (error) {
           // Silent failure - only show error for explicit permission denial
           const errorStr = String(error);
@@ -202,7 +223,7 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
             const { message } = parseMediaError(error);
             showError(message, ErrorCode.CAMERA_PERMISSION_DENIED);
           }
-          setIsCameraOn(false);
+          setCameraOn(false);
         } finally {
           isTogglingCameraRef.current = false;
         }
@@ -223,12 +244,18 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
     
     isTogglingMicRef.current = true;
     const newState = !isMicOn;
-    setIsMicOn(newState);
+    setMicOn(newState);
     
     // If already in a call, toggle the track (it handles publish/unpublish internally)
     if (isRTCInitialized && rtcServiceRef.current) {
       try {
         await rtcServiceRef.current.toggleMicrophone(newState);
+        // Update device IDs after toggling
+        const devices = rtcServiceRef.current.getCurrentDevices();
+        if (devices.micId) setCurrentMicId(devices.micId);
+        
+        // Track analytics
+        analytics.trackMicrophoneToggle(newState, 'call');
       } catch (error) {
         // Silent failure - only show error for explicit permission denial
         const errorStr = String(error);
@@ -236,7 +263,7 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
           const { message, code } = parseMediaError(error);
           showError(message, code);
         }
-        setIsMicOn(!newState); // Revert on error
+        setMicOn(!newState); // Revert on error
       } finally {
         isTogglingMicRef.current = false;
       }
@@ -246,12 +273,20 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
         try {
           // Initialize RTC service for preview if needed
           if (!rtcServiceRef.current) {
-            const { AgoraRTCService } = await import('@/lib/agora-rtc');
+            const { AgoraRTCService } = await import('@/lib/agora/agora-rtc');
             rtcServiceRef.current = new AgoraRTCService();
           }
           
           await rtcServiceRef.current.createLocalPreview(isCameraOn, newState);
           hasPreviewRef.current = true;
+          
+          // Update device IDs after preview is created
+          const devices = rtcServiceRef.current.getCurrentDevices();
+          if (devices.cameraId) setCurrentCameraId(devices.cameraId);
+          if (devices.micId) setCurrentMicId(devices.micId);
+          
+          // Track analytics
+          analytics.trackMicrophoneToggle(newState, 'preview');
         } catch (error) {
           // Silent error
         } finally {

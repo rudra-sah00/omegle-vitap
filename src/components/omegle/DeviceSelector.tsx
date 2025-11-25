@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { analytics } from '@/lib/firebase/analytics';
 
 interface DeviceInfo {
   deviceId: string;
@@ -69,6 +70,9 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
+    // Track device list opened
+    analytics.trackDeviceListOpened(type);
+
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       // Don't close if clicking the trigger button or the menu itself
@@ -88,7 +92,7 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
       clearTimeout(timer);
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, type]);
 
   const loadDevices = async () => {
     try {

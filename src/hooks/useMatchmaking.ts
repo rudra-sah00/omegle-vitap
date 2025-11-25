@@ -6,6 +6,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { getSocketIOService, destroySocketIOService, type SocketIOService } from '@/lib/socketio';
 import { showError, ErrorCode } from '@/lib/toast';
+import { analytics } from '@/lib/firebase/analytics';
 import type {
   ConnectionState,
   MatchData,
@@ -86,6 +87,9 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
             clearTimeout(searchTimeoutRef.current);
             searchTimeoutRef.current = null;
           }
+          
+          // Track match found
+          analytics.trackMatchFound();
           
           setConnectionState('matched');
           setMatchData(message.data);
@@ -303,9 +307,14 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
       setError(null); // Clear any previous errors
 
       // Set 30-second timeout for search
+      const searchStartTime = Date.now();
       searchTimeoutRef.current = setTimeout(() => {
         // Check if still joining (not matched yet)
         if (isJoiningRef.current) {
+          // Track search timeout
+          const waitTime = Date.now() - searchStartTime;
+          analytics.trackSearchTimeout(waitTime);
+          
           // Auto-cancel search after timeout
           const currentWs = wsRef.current;
           if (currentWs) {
@@ -400,11 +409,8 @@ export const useMatchmaking = (options: UseMatchmakingOptions = {}): UseMatchmak
     const unsubscribeClose = ws.onClose(handleClose);
     const unsubscribeError = ws.onError(handleError);
 
-    // Only auto-connect if autoConnect is enabled
-    if (autoConnect && !ws.isConnected()) {
-      setConnectionState('connecting');
-      ws.connect();
-    }
+    // Don't auto-connect - only connect when user starts search
+    // This prevents showing "Connecting to server" loading screen on page load
 
     // Cleanup on unmount
     return () => {

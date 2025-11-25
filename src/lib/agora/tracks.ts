@@ -189,19 +189,19 @@ async function createBothTracks(
   currentCameraId?: string,
   currentMicId?: string
 ): Promise<{ audioTrack: IMicrophoneAudioTrack; videoTrack: ICameraVideoTrack }> {
-  const tracksPromise = AgoraRTC.createMicrophoneAndCameraTracks(
-    {
-      ...AGORA_CONFIG.AUDIO,
-      microphoneId: currentMicId || undefined,
-    },
-    {
-      encoderConfig: AGORA_CONFIG.VIDEO,
-      optimizationMode: AGORA_CONFIG.VIDEO_OPTIMIZATION_MODE,
-      cameraId: currentCameraId || undefined,
-    }
-  );
-
   try {
+    const tracksPromise = AgoraRTC.createMicrophoneAndCameraTracks(
+      {
+        ...AGORA_CONFIG.AUDIO,
+        ...(currentMicId && { microphoneId: currentMicId }),
+      },
+      {
+        encoderConfig: AGORA_CONFIG.VIDEO,
+        optimizationMode: AGORA_CONFIG.VIDEO_OPTIMIZATION_MODE,
+        ...(currentCameraId && { cameraId: currentCameraId }),
+      }
+    );
+
     const [audioTrack, videoTrack] = await Promise.race([
       tracksPromise,
       trackTimeout
@@ -209,6 +209,24 @@ async function createBothTracks(
     
     return { audioTrack, videoTrack };
   } catch (error) {
+    // If device not found, retry without specific device IDs (use default)
+    const errorStr = String(error);
+    if (errorStr.includes('DEVICE_NOT_FOUND') || errorStr.includes('NotFoundError')) {
+      const tracksPromise = AgoraRTC.createMicrophoneAndCameraTracks(
+        AGORA_CONFIG.AUDIO,
+        {
+          encoderConfig: AGORA_CONFIG.VIDEO,
+          optimizationMode: AGORA_CONFIG.VIDEO_OPTIMIZATION_MODE,
+        }
+      );
+
+      const [audioTrack, videoTrack] = await Promise.race([
+        tracksPromise,
+        trackTimeout
+      ]) as [IMicrophoneAudioTrack, ICameraVideoTrack];
+      
+      return { audioTrack, videoTrack };
+    }
     throw parseTrackCreationError(error);
   }
 }
@@ -224,11 +242,19 @@ async function createAudioTrack(
     return await Promise.race([
       AgoraRTC.createMicrophoneAudioTrack({
         ...AGORA_CONFIG.AUDIO,
-        microphoneId: currentMicId || undefined,
+        ...(currentMicId && { microphoneId: currentMicId }),
       }),
       trackTimeout
     ]) as IMicrophoneAudioTrack;
   } catch (error) {
+    // If device not found, retry with default device
+    const errorStr = String(error);
+    if ((errorStr.includes('DEVICE_NOT_FOUND') || errorStr.includes('NotFoundError')) && currentMicId) {
+      return await Promise.race([
+        AgoraRTC.createMicrophoneAudioTrack(AGORA_CONFIG.AUDIO),
+        trackTimeout
+      ]) as IMicrophoneAudioTrack;
+    }
     throw parseTrackCreationError(error, 'microphone');
   }
 }
@@ -245,11 +271,22 @@ async function createVideoTrack(
       AgoraRTC.createCameraVideoTrack({
         encoderConfig: AGORA_CONFIG.VIDEO,
         optimizationMode: AGORA_CONFIG.VIDEO_OPTIMIZATION_MODE,
-        cameraId: currentCameraId || undefined,
+        ...(currentCameraId && { cameraId: currentCameraId }),
       }),
       trackTimeout
     ]) as ICameraVideoTrack;
   } catch (error) {
+    // If device not found, retry with default device
+    const errorStr = String(error);
+    if ((errorStr.includes('DEVICE_NOT_FOUND') || errorStr.includes('NotFoundError')) && currentCameraId) {
+      return await Promise.race([
+        AgoraRTC.createCameraVideoTrack({
+          encoderConfig: AGORA_CONFIG.VIDEO,
+          optimizationMode: AGORA_CONFIG.VIDEO_OPTIMIZATION_MODE,
+        }),
+        trackTimeout
+      ]) as ICameraVideoTrack;
+    }
     throw parseTrackCreationError(error, 'camera');
   }
 }

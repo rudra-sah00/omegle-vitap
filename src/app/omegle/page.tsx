@@ -13,6 +13,7 @@ import { ErrorState } from '@/components/omegle/ErrorState';
 import { OmegleErrorBoundary } from '@/components/omegle/OmegleErrorBoundary';
 import { showError, showWarning, ErrorCode } from '@/lib/toast';
 import { isBrowserSupported } from '@/lib/browser-polyfill';
+import { analytics } from '@/lib/firebase/analytics';
 
 function OmeglePageContent() {
   const { name, gender } = useUser();
@@ -174,6 +175,12 @@ function OmeglePageContent() {
         return;
       }
 
+      // Track match start
+      analytics.trackMatchStart({
+        camera: isCameraOn,
+        microphone: isMicOn
+      });
+
       await startSearch({
         name,
         gender,
@@ -189,6 +196,9 @@ function OmeglePageContent() {
    */
   const handleStop = useCallback(async () => {
     try {
+      // Track match ended
+      analytics.trackMatchEnded('user_stop');
+      
       await stopSearch();
     } catch (error) {
       // Silently handle cancel errors - no need to reload page
@@ -205,6 +215,9 @@ function OmeglePageContent() {
         showError('No internet connection. Please check your network.', ErrorCode.CONNECTION_LOST);
         return;
       }
+      // Track skip event
+      analytics.trackMatchEnded('user_skip');
+      
       await findNext();
     } catch (error) {
       showError('Failed to find next partner. Please try again.', ErrorCode.CONNECTION_LOST);
@@ -223,9 +236,9 @@ function OmeglePageContent() {
   // Calculate isSearching BEFORE any conditional returns
   const isSearching = useMemo(() => connectionState === 'waiting' && !isMatched, [connectionState, isMatched]);
 
-  // Show loading while checking status or connecting
-  if (!name || checkingStatus || connectionState === 'connecting') {
-    return <LoadingState state={connectionState} />;
+  // Show loading only while checking initial status - NOT for websocket connecting
+  if (!name || checkingStatus) {
+    return <LoadingState state="loading" />;
   }
 
   // Show error state

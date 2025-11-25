@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { useMatchmaking } from './useMatchmaking';
 import { useAgoraRTC } from './useAgoraRTC';
-import { useWebSocketChat } from './useWebSocketChat';
+import { useSocketIOChat } from './useSocketIOChat';
 import { getSocketIOService } from '@/lib/socketio';
 import { showError, showInfo, ErrorCode } from '@/lib/toast';
 import { useUser } from '@/context/UserContext';
@@ -30,6 +30,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
   // State
   const [isInSession, setIsInSession] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const isFindingNextRef = useRef(false);
 
   // Agora RTC (Video/Audio) - initialize first
   const {
@@ -155,7 +156,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     sendMessage,
     sendTypingIndicator,
     clearMessages,
-  } = useWebSocketChat({
+  } = useSocketIOChat({
     ws: getSocketIOService(),
     isInSession,
     onMessageReceived: () => {},
@@ -248,7 +249,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
    * Handle partner leaving - force cleanup for both users
    */
   const handlePartnerLeft = useCallback(async () => {
-    if (isLeavingRef.current) return;
+    if (isLeavingRef.current || isFindingNextRef.current) return;
     
     // Get partner name from current match data
     const partnerName = currentMatchRef.current && 'partnerName' in currentMatchRef.current 
@@ -268,11 +269,12 @@ export const useChatSession = (options: UseChatSessionOptions) => {
    * Next - find new partner (keeps camera/mic state)
    */
   const findNext = useCallback(async () => {
-    if (isLeavingRef.current) {
+    if (isLeavingRef.current || isFindingNextRef.current) {
       return;
     }
     
     isLeavingRef.current = true;
+    isFindingNextRef.current = true;
     
     try {
       // End current session
@@ -338,6 +340,10 @@ export const useChatSession = (options: UseChatSessionOptions) => {
       }
     } finally {
       isLeavingRef.current = false;
+      // Clear findingNext flag after a small delay to ensure join completes
+      setTimeout(() => {
+        isFindingNextRef.current = false;
+      }, 500);
     }
   }, [leaveRoom, leaveRTC, join, clearMessages]);
 
