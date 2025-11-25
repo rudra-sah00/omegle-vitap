@@ -106,7 +106,6 @@ describe('WelcomeForm', () => {
       render(<WelcomeForm />);
       expect(screen.getByText('Male')).toBeTruthy();
       expect(screen.getByText('Female')).toBeTruthy();
-      expect(screen.getByText('Other')).toBeTruthy();
     });
 
     it('should render JoinButton', () => {
@@ -180,15 +179,6 @@ describe('WelcomeForm', () => {
       expect(mockSetGender).toHaveBeenCalledWith('Female');
     });
 
-    it('should update gender when Other is clicked', () => {
-      render(<WelcomeForm />);
-      
-      const otherButton = screen.getByText('Other');
-      fireEvent.click(otherButton);
-      
-      expect(mockSetGender).toHaveBeenCalledWith('Other');
-    });
-
     it('should highlight selected gender', () => {
       (useUser as jest.Mock).mockReturnValue({
         name: '',
@@ -202,9 +192,8 @@ describe('WelcomeForm', () => {
       const buttons = container.querySelectorAll('button');
       const maleButton = Array.from(buttons).find(b => b.textContent === 'Male');
       
-      expect(maleButton?.className).toContain('bg-white');
-      expect(maleButton?.className).toContain('text-blue-600');
-      expect(maleButton?.className).toContain('scale-105');
+      expect(maleButton?.className).toContain('from-blue-600');
+      expect(maleButton?.className).toContain('text-white');
     });
   });
 

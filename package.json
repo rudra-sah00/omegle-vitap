@@ -33,7 +33,6 @@
     ]
   },
   "dependencies": {
-    "@heroui/autocomplete": "^2.3.29",
     "@heroui/button": "^2.2.27",
     "@heroui/system": "2.4.23",
     "@heroui/theme": "2.4.23",

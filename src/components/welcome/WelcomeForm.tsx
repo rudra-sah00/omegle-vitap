@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { Button } from '@heroui/button';
 import { JoinButton } from './JoinButton';
 import { useUser } from '@/context/UserContext';
-import { Autocomplete, AutocompleteItem } from '@heroui/autocomplete';
 
 export const WelcomeForm = () => {
   const { name, setName, gender, setGender } = useUser();
@@ -22,12 +22,9 @@ export const WelcomeForm = () => {
     const checkOnlineStatus = async () => {
       try {
         // Check backend status directly
-        const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
-        if (wsUrl) {
-          const httpUrl = wsUrl.replace('ws://', 'http://').replace('wss://', 'https://');
-          const baseUrl = httpUrl.split('/ws')[0];
-
-          const res = await fetch(`${baseUrl}/status`);
+        const backendUrl = process.env.NEXT_PUBLIC_WS_URL;
+        if (backendUrl) {
+          const res = await fetch(`${backendUrl}/status`);
           const data = await res.json();
           setIsOnline(data.status);
         } else {
@@ -59,8 +56,8 @@ export const WelcomeForm = () => {
       setServiceMessage('');
 
       // Check backend status before navigating
-      const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
-      if (!wsUrl) {
+      const backendUrl = process.env.NEXT_PUBLIC_WS_URL;
+      if (!backendUrl) {
         setServiceAvailable(false);
         setServiceMessage('Backend service not configured. Please contact support.');
         setIsLoading(false);
@@ -68,14 +65,10 @@ export const WelcomeForm = () => {
         return;
       }
 
-      // Convert WebSocket URL to HTTP for status check
-      const httpUrl = wsUrl.replace('ws://', 'http://').replace('wss://', 'https://');
-      const baseUrl = httpUrl.split('/ws')[0];
-
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-      const res = await fetch(`${baseUrl}/status`, {
+      const res = await fetch(`${backendUrl}/status`, {
         signal: controller.signal,
       });
 
@@ -161,51 +154,38 @@ export const WelcomeForm = () => {
               </svg>
               Gender
             </label>
-            <Autocomplete
-              placeholder="Select your gender"
-              selectedKey={gender}
-              onSelectionChange={(key) => setGender(key as string)}
-              allowsCustomValue={false}
-              className="w-full"
-              classNames={{
-                base: "w-full",
-                listboxWrapper: "max-h-[400px]",
-                selectorButton: "text-gray-900",
-              }}
-              inputProps={{
-                classNames: {
-                  input: "text-gray-900 font-medium cursor-pointer",
-                  inputWrapper: "bg-white/95 backdrop-blur-sm border-2 border-white/40 hover:bg-white shadow-xl rounded-2xl h-14 px-5 cursor-pointer",
-                },
-                readOnly: true,
-              }}
-              listboxProps={{
-                itemClasses: {
-                  base: [
-                    "rounded-lg",
-                    "text-gray-900",
-                    "transition-colors",
-                    "data-[hover=true]:bg-blue-50",
-                    "data-[selectable=true]:focus:bg-blue-100",
-                    "data-[pressed=true]:opacity-70",
-                    "data-[focus-visible=true]:ring-2",
-                    "data-[focus-visible=true]:ring-blue-500",
-                  ],
-                },
-              }}
-              popoverProps={{
-                classNames: {
-                  content: "bg-white rounded-2xl shadow-2xl border-2 border-gray-100",
-                },
-              }}
-            >
-              <AutocompleteItem key="Male">
-                Male
-              </AutocompleteItem>
-              <AutocompleteItem key="Female">
-                Female
-              </AutocompleteItem>
-            </Autocomplete>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                onClick={() => setGender('Male')}
+                className={`py-4 sm:py-5 rounded-2xl font-bold text-sm sm:text-base shadow-xl relative overflow-hidden group transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                  gender === 'Male'
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white'
+                    : 'bg-white/95 backdrop-blur-sm border-2 border-white/40 text-gray-900 hover:bg-white'
+                }`}
+              >
+                {gender === 'Male' && (
+                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                )}
+                <span className="relative flex items-center justify-center gap-2">
+                  Male
+                </span>
+              </Button>
+              <Button
+                onClick={() => setGender('Female')}
+                className={`py-4 sm:py-5 rounded-2xl font-bold text-sm sm:text-base shadow-xl relative overflow-hidden group transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                  gender === 'Female'
+                    ? 'bg-gradient-to-r from-pink-600 to-pink-700 text-white'
+                    : 'bg-white/95 backdrop-blur-sm border-2 border-white/40 text-gray-900 hover:bg-white'
+                }`}
+              >
+                {gender === 'Female' && (
+                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                )}
+                <span className="relative flex items-center justify-center gap-2">
+                  Female
+                </span>
+              </Button>
+            </div>
           </div>
 
           {/* Service Unavailable Error Banner - Only shown after check fails */}
