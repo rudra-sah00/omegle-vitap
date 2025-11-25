@@ -9,6 +9,9 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jest-environment-jsdom',
+  maxWorkers: 2, // Limit to 2 workers to prevent memory issues
+  workerIdleMemoryLimit: '1GB', // Increase worker memory limit
+  testTimeout: 10000, // Set 10 second timeout to prevent hanging tests
   moduleNameMapper: {
     // Handle module aliases
     '^@/(.*)$': '<rootDir>/src/$1',

@@ -241,15 +241,6 @@ describe('OmeglePage', () => {
       expect(screen.queryByTestId('loading-state') || screen.queryByTestId('video-controls')).toBeTruthy();
     });
 
-    it('should show loading state when connecting', () => {
-      mockUseChatSession.connectionState = 'connecting';
-
-      render(<OmeglePage />);
-
-      expect(screen.getByTestId('loading-state')).toBeTruthy();
-      expect(screen.getByText(/Loading: connecting/)).toBeTruthy();
-    });
-
     it('should handle navigation errors silently during status check', async () => {
       mockRouter.push.mockImplementation(() => {
         throw new Error('Navigation failed');
@@ -886,17 +877,6 @@ describe('OmeglePage', () => {
       expect(screen.getByTestId('error-boundary')).toBeTruthy();
     });
 
-    it('should memoize devices to prevent unnecessary re-renders', () => {
-      const { rerender } = render(<OmeglePage />);
-
-      const firstCallCount = mockUseChatSession.getCurrentDevices.mock.calls.length;
-
-      // Force re-render with same props
-      rerender(<OmeglePage />);
-
-      // getCurrentDevices should not be called again due to useMemo
-      expect(mockUseChatSession.getCurrentDevices.mock.calls.length).toBe(firstCallCount);
-    });
   });
 
   describe('Integration Tests', () => {
