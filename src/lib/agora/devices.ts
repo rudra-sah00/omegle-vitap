@@ -63,7 +63,7 @@ export async function toggleCamera(
           clearTimeout(publishTimeout);
           // If publish fails due to disconnection, just keep track locally
           if (error?.code === 'INVALID_OPERATION' || client.connectionState !== 'CONNECTED') {
-            console.warn('Cannot publish - connection not stable, keeping track locally');
+            // Connection not stable, keeping track locally
           } else {
             throw error;
           }
@@ -178,7 +178,7 @@ export async function toggleMicrophone(
           clearTimeout(publishTimeout);
           // If publish fails due to disconnection, just keep track locally
           if (error?.code === 'INVALID_OPERATION' || client.connectionState !== 'CONNECTED') {
-            console.warn('Cannot publish - connection not stable, keeping track locally');
+            // Connection not stable, keeping track locally
           } else {
             throw error;
           }

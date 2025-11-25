@@ -110,7 +110,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -129,7 +128,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -145,7 +143,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -172,7 +169,6 @@ class FirebaseAnalyticsHelper {
         this.sessionStartTime = null;
       }
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -189,7 +185,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -206,7 +201,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -227,7 +221,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -244,7 +237,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -259,7 +251,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -274,7 +265,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -290,7 +280,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -305,7 +294,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -320,7 +308,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -343,7 +330,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -368,7 +354,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -381,7 +366,6 @@ class FirebaseAnalyticsHelper {
     try {
       setUserProperties(this.analytics, { [key]: value });
     } catch (error) {
-      console.error('Analytics set user property error:', error);
     }
   }
 
@@ -398,7 +382,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -414,7 +397,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -431,7 +413,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -448,7 +429,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -465,7 +445,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -482,7 +461,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -499,7 +477,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -515,7 +492,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -531,7 +507,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -549,7 +524,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 
@@ -565,7 +539,6 @@ class FirebaseAnalyticsHelper {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Analytics tracking error:', error);
     }
   }
 }

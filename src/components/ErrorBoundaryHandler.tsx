@@ -9,22 +9,12 @@ export function ErrorBoundaryHandler() {
       // Prevent the default browser behavior
       event.preventDefault();
       
-      // Log to console in development
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Unhandled promise rejection:', event.reason);
-      }
-      
       // Silently handle in production
     };
 
     // Handle uncaught errors
     const handleError = (event: ErrorEvent) => {
       event.preventDefault();
-      
-      // Log to console in development
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Uncaught error:', event.error);
-      }
       
       // Silently handle error
     };

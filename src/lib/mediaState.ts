@@ -24,7 +24,6 @@ export function getPersistedCameraState(): boolean {
     const stored = sessionStorage.getItem(STORAGE_KEYS.CAMERA_STATE);
     return stored !== null ? stored === 'true' : DEFAULT_CAMERA_STATE;
   } catch (error) {
-    console.warn('Failed to read camera state from sessionStorage:', error);
     return DEFAULT_CAMERA_STATE;
   }
 }
@@ -39,7 +38,6 @@ export function getPersistedMicState(): boolean {
     const stored = sessionStorage.getItem(STORAGE_KEYS.MIC_STATE);
     return stored !== null ? stored === 'true' : DEFAULT_MIC_STATE;
   } catch (error) {
-    console.warn('Failed to read mic state from sessionStorage:', error);
     return DEFAULT_MIC_STATE;
   }
 }
@@ -54,7 +52,7 @@ export function persistCameraState(isOn: boolean): void {
     sessionStorage.setItem(STORAGE_KEYS.CAMERA_STATE, String(isOn));
     sessionStorage.setItem(STORAGE_KEYS.LAST_UPDATED, new Date().toISOString());
   } catch (error) {
-    console.warn('Failed to save camera state to sessionStorage:', error);
+    // Failed to save camera state
   }
 }
 
@@ -68,7 +66,7 @@ export function persistMicState(isOn: boolean): void {
     sessionStorage.setItem(STORAGE_KEYS.MIC_STATE, String(isOn));
     sessionStorage.setItem(STORAGE_KEYS.LAST_UPDATED, new Date().toISOString());
   } catch (error) {
-    console.warn('Failed to save mic state to sessionStorage:', error);
+    // Failed to save mic state
   }
 }
 
@@ -93,6 +91,6 @@ export function clearPersistedMediaStates(): void {
     sessionStorage.removeItem(STORAGE_KEYS.MIC_STATE);
     sessionStorage.removeItem(STORAGE_KEYS.LAST_UPDATED);
   } catch (error) {
-    console.warn('Failed to clear media states from sessionStorage:', error);
+    // Failed to clear media states
   }
 }

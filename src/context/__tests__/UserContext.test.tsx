@@ -88,15 +88,9 @@ describe('UserContext Module', () => {
     })
 
     it('should throw error when used outside provider', () => {
-      // Suppress console.error for this test
-      const originalError = console.error
-      console.error = jest.fn()
-
       expect(() => {
         renderHook(() => useUser())
       }).toThrow('useUser must be used within a UserProvider')
-
-      console.error = originalError
     })
   })
 
