@@ -17,6 +17,7 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
   const { onRemoteVideoReady, onRemoteUserLeft } = options;
 
   const rtcServiceRef = useRef<any>(null);
+  const isInitializingRef = useRef(false);
   
   // Use MediaStateContext for camera/mic state
   // - On page load/reload: Always starts OFF (context resets)
@@ -41,6 +42,7 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
   ) => {
     const initTimeout = setTimeout(() => {
       showError('Connection timeout. Please check your network.', ErrorCode.CONNECTION_TIMEOUT);
+      isInitializingRef.current = false;
     }, 15000); // 15 second timeout
 
     try {
@@ -49,6 +51,9 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
         clearTimeout(initTimeout);
         return;
       }
+      
+      // Set initialization flag to prevent cleanup during init
+      isInitializingRef.current = true;
 
       // Validate required environment variables
       if (!process.env.NEXT_PUBLIC_AGORA_APP_ID) {
@@ -69,7 +74,7 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
         showError('Invalid session data. Please try again.', ErrorCode.CHANNEL_JOIN_FAILED);
         throw new Error('Missing channel name from match data');
       }
-
+      
       // Track RTC connection start time
       const rtcConnectionStart = Date.now();
       
@@ -115,6 +120,12 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
         uid: typeof uid === 'number' ? uid.toString() : uid,
       }, isCameraOn, isMicOn);
 
+      // Check if service still exists (could be null if cleanup ran during join)
+      if (!rtcServiceRef.current) {
+        clearTimeout(initTimeout);
+        throw new Error('RTC service was cleaned up during initialization');
+      }
+      
       // Update device IDs after joining
       const devices = rtcServiceRef.current.getCurrentDevices();
       if (devices.cameraId) setCurrentCameraId(devices.cameraId);
@@ -132,15 +143,19 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
           try {
             rtcServiceRef.current.playLocalVideo(localVideoElementId);
           } catch (err) {
+            // Silent failure
           }
         }
       }
 
       setIsRTCInitialized(true);
       clearTimeout(initTimeout);
+      isInitializingRef.current = false;
     } catch (error) {
+      
       clearTimeout(initTimeout);
       setIsRTCInitialized(false);
+      isInitializingRef.current = false;
       
       // Clean up on error
       if (rtcServiceRef.current) {
@@ -165,7 +180,9 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
   
   const toggleCamera = useCallback(async () => {
     // Prevent concurrent toggle operations
-    if (isTogglingCameraRef.current) return;
+    if (isTogglingCameraRef.current) {
+      return;
+    }
     
     isTogglingCameraRef.current = true;
     const newState = !isCameraOn;
@@ -182,6 +199,7 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
         // Track analytics
         analytics.trackCameraToggle(newState, 'call');
       } catch (error) {
+        
         // Silent failure - user toggled off or device unavailable
         // Only show error if explicitly denied by user
         const errorStr = String(error);
@@ -240,7 +258,9 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
   
   const toggleMicrophone = useCallback(async () => {
     // Prevent concurrent toggle operations
-    if (isTogglingMicRef.current) return;
+    if (isTogglingMicRef.current) {
+      return;
+    }
     
     isTogglingMicRef.current = true;
     const newState = !isMicOn;
@@ -257,6 +277,7 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
         // Track analytics
         analytics.trackMicrophoneToggle(newState, 'call');
       } catch (error) {
+        
         // Silent failure - only show error for explicit permission denial
         const errorStr = String(error);
         if (errorStr.includes('NotAllowedError') || errorStr.includes('PermissionDenied')) {
@@ -303,7 +324,19 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
    * IMPORTANT: Camera/Mic states are preserved across sessions
    */
   const leaveRTC = useCallback(async () => {
-    if (!rtcServiceRef.current) return;
+    // If initialization is in progress, wait for it to complete or fail
+    if (isInitializingRef.current) {
+      // Wait up to 3 seconds for initialization to complete
+      const maxWait = 3000;
+      const startWait = Date.now();
+      while (isInitializingRef.current && Date.now() - startWait < maxWait) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+    
+    if (!rtcServiceRef.current) {
+      return;
+    }
 
     try {
       // Properly leave and cleanup tracks
@@ -327,7 +360,7 @@ export const useAgoraRTC = (options: UseAgoraRTCOptions = {}) => {
       // Reset only initialization state on error, keep camera/mic preferences
       setIsRTCInitialized(false);
     }
-  }, []);
+  }, [isRTCInitialized, isCameraOn, isMicOn]);
 
   /**
    * Switch camera device

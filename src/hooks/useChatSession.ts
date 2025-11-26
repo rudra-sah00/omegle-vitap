@@ -209,7 +209,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     setIsSearching(false);
     // Cancel search - new API doesn't require user data
     cancelSearch();
-  }, [cancelSearch]);
+  }, [cancelSearch, isSearching]);
 
   /**
    * End current session and cleanup - ensure both users leave channel
@@ -238,7 +238,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     await leaveRoom();
     
     isLeavingRef.current = false;
-  }, [leaveRTC, leaveRoom, clearMessages]);
+  }, [leaveRTC, leaveRoom, clearMessages, isInSession]);
 
   // Update ref whenever endSessionFinal changes
   useEffect(() => {
@@ -249,7 +249,15 @@ export const useChatSession = (options: UseChatSessionOptions) => {
    * Handle partner leaving - force cleanup for both users
    */
   const handlePartnerLeft = useCallback(async () => {
-    if (isLeavingRef.current || isFindingNextRef.current) return;
+    if (isLeavingRef.current || isFindingNextRef.current) {
+      return;
+    }
+    
+    // If RTC is not initialized yet but we have a match, partner left during initialization
+    // Give a small grace period to let initialization complete or fail gracefully
+    if (!isRTCInitialized && currentMatchRef.current && !isInSession) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
     
     // Get partner name from current match data
     const partnerName = currentMatchRef.current && 'partnerName' in currentMatchRef.current 
@@ -258,7 +266,7 @@ export const useChatSession = (options: UseChatSessionOptions) => {
     
     showInfo(`${partnerName} left`);
     await endSessionFinal();
-  }, [endSessionFinal]);
+  }, [endSessionFinal, isInSession, isRTCInitialized]);
 
   // Update ref whenever handlePartnerLeft changes
   useEffect(() => {

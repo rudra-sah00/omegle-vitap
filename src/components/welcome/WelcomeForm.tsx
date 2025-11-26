@@ -22,7 +22,7 @@ export const WelcomeForm = () => {
     const checkOnlineStatus = async () => {
       try {
         // Check backend status directly
-        const backendUrl = process.env.NEXT_PUBLIC_WS_URL;
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
         if (backendUrl) {
           const res = await fetch(`${backendUrl}/status`);
           const data = await res.json();
@@ -56,7 +56,7 @@ export const WelcomeForm = () => {
       setServiceMessage('');
 
       // Check backend status before navigating
-      const backendUrl = process.env.NEXT_PUBLIC_WS_URL;
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
       if (!backendUrl) {
         setServiceAvailable(false);
         setServiceMessage('Backend service not configured. Please contact support.');
