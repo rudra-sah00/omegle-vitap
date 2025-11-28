@@ -14,7 +14,7 @@
  * ```
  */
 
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { analytics } from '@/services/firebase';
 
 /**
@@ -49,30 +49,6 @@ const TOAST_CONFIG = {
   SUCCESS_DURATION: 3000,
   INFO_DURATION: 3000,
   WARNING_DURATION: 3500,
-} as const;
-
-/** Toast style presets */
-const TOAST_STYLES = {
-  base: {
-    padding: '12px 20px',
-    borderRadius: '8px',
-  },
-  error: {
-    background: '#ef4444',
-    color: '#fff',
-  },
-  success: {
-    background: '#10b981',
-    color: '#fff',
-  },
-  info: {
-    background: '#3b82f6',
-    color: '#fff',
-  },
-  warning: {
-    background: '#f59e0b',
-    color: '#fff',
-  },
 } as const;
 
 /**
@@ -155,15 +131,17 @@ class ToastManager {
     
     const toastId = toast.error(message, {
       duration: TOAST_CONFIG.ERROR_DURATION,
-      position: 'top-center',
-      style: { ...TOAST_STYLES.base, ...TOAST_STYLES.error },
     });
     
-    this.activeToastIds.add(toastId);
+    if (typeof toastId === 'string' || typeof toastId === 'number') {
+      this.activeToastIds.add(String(toastId));
+    }
     this.trackToast(message);
     
     setTimeout(() => {
-      this.activeToastIds.delete(toastId);
+      if (typeof toastId === 'string' || typeof toastId === 'number') {
+        this.activeToastIds.delete(String(toastId));
+      }
     }, TOAST_CONFIG.ERROR_DURATION);
   }
 
@@ -177,8 +155,6 @@ class ToastManager {
     
     toast.success(message, {
       duration: TOAST_CONFIG.SUCCESS_DURATION,
-      position: 'top-center',
-      style: { ...TOAST_STYLES.base, ...TOAST_STYLES.success },
     });
     
     this.trackToast(message);
@@ -192,11 +168,8 @@ class ToastManager {
     
     this.clearActiveToasts();
     
-    toast(message, {
+    toast.info(message, {
       duration: TOAST_CONFIG.INFO_DURATION,
-      position: 'top-center',
-      icon: 'ℹ️',
-      style: { ...TOAST_STYLES.base, ...TOAST_STYLES.info },
     });
     
     this.trackToast(message);
@@ -210,11 +183,8 @@ class ToastManager {
     
     this.clearActiveToasts();
     
-    toast(message, {
+    toast.warning(message, {
       duration: TOAST_CONFIG.WARNING_DURATION,
-      position: 'top-center',
-      icon: '⚠️',
-      style: { ...TOAST_STYLES.base, ...TOAST_STYLES.warning },
     });
     
     this.trackToast(message);

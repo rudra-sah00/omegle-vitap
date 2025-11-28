@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TypingIndicator } from './TypingIndicator'; 
 import { formatMessage } from '@/utils/messageFormatter';
+import { TextAnimate } from '@/components/ui/text-animate';
 import type { MessageData } from '@/hooks/useChat';
 
 interface ChatMessagesProps {
@@ -15,6 +16,8 @@ interface ChatMessagesProps {
 export const ChatMessages = ({ isConnected, isStrangerTyping = false, messages = [], partnerName }: ChatMessagesProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Track which message IDs have been animated (to not re-animate on re-render)
+  const [animatedIds, setAnimatedIds] = useState<Set<string>>(new Set());
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -22,6 +25,25 @@ export const ChatMessages = ({ isConnected, isStrangerTyping = false, messages =
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isStrangerTyping]);
+
+  // Mark messages as animated after they appear
+  useEffect(() => {
+    const newIds = messages
+      .filter(m => !animatedIds.has(m.id))
+      .map(m => m.id);
+    
+    if (newIds.length > 0) {
+      // Mark as animated after a short delay to let animation play
+      const timer = setTimeout(() => {
+        setAnimatedIds(prev => {
+          const next = new Set(prev);
+          newIds.forEach(id => next.add(id));
+          return next;
+        });
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [messages, animatedIds]);
 
   return (
     <div 
@@ -48,6 +70,10 @@ export const ChatMessages = ({ isConnected, isStrangerTyping = false, messages =
         <div className="space-y-2">
           {messages.map((message) => {
             const isYou = message.senderName === 'You';
+            const isNewMessage = !animatedIds.has(message.id);
+            // Check if message has URLs (links) - if so, skip animation
+            const hasLinks = /https?:\/\/|www\./i.test(message.text);
+            const shouldAnimate = !isYou && isNewMessage && !hasLinks;
             
             return (
               <div 
@@ -60,7 +86,21 @@ export const ChatMessages = ({ isConnected, isStrangerTyping = false, messages =
                   {isYou ? 'You:' : `${partnerName || 'Stranger'}:`}
                 </span>
                 <div className="flex-1 text-sm text-slate-800 break-words overflow-wrap-anywhere whitespace-pre-wrap min-w-0">
-                  {formatMessage(message.text)}
+                  {shouldAnimate ? (
+                    <TextAnimate 
+                      animation="slideLeft" 
+                      by="character"
+                      duration={0.5}
+                      startOnView={false}
+                      once={true}
+                      className="inline"
+                      as="span"
+                    >
+                      {message.text}
+                    </TextAnimate>
+                  ) : (
+                    formatMessage(message.text)
+                  )}
                 </div>
               </div>
             );

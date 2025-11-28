@@ -62,9 +62,9 @@ export const LocalScreenShareView: FC<LocalScreenShareViewProps> = ({
         speedScale={1}
       />
 
-      {/* Screen share info centered */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 flex flex-col items-center shadow-lg">
+      {/* Screen share info centered - pointer-events-none to allow clicks on buttons */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 flex flex-col items-center shadow-lg pointer-events-auto">
           <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
             <svg
               className="w-8 h-8 text-green-600"
@@ -87,14 +87,14 @@ export const LocalScreenShareView: FC<LocalScreenShareViewProps> = ({
 
       {/* Camera PiP when screen sharing - always render element, hide if camera off */}
       <div
-        className={`absolute bottom-20 right-4 w-36 h-28 rounded-lg overflow-hidden border-2 border-white shadow-xl z-20 transition-opacity bg-video-blue-icon-bg ${
+        className={`absolute bottom-24 right-4 w-36 h-28 rounded-lg overflow-hidden border-2 border-white shadow-xl z-20 transition-opacity bg-video-blue-icon-bg ${
           isCameraOn ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
         <div id="local-video" className="w-full h-full" />
       </div>
 
-      {/* Control Buttons */}
+      {/* Control Buttons - z-30 to appear above PiP and centered info */}
       <RoomControls
         isMatched={isMatched}
         isSearching={isSearching}

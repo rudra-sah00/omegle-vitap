@@ -3,4 +3,16 @@
  */
 
 export { initializeFirebase, getFirebaseApp, getFirebaseAnalytics } from './config';
-export { analytics, AnalyticsEvents } from './analytics.service';
+
+// Analytics exports from modular structure
+export { analytics, AnalyticsEvents } from './analytics';
+export type {
+  DurationBucket,
+  MatchQuality,
+  NetworkQuality,
+  ErrorType,
+  MatchEndReason,
+  DeviceType,
+  ReconnectionType,
+  MediaContext,
+} from './analytics';

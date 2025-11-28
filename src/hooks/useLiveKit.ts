@@ -8,7 +8,7 @@
  */
 
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { showError, showWarning, parseMediaError, ErrorCode } from '@/lib/toast';
+import { showError, showWarning, showSuccess, parseMediaError, ErrorCode } from '@/lib/toast';
 import { useMediaState } from './useMediaState';
 import { analytics } from '@/services/firebase';
 import { RTC_INIT_TIMEOUT, DEVICE_UPDATE_INTERVAL, DOM_IDS } from '@/constants';
@@ -253,6 +253,7 @@ export function useLiveKit(options: UseLiveKitOptions = {}) {
         const devices = rtcServiceRef.current.getCurrentDevices();
         if (devices.cameraId) setCurrentCameraId(devices.cameraId);
         analytics.trackCameraToggle(newState, 'call');
+        showSuccess(newState ? 'Camera on' : 'Camera off');
       } catch (error) {
         const errorStr = String(error);
         if (errorStr.includes('NotAllowedError') || errorStr.includes('PermissionDenied')) {
@@ -315,6 +316,7 @@ export function useLiveKit(options: UseLiveKitOptions = {}) {
         const devices = rtcServiceRef.current.getCurrentDevices();
         if (devices.micId) setCurrentMicId(devices.micId);
         analytics.trackMicrophoneToggle(newState, 'call');
+        showSuccess(newState ? 'Microphone on' : 'Microphone off');
       } catch (error) {
         const errorStr = String(error);
         if (errorStr.includes('NotAllowedError') || errorStr.includes('PermissionDenied')) {
@@ -429,6 +431,11 @@ export function useLiveKit(options: UseLiveKitOptions = {}) {
     try {
       const newState = await rtcServiceRef.current.toggleScreenShare();
       setIsScreenSharing(newState);
+      if (newState) {
+        showSuccess('Screen sharing started');
+      } else {
+        showSuccess('Screen sharing stopped');
+      }
     } catch (error) {
       const errorStr = String(error);
       if (errorStr.includes('Permission denied') || errorStr.includes('NotAllowedError')) {

@@ -1,11 +1,11 @@
 /**
  * Toast Provider
- * Provides toast notifications using react-hot-toast
+ * Provides toast notifications using sonner
  */
 
 'use client';
 
-import { Toaster } from 'react-hot-toast';
+import { Toaster } from '@/components/ui/sonner';
 import type { ReactNode } from 'react';
 
 interface ToastProviderProps {
@@ -17,35 +17,9 @@ export function ToastProvider({ children }: ToastProviderProps) {
     <>
       <Toaster
         position="top-center"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            borderRadius: '12px',
-            padding: '12px 20px',
-            fontSize: '14px',
-            fontWeight: '500',
-          },
-          success: {
-            style: {
-              background: '#10b981',
-              color: '#fff',
-            },
-            iconTheme: {
-              primary: '#fff',
-              secondary: '#10b981',
-            },
-          },
-          error: {
-            style: {
-              background: '#ef4444',
-              color: '#fff',
-            },
-            iconTheme: {
-              primary: '#fff',
-              secondary: '#ef4444',
-            },
-          },
-        }}
+        duration={4000}
+        closeButton={false}
+        richColors={false}
       />
       {children}
     </>
