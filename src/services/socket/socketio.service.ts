@@ -13,30 +13,54 @@ import type {
   ISocketService,
 } from './types';
 
-const WS_URL = process.env.NEXT_PUBLIC_BACKEND_URL!;
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY!;
+const WS_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY || '';
 
+/** Singleton instance */
 let socketIOInstance: SocketIOService | null = null;
-let isCreating = false;
+
+/** Lock to prevent race conditions during creation */
+let creationLock: Promise<SocketIOService> | null = null;
 
 /**
  * Get singleton instance of SocketIOService
- * Prevents multiple instances during React StrictMode double-mounting
+ * Uses a promise-based lock to prevent race conditions during React StrictMode
  */
 export function getSocketIOService(): SocketIOService {
-  if (isCreating) {
-    const start = Date.now();
-    while (!socketIOInstance && Date.now() - start < 100) {
-      // Busy wait for max 100ms
-    }
+  // Return existing instance immediately
+  if (socketIOInstance) {
+    return socketIOInstance;
   }
   
-  if (!socketIOInstance) {
-    isCreating = true;
-    socketIOInstance = new SocketIOService(WS_URL, API_KEY);
-    isCreating = false;
-  }
+  // Create new instance (synchronous for compatibility)
+  socketIOInstance = new SocketIOService(WS_URL, API_KEY);
   return socketIOInstance;
+}
+
+/**
+ * Get singleton instance asynchronously (preferred for new code)
+ * Safely handles concurrent access
+ */
+export async function getSocketIOServiceAsync(): Promise<SocketIOService> {
+  if (socketIOInstance) {
+    return socketIOInstance;
+  }
+
+  // If creation is in progress, wait for it
+  if (creationLock) {
+    return creationLock;
+  }
+
+  // Create with lock to prevent race conditions
+  creationLock = Promise.resolve().then(() => {
+    if (!socketIOInstance) {
+      socketIOInstance = new SocketIOService(WS_URL, API_KEY);
+    }
+    creationLock = null;
+    return socketIOInstance;
+  });
+
+  return creationLock;
 }
 
 /**
@@ -63,9 +87,11 @@ export class SocketIOService implements ISocketService {
   private closeHandlers: Set<CloseHandler> = new Set();
   private openHandlers: Set<OpenHandler> = new Set();
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 3;
+  private readonly maxReconnectAttempts = 5;
+  private readonly reconnectDelays = [1000, 2000, 4000, 8000, 16000]; // Exponential backoff
   private isIntentionalClose = false;
   private isConnecting = false;
+  private reconnectTimer: NodeJS.Timeout | null = null;
 
   constructor(url: string, apiKey: string) {
     this.url = url;
@@ -73,10 +99,18 @@ export class SocketIOService implements ISocketService {
   }
 
   /**
-   * Establish WebSocket connection
+   * Establish WebSocket connection with automatic reconnection
    */
   connect(): void {
     if (this.socket?.connected || this.isConnecting) {
+      return;
+    }
+
+    // Validate configuration
+    if (!this.url) {
+      this.errorHandlers.forEach(handler => 
+        handler(new Error('Backend URL not configured. Check NEXT_PUBLIC_BACKEND_URL.'))
+      );
       return;
     }
 
@@ -87,7 +121,10 @@ export class SocketIOService implements ISocketService {
       this.socket = io(this.url, {
         transports: ['websocket', 'polling'],
         auth: { apiKey: this.apiKey },
-        reconnection: false,
+        reconnection: true,
+        reconnectionAttempts: this.maxReconnectAttempts,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 16000,
         autoConnect: false,
         timeout: 10000,
         closeOnBeforeunload: false,
@@ -98,22 +135,33 @@ export class SocketIOService implements ISocketService {
       this.socket.on('connect', () => {
         this.reconnectAttempts = 0;
         this.isConnecting = false;
+        this.clearReconnectTimer();
         this.openHandlers.forEach(handler => handler());
       });
 
-      this.socket.on('disconnect', () => {
+      this.socket.on('disconnect', (reason) => {
         this.isConnecting = false;
         if (!this.isIntentionalClose) {
           this.closeHandlers.forEach(handler => handler());
+          // Attempt manual reconnection for certain disconnect reasons
+          if (reason === 'io server disconnect' || reason === 'transport close') {
+            this.scheduleReconnect();
+          }
         }
       });
 
       this.socket.on('connect_error', (error) => {
         this.reconnectAttempts++;
         this.isConnecting = false;
-        this.errorHandlers.forEach(handler => 
-          handler(new Error(`Connection failed: ${error.message}`))
-        );
+        
+        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+          this.errorHandlers.forEach(handler => 
+            handler(new Error(`Connection failed after ${this.maxReconnectAttempts} attempts: ${error.message}`))
+          );
+        } else {
+          // Schedule reconnection
+          this.scheduleReconnect();
+        }
       });
 
       this.socket.onAny((eventName: string, ...args: unknown[]) => {
@@ -129,10 +177,40 @@ export class SocketIOService implements ISocketService {
         this.messageHandlers.forEach(handler => handler(message));
       });
 
-    } catch {
+    } catch (error) {
+      this.isConnecting = false;
       this.errorHandlers.forEach(handler => 
-        handler(new Error('Unable to connect to server'))
+        handler(new Error(`Unable to connect to server: ${error instanceof Error ? error.message : 'Unknown error'}`))
       );
+    }
+  }
+
+  /**
+   * Schedule a reconnection attempt with exponential backoff
+   */
+  private scheduleReconnect(): void {
+    if (this.isIntentionalClose || this.reconnectAttempts >= this.maxReconnectAttempts) {
+      return;
+    }
+
+    this.clearReconnectTimer();
+    
+    const delay = this.reconnectDelays[Math.min(this.reconnectAttempts, this.reconnectDelays.length - 1)];
+    
+    this.reconnectTimer = setTimeout(() => {
+      if (!this.isIntentionalClose && !this.socket?.connected) {
+        this.socket?.connect();
+      }
+    }, delay);
+  }
+
+  /**
+   * Clear any pending reconnection timer
+   */
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
     }
   }
 
@@ -142,6 +220,8 @@ export class SocketIOService implements ISocketService {
   disconnect(): void {
     this.isIntentionalClose = true;
     this.isConnecting = false;
+    this.clearReconnectTimer();
+    this.reconnectAttempts = 0;
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;

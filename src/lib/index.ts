@@ -18,6 +18,7 @@ export {
   showInfo, 
   showWarning, 
   parseMediaError,
+  resetToastManager,
   ErrorCode 
 } from './toast';
 

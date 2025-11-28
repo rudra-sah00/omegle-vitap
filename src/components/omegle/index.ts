@@ -14,3 +14,7 @@ export * from './video';
 
 // Feedback (loading, errors, effects)
 export * from './feedback';
+
+// Screen sharing components
+export { RemoteScreenShareOverlay } from './RemoteScreenShareOverlay';
+export { LocalScreenShareView } from './LocalScreenShareView';

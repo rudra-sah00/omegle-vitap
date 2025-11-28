@@ -94,21 +94,21 @@ export default function PrivacyPage() {
           </section>
 
           <section className="mb-12">
-            <h2 className="text-2xl font-bold mb-4">3. Cookies</h2>
+            <h2 className="text-2xl font-bold mb-4">4. Cookies</h2>
             <p className="text-slate-600 leading-relaxed">
               We use cookies to store information about your preferences and to record user-specific information on visits to pages. You can choose to disable cookies through your individual browser options.
             </p>
           </section>
 
           <section className="mb-12">
-            <h2 className="text-2xl font-bold mb-4">4. Data Security</h2>
+            <h2 className="text-2xl font-bold mb-4">5. Data Security</h2>
             <p className="text-slate-600 leading-relaxed">
               The security of your Personal Information is important to us, but remember that no method of transmission over the Internet, or method of electronic storage, is 100% secure. While we strive to use commercially acceptable means to protect your Personal Information, we cannot guarantee its absolute security.
             </p>
           </section>
 
           <section className="mb-12">
-            <h2 className="text-2xl font-bold mb-4">5. Third-Party Links</h2>
+            <h2 className="text-2xl font-bold mb-4">6. Third-Party Links</h2>
             <p className="text-slate-600 leading-relaxed">
               Our Service may contain links to external sites that are not operated by us. If you click on a third-party link, you will be directed to that third party's site. We strongly advise you to review the Privacy Policy and terms and conditions of every site you visit.
             </p>

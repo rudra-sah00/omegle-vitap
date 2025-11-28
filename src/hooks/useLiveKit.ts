@@ -9,8 +9,25 @@ import { useMediaState } from './useMediaState';
 import { analytics } from '@/services/firebase';
 import { RTC_INIT_TIMEOUT, MESSAGE_PENDING_CLEAR_DELAY, DEVICE_UPDATE_INTERVAL } from '@/constants';
 import type { MatchDataMatched } from '@/types/matchmaking';
-import type { RemoteParticipant, ConnectionQuality } from 'livekit-client';
+import { ConnectionQuality, type RemoteParticipant } from 'livekit-client';
 import type { NetworkQualityLevel } from '@/services/livekit';
+
+/**
+ * Convert ConnectionQuality enum to NetworkQualityLevel string
+ * This is a local utility to avoid dynamic imports in callbacks
+ */
+function mapConnectionQuality(quality: ConnectionQuality): NetworkQualityLevel {
+  switch (quality) {
+    case ConnectionQuality.Excellent:
+      return 'excellent';
+    case ConnectionQuality.Good:
+      return 'good';
+    case ConnectionQuality.Poor:
+      return 'poor';
+    default:
+      return 'unknown';
+  }
+}
 
 interface UseLiveKitOptions {
   onRemoteVideoReady?: (participantId: string) => void;
@@ -110,8 +127,8 @@ export function useLiveKit(options: UseLiveKitOptions = {}) {
       });
 
       rtcServiceRef.current.setOnConnectionQualityChanged((quality: ConnectionQuality, participant: RemoteParticipant | null) => {
-        const { LiveKitService } = require('@/services/livekit');
-        const qualityLevel = LiveKitService.convertQuality(quality);
+        // Use the local mapping function
+        const qualityLevel = mapConnectionQuality(quality);
         
         const isLocalParticipant = participant === null || 
           participant.identity === rtcServiceRef.current?.room?.localParticipant?.identity;

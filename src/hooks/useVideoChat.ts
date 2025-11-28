@@ -299,25 +299,35 @@ export function useVideoChat(options: UseVideoChatOptions) {
     }
   }, [leaveRoom, leaveRTC, join, clearMessages]);
 
+  // Store cleanup functions in refs to avoid stale closure issues
+  const clearMessagesRef = useRef(clearMessages);
+  const leaveRTCRef = useRef(leaveRTC);
+  const leaveRoomRef = useRef(leaveRoom);
+  
+  // Keep refs up to date
   useEffect(() => {
-    const cleanupRef = { cancelled: false };
-    
+    clearMessagesRef.current = clearMessages;
+    leaveRTCRef.current = leaveRTC;
+    leaveRoomRef.current = leaveRoom;
+  }, [clearMessages, leaveRTC, leaveRoom]);
+
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
-      cleanupRef.cancelled = true;
-      
-      (async () => {
+      // Use refs to get latest function references
+      const cleanup = async () => {
         try {
-          clearMessages();
-          await leaveRTC();
-          if (!cleanupRef.cancelled) {
-            await leaveRoom();
-          }
+          clearMessagesRef.current();
+          await leaveRTCRef.current();
+          await leaveRoomRef.current();
         } catch {
           // Silently handle cleanup errors
         }
-      })();
+      };
+      
+      cleanup();
     };
-  }, []);
+  }, []); // Empty deps is intentional - cleanup should only run on unmount
 
   return {
     connectionState,

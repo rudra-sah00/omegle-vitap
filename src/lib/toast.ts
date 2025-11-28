@@ -1,5 +1,6 @@
 /**
  * Toast Notification Utilities
+ * Centralized toast management with deduplication and error tracking
  */
 
 import toast from 'react-hot-toast';
@@ -21,127 +22,194 @@ export enum ErrorCode {
   MESSAGE_SERVICE_UNAVAILABLE = 'E302',
 }
 
-let activeToastIds = new Set<string>();
-let lastToastMessage = '';
-let lastToastTime = 0;
+/** Toast configuration */
+const TOAST_CONFIG = {
+  DEDUPE_WINDOW_MS: 3000,
+  ERROR_DURATION: 4000,
+  SUCCESS_DURATION: 3000,
+  INFO_DURATION: 3000,
+  WARNING_DURATION: 3500,
+} as const;
+
+/** Toast style presets */
+const TOAST_STYLES = {
+  base: {
+    padding: '12px 20px',
+    borderRadius: '8px',
+  },
+  error: {
+    background: '#ef4444',
+    color: '#fff',
+  },
+  success: {
+    background: '#10b981',
+    color: '#fff',
+  },
+  info: {
+    background: '#3b82f6',
+    color: '#fff',
+  },
+  warning: {
+    background: '#f59e0b',
+    color: '#fff',
+  },
+} as const;
+
+/**
+ * Toast Manager Class
+ * Encapsulates toast state for better testability and control
+ */
+class ToastManager {
+  private activeToastIds = new Set<string>();
+  private lastToastMessage = '';
+  private lastToastTime = 0;
+
+  /**
+   * Check if toast should be deduplicated
+   */
+  private shouldDedupe(message: string): boolean {
+    const now = Date.now();
+    return message === this.lastToastMessage && 
+           now - this.lastToastTime < TOAST_CONFIG.DEDUPE_WINDOW_MS;
+  }
+
+  /**
+   * Update last toast tracking
+   */
+  private trackToast(message: string): void {
+    this.lastToastMessage = message;
+    this.lastToastTime = Date.now();
+  }
+
+  /**
+   * Clear all active toasts
+   */
+  private clearActiveToasts(): void {
+    toast.dismiss();
+    this.activeToastIds.clear();
+  }
+
+  /**
+   * Show error toast
+   */
+  error(message: string, _code?: ErrorCode): void {
+    if (this.shouldDedupe(message)) return;
+    
+    this.clearActiveToasts();
+    
+    const toastId = toast.error(message, {
+      duration: TOAST_CONFIG.ERROR_DURATION,
+      position: 'top-center',
+      style: { ...TOAST_STYLES.base, ...TOAST_STYLES.error },
+    });
+    
+    this.activeToastIds.add(toastId);
+    this.trackToast(message);
+    
+    setTimeout(() => {
+      this.activeToastIds.delete(toastId);
+    }, TOAST_CONFIG.ERROR_DURATION);
+  }
+
+  /**
+   * Show success toast
+   */
+  success(message: string): void {
+    if (this.shouldDedupe(message)) return;
+    
+    this.clearActiveToasts();
+    
+    toast.success(message, {
+      duration: TOAST_CONFIG.SUCCESS_DURATION,
+      position: 'top-center',
+      style: { ...TOAST_STYLES.base, ...TOAST_STYLES.success },
+    });
+    
+    this.trackToast(message);
+  }
+
+  /**
+   * Show info toast
+   */
+  info(message: string): void {
+    if (this.shouldDedupe(message)) return;
+    
+    this.clearActiveToasts();
+    
+    toast(message, {
+      duration: TOAST_CONFIG.INFO_DURATION,
+      position: 'top-center',
+      icon: 'ℹ️',
+      style: { ...TOAST_STYLES.base, ...TOAST_STYLES.info },
+    });
+    
+    this.trackToast(message);
+  }
+
+  /**
+   * Show warning toast
+   */
+  warning(message: string): void {
+    if (this.shouldDedupe(message)) return;
+    
+    this.clearActiveToasts();
+    
+    toast(message, {
+      duration: TOAST_CONFIG.WARNING_DURATION,
+      position: 'top-center',
+      icon: '⚠️',
+      style: { ...TOAST_STYLES.base, ...TOAST_STYLES.warning },
+    });
+    
+    this.trackToast(message);
+  }
+
+  /**
+   * Reset manager state (useful for testing)
+   */
+  reset(): void {
+    this.activeToastIds.clear();
+    this.lastToastMessage = '';
+    this.lastToastTime = 0;
+  }
+}
+
+// Singleton instance
+const toastManager = new ToastManager();
 
 /**
  * Show error toast
  */
-export function showError(message: string, code?: ErrorCode) {
-  const now = Date.now();
-  
-  if (message === lastToastMessage && now - lastToastTime < 3000) {
-    return;
-  }
-  
-  toast.dismiss();
-  activeToastIds.clear();
-  
-  const toastId = toast.error(message, {
-    duration: 4000,
-    position: 'top-center',
-    style: {
-      background: '#ef4444',
-      color: '#fff',
-      padding: '12px 20px',
-      borderRadius: '8px',
-    },
-  });
-  
-  activeToastIds.add(toastId);
-  lastToastMessage = message;
-  lastToastTime = now;
-  
-  setTimeout(() => {
-    activeToastIds.delete(toastId);
-  }, 4000);
+export function showError(message: string, code?: ErrorCode): void {
+  toastManager.error(message, code);
 }
 
 /**
  * Show success toast
  */
-export function showSuccess(message: string) {
-  const now = Date.now();
-  
-  if (message === lastToastMessage && now - lastToastTime < 3000) {
-    return;
-  }
-  
-  toast.dismiss();
-  activeToastIds.clear();
-  
-  toast.success(message, {
-    duration: 3000,
-    position: 'top-center',
-    style: {
-      background: '#10b981',
-      color: '#fff',
-      padding: '12px 20px',
-      borderRadius: '8px',
-    },
-  });
-  
-  lastToastMessage = message;
-  lastToastTime = now;
+export function showSuccess(message: string): void {
+  toastManager.success(message);
 }
 
 /**
  * Show info toast
  */
-export function showInfo(message: string) {
-  const now = Date.now();
-  
-  if (message === lastToastMessage && now - lastToastTime < 3000) {
-    return;
-  }
-  
-  toast.dismiss();
-  activeToastIds.clear();
-  
-  toast(message, {
-    duration: 3000,
-    position: 'top-center',
-    icon: 'ℹ️',
-    style: {
-      background: '#3b82f6',
-      color: '#fff',
-      padding: '12px 20px',
-      borderRadius: '8px',
-    },
-  });
-  
-  lastToastMessage = message;
-  lastToastTime = now;
+export function showInfo(message: string): void {
+  toastManager.info(message);
 }
 
 /**
  * Show warning toast
  */
-export function showWarning(message: string) {
-  const now = Date.now();
-  
-  if (message === lastToastMessage && now - lastToastTime < 3000) {
-    return;
-  }
-  
-  toast.dismiss();
-  activeToastIds.clear();
-  
-  toast(message, {
-    duration: 3500,
-    position: 'top-center',
-    icon: '⚠️',
-    style: {
-      background: '#f59e0b',
-      color: '#fff',
-      padding: '12px 20px',
-      borderRadius: '8px',
-    },
-  });
-  
-  lastToastMessage = message;
-  lastToastTime = now;
+export function showWarning(message: string): void {
+  toastManager.warning(message);
+}
+
+/**
+ * Reset toast manager (for testing)
+ */
+export function resetToastManager(): void {
+  toastManager.reset();
 }
 
 /**
