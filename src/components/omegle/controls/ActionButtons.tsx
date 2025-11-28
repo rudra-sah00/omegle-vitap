@@ -103,21 +103,23 @@ interface ScreenShareButtonProps extends ActionButtonProps {
 
 /**
  * Screen share toggle button
+ * Styled to match camera/mic toggle buttons
+ * - Green when sharing (active state)
+ * - Slate when not sharing (inactive state)  
  */
 export const ScreenShareButton = memo(({ onClick, isSharing, disabled }: ScreenShareButtonProps) => (
-  <Button
+  <button
     onClick={onClick}
-    isIconOnly
-    radius="full"
-    isDisabled={disabled}
-    className={`w-12 h-12 min-w-12 text-white ${
-      isSharing ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-600 hover:bg-gray-700'
+    disabled={disabled}
+    className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors ${
+      isSharing ? 'bg-red-500 hover:bg-red-600' : 'bg-slate-600 hover:bg-slate-700'
     }`}
     title={isSharing ? 'Stop sharing screen' : 'Share screen'}
     aria-label={isSharing ? 'Stop sharing your screen' : 'Share your screen'}
+    aria-pressed={isSharing}
   >
     {isSharing ? <ScreenShareOffIcon /> : <ScreenShareIcon />}
-  </Button>
+  </button>
 ));
 ScreenShareButton.displayName = 'ScreenShareButton';
 

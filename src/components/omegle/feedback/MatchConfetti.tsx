@@ -1,82 +1,118 @@
 'use client';
 
-import { useEffect, useRef, memo, useCallback } from 'react';
+import { useEffect, useRef, memo, useCallback, useState } from 'react';
 import confetti from 'canvas-confetti';
 
 interface MatchConfettiProps {
   isActive: boolean;
 }
 
+/**
+ * Optimized confetti for match celebration
+ * 
+ * Performance optimizations:
+ * - Detects low-end devices and reduces particle count
+ * - Uses simpler shapes on low-end devices
+ * - Reduces number of bursts
+ * - Uses requestIdleCallback for non-critical animations
+ * - Respects prefers-reduced-motion
+ */
 const MatchConfettiComponent = ({ isActive }: MatchConfettiProps) => {
   const wasActiveRef = useRef(false);
+  const [isLowEnd, setIsLowEnd] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  // Detect device capabilities on mount
+  useEffect(() => {
+    // Check for reduced motion preference
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(motionQuery.matches);
+    
+    // Detect low-end device heuristics
+    const detectLowEnd = () => {
+      // Check hardware concurrency (CPU cores)
+      const cores = navigator.hardwareConcurrency || 4;
+      
+      // Check device memory (if available)
+      const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 8;
+      
+      // Check if mobile
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      // Consider low-end if: few cores, low memory, or older mobile
+      return cores <= 2 || memory <= 2 || (isMobile && cores <= 4);
+    };
+    
+    setIsLowEnd(detectLowEnd());
+  }, []);
 
   const fireConfetti = useCallback(() => {
-    const scalar = 2;
-    const triangle = confetti.shapeFromPath({
-      path: "M0 10 L5 0 L10 10z",
-    });
-    const square = confetti.shapeFromPath({
-      path: "M0 0 L10 0 L10 10 L0 10 Z",
-    });
-    const heart = confetti.shapeFromPath({
-      path: "M5 3 C5 0 0 0 0 3 C0 6 5 9 5 9 C5 9 10 6 10 3 C10 0 5 0 5 3 Z",
-    });
-    const star = confetti.shapeFromPath({
-      path: "M5 0 L6 3 L10 4 L7 6 L8 10 L5 8 L2 10 L3 6 L0 4 L4 3 Z",
-    });
+    // Skip confetti entirely if user prefers reduced motion
+    if (prefersReducedMotion) return;
 
-    const defaults = {
-      spread: 360,
-      ticks: 100,
-      gravity: 0.8,
-      decay: 0.94,
-      startVelocity: 30,
-      colors: ['#ff6b9d', '#c084fc', '#60a5fa', '#34d399', '#fbbf24', '#f472b6', '#a78bfa'],
-      shapes: [triangle, square, heart, star],
-      scalar,
+    // Optimized settings based on device capability
+    const particleMultiplier = isLowEnd ? 0.4 : 1;
+    const burstCount = isLowEnd ? 1 : 3;
+    
+    // Simple shapes for better performance (avoid custom paths on low-end)
+    const shapes: confetti.Shape[] = isLowEnd 
+      ? ['circle', 'square'] 
+      : (() => {
+          const triangle = confetti.shapeFromPath({ path: "M0 10 L5 0 L10 10z" });
+          const square = confetti.shapeFromPath({ path: "M0 0 L10 0 L10 10 L0 10 Z" });
+          return [triangle, square, 'circle'];
+        })();
+
+    const defaults: confetti.Options = {
+      spread: isLowEnd ? 180 : 360,
+      ticks: isLowEnd ? 50 : 80,
+      gravity: 1,
+      decay: 0.92,
+      startVelocity: isLowEnd ? 20 : 25,
+      colors: ['#ff6b9d', '#c084fc', '#60a5fa', '#34d399', '#fbbf24'],
+      shapes,
+      scalar: isLowEnd ? 1.5 : 2,
+      disableForReducedMotion: true,
     };
 
     const shoot = () => {
-      // Center burst
+      // Single center burst for low-end, multiple for high-end
       confetti({
         ...defaults,
-        particleCount: 40,
+        particleCount: Math.floor(30 * particleMultiplier),
         origin: { x: 0.5, y: 0.5 },
       });
 
-      // Left side
-      confetti({
-        ...defaults,
-        particleCount: 25,
-        origin: { x: 0.2, y: 0.6 },
-        angle: 60,
-        spread: 80,
-      });
+      // Additional side bursts only on capable devices
+      if (!isLowEnd) {
+        confetti({
+          ...defaults,
+          particleCount: 15,
+          origin: { x: 0.25, y: 0.6 },
+          angle: 60,
+          spread: 60,
+        });
 
-      // Right side
-      confetti({
-        ...defaults,
-        particleCount: 25,
-        origin: { x: 0.8, y: 0.6 },
-        angle: 120,
-        spread: 80,
-      });
-
-      // Small circles
-      confetti({
-        ...defaults,
-        particleCount: 20,
-        scalar: scalar / 2,
-        shapes: ['circle'],
-        origin: { x: 0.5, y: 0.5 },
-      });
+        confetti({
+          ...defaults,
+          particleCount: 15,
+          origin: { x: 0.75, y: 0.6 },
+          angle: 120,
+          spread: 60,
+        });
+      }
     };
 
-    // Fire confetti in sequence
+    // Fire confetti - fewer bursts on low-end
     shoot();
-    setTimeout(shoot, 150);
-    setTimeout(shoot, 300);
-  }, []);
+    
+    if (burstCount > 1) {
+      setTimeout(shoot, 200);
+    }
+    if (burstCount > 2) {
+      setTimeout(shoot, 400);
+    }
+  }, [isLowEnd, prefersReducedMotion]);
 
   useEffect(() => {
     const wasActive = wasActiveRef.current;
@@ -84,22 +120,26 @@ const MatchConfettiComponent = ({ isActive }: MatchConfettiProps) => {
 
     // Rising edge detection: fire confetti when isActive changes from false to true
     if (isActive && !wasActive) {
-      // Schedule in next microtask to avoid synchronous calls
-      queueMicrotask(fireConfetti);
+      // Use requestIdleCallback on low-end devices for better main thread performance
+      if (isLowEnd && 'requestIdleCallback' in window) {
+        (window as Window & { requestIdleCallback: (cb: () => void) => void }).requestIdleCallback(fireConfetti);
+      } else {
+        // Use microtask for capable devices
+        queueMicrotask(fireConfetti);
+      }
     }
-  }, [isActive, fireConfetti]);
+  }, [isActive, fireConfetti, isLowEnd]);
 
-  // Show "MATCHED!" text when active
+  // Show "MATCHED!" text when active (CSS animation is lightweight)
   if (!isActive) return null;
 
   return (
     <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
       <div className="animate-match-popup">
         <div 
-          className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 
-                     drop-shadow-[0_0_20px_rgba(168,85,247,0.5)]"
+          className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500"
           style={{
-            textShadow: '0 0 40px rgba(168, 85, 247, 0.6), 0 0 80px rgba(168, 85, 247, 0.4)',
+            textShadow: prefersReducedMotion ? 'none' : '0 0 30px rgba(168, 85, 247, 0.5)',
           }}
         >
           🎉 MATCHED! 🎉
@@ -109,14 +149,14 @@ const MatchConfettiComponent = ({ isActive }: MatchConfettiProps) => {
       <style jsx>{`
         @keyframes match-popup {
           0% {
-            transform: scale(0.3);
+            transform: scale(0.5);
             opacity: 0;
           }
-          30% {
-            transform: scale(1.2);
+          40% {
+            transform: scale(1.1);
             opacity: 1;
           }
-          60% {
+          70% {
             transform: scale(1);
             opacity: 1;
           }
@@ -127,7 +167,14 @@ const MatchConfettiComponent = ({ isActive }: MatchConfettiProps) => {
         }
         
         :global(.animate-match-popup) {
-          animation: match-popup 1.5s ease-out forwards;
+          animation: match-popup 1.2s ease-out forwards;
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+          :global(.animate-match-popup) {
+            animation: none;
+            opacity: 1;
+          }
         }
       `}</style>
     </div>

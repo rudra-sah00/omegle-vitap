@@ -73,6 +73,9 @@ export function useLiveKit(options: UseLiveKitOptions = {}) {
   
   const [localNetworkQuality, setLocalNetworkQuality] = useState<NetworkQualityLevel>('unknown');
   const [remoteNetworkQuality, setRemoteNetworkQuality] = useState<NetworkQualityLevel>('unknown');
+  
+  // Track remote screen share state for proper video element targeting
+  const isRemoteScreenSharingRef = useRef(false);
 
   const initializeRTC = useCallback(async (
     matchData: MatchDataMatched,
@@ -121,10 +124,31 @@ export function useLiveKit(options: UseLiveKitOptions = {}) {
       rtcServiceRef.current.setOnUserPublished((participant: RemoteParticipant, mediaType: 'audio' | 'video') => {
         if (mediaType === 'video') {
           setIsRemoteCameraOn(true);
-          const remoteElement = document.getElementById(remoteVideoElementId);
-          if (remoteElement) {
-            rtcServiceRef.current?.playRemoteVideo(participant, remoteVideoElementId);
-            onRemoteVideoReady?.(participant.identity);
+          
+          // Determine which element to attach to based on screen share state
+          // If remote is screen sharing, attach camera to PiP element
+          const attachVideo = () => {
+            const targetElementId = isRemoteScreenSharingRef.current 
+              ? DOM_IDS.REMOTE_VIDEO_PIP 
+              : remoteVideoElementId;
+            
+            const remoteElement = document.getElementById(targetElementId);
+            if (remoteElement) {
+              if (isRemoteScreenSharingRef.current) {
+                rtcServiceRef.current?.playRemoteCameraToPip(participant, DOM_IDS.REMOTE_VIDEO_PIP);
+              } else {
+                rtcServiceRef.current?.playRemoteVideo(participant, remoteVideoElementId);
+              }
+              onRemoteVideoReady?.(participant.identity);
+            }
+          };
+          
+          // When screen sharing is active, the PiP element only renders after
+          // isRemoteCameraOn state updates. Wait for React to re-render.
+          if (isRemoteScreenSharingRef.current) {
+            setTimeout(attachVideo, 150);
+          } else {
+            attachVideo();
           }
         } else if (mediaType === 'audio') {
           setIsRemoteMicOn(true);
@@ -163,6 +187,7 @@ export function useLiveKit(options: UseLiveKitOptions = {}) {
 
       rtcServiceRef.current.setOnScreenShareSubscribed((participant: RemoteParticipant, isSharing: boolean) => {
         setIsRemoteScreenSharing(isSharing);
+        isRemoteScreenSharingRef.current = isSharing;
         
         if (isSharing) {
           setTimeout(() => {
@@ -173,6 +198,14 @@ export function useLiveKit(options: UseLiveKitOptions = {}) {
             const pipElement = document.getElementById(DOM_IDS.REMOTE_VIDEO_PIP);
             if (pipElement) {
               rtcServiceRef.current?.playRemoteCameraToPip(participant, DOM_IDS.REMOTE_VIDEO_PIP);
+            }
+          }, 100);
+        } else {
+          // Screen share stopped - reattach camera to main remote video element
+          setTimeout(() => {
+            const remoteElement = document.getElementById(remoteVideoElementId);
+            if (remoteElement) {
+              rtcServiceRef.current?.playRemoteVideo(participant, remoteVideoElementId);
             }
           }, 100);
         }
@@ -367,9 +400,14 @@ export function useLiveKit(options: UseLiveKitOptions = {}) {
       return;
     }
 
+    // Capture camera/mic state before leaving to restore preview after
+    const wasCameraOn = isCameraOn;
+    const wasMicOn = isMicOn;
+
     try {
       await rtcServiceRef.current.leave();
       hasPreviewRef.current = false;
+      isRemoteScreenSharingRef.current = false;
       setIsRTCInitialized(false);
       setIsRemoteCameraOn(false);
       setIsRemoteMicOn(false);
@@ -378,17 +416,38 @@ export function useLiveKit(options: UseLiveKitOptions = {}) {
       setLocalNetworkQuality('unknown');
       setRemoteNetworkQuality('unknown');
       
-      setTimeout(() => {
-        const service = rtcServiceRef.current;
-        if (service) {
-          rtcServiceRef.current = null;
-        }
-      }, 200);
+      // If camera or mic was on, recreate preview so local video shows
+      if (wasCameraOn || wasMicOn) {
+        setTimeout(async () => {
+          try {
+            if (!rtcServiceRef.current) {
+              const { LiveKitService } = await import('@/services/livekit');
+              rtcServiceRef.current = new LiveKitService();
+            }
+            await rtcServiceRef.current.createLocalPreview(wasCameraOn, wasMicOn);
+            hasPreviewRef.current = true;
+            
+            // Reattach local video after preview is created
+            if (wasCameraOn) {
+              rtcServiceRef.current.reattachLocalVideo(DOM_IDS.LOCAL_VIDEO);
+            }
+          } catch {
+            // Preview recreation failed - camera button will still show correct state
+          }
+        }, 100);
+      } else {
+        setTimeout(() => {
+          const service = rtcServiceRef.current;
+          if (service) {
+            rtcServiceRef.current = null;
+          }
+        }, 200);
+      }
     } catch {
       // Leave failed but we still need to reset state for consistent UI
       setIsRTCInitialized(false);
     }
-  }, []);
+  }, [isCameraOn, isMicOn]);
 
   const switchCamera = useCallback(async (deviceId: string) => {
     if (!rtcServiceRef.current) return;

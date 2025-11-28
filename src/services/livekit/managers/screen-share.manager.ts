@@ -1,6 +1,6 @@
 /**
  * Screen Share Manager
- * Handles screen sharing functionality
+ * Handles screen sharing functionality with bandwidth optimization
  */
 
 import {
@@ -19,15 +19,60 @@ import type { LiveKitState } from './types';
  * - Start/stop screen share
  * - Publish screen share tracks
  * - Handle browser "Stop sharing" button
+ * - Reduce camera quality during screen share to save bandwidth
  */
 export class ScreenShareManager {
   constructor(private state: LiveKitState) {}
+
+  /**
+   * Reduce camera quality during screen share to prioritize screen share bandwidth
+   * Uses track constraints to lower resolution
+   */
+  private async reduceCameraQuality(): Promise<void> {
+    if (!this.state.localVideoTrack) return;
+
+    try {
+      // Apply constraints to reduce camera resolution during screen share
+      const mediaStreamTrack = this.state.localVideoTrack.mediaStreamTrack;
+      if (mediaStreamTrack && 'applyConstraints' in mediaStreamTrack) {
+        await mediaStreamTrack.applyConstraints({
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          frameRate: { ideal: 15 },
+        });
+      }
+    } catch {
+      // Quality reduction failed - non-critical, continue with screen share
+    }
+  }
+
+  /**
+   * Restore camera quality after screen share ends
+   */
+  private async restoreCameraQuality(): Promise<void> {
+    if (!this.state.localVideoTrack) return;
+
+    try {
+      // Restore camera to higher quality
+      const mediaStreamTrack = this.state.localVideoTrack.mediaStreamTrack;
+      if (mediaStreamTrack && 'applyConstraints' in mediaStreamTrack) {
+        await mediaStreamTrack.applyConstraints({
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 },
+        });
+      }
+    } catch {
+      // Quality restoration failed - non-critical
+    }
+  }
 
   /**
    * Start sharing screen
    * 
    * Uses browser's screen capture API to get screen/window/tab.
    * Includes audio capture if user grants permission.
+   * Reduces camera quality to prioritize screen share bandwidth.
    */
   async start(): Promise<void> {
     if (this.state.isLeaving || this.state.isTogglingScreenShare || this.state.isScreenSharing) {
@@ -54,11 +99,14 @@ export class ScreenShareManager {
 
       this.state.localScreenTrack = videoTrack;
 
-      // Publish video track
+      // Reduce camera quality to save bandwidth for screen share
+      await this.reduceCameraQuality();
+
+      // Publish video track with high quality for screen content
       await this.state.room.localParticipant.publishTrack(this.state.localScreenTrack, {
         source: Track.Source.ScreenShare,
         videoEncoding: {
-          maxBitrate: 3_000_000,
+          maxBitrate: 3_000_000, // 3 Mbps for crisp text
           maxFramerate: 30,
         },
       });
@@ -80,6 +128,8 @@ export class ScreenShareManager {
     } catch (error) {
       this.state.localScreenTrack = null;
       this.state.isScreenSharing = false;
+      // Restore camera quality on error
+      await this.restoreCameraQuality();
       throw error;
     } finally {
       this.state.isTogglingScreenShare = false;
@@ -104,6 +154,9 @@ export class ScreenShareManager {
         this.state.localScreenTrack.stop();
         this.state.localScreenTrack = null;
       }
+
+      // Restore camera quality after stopping screen share
+      await this.restoreCameraQuality();
 
       this.state.isScreenSharing = false;
     } finally {
