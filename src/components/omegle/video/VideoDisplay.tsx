@@ -15,41 +15,44 @@ interface VideoDisplayProps {
   children?: ReactNode;
 }
 
-// Color schemes for different genders
-const getColorScheme = (gender?: 'male' | 'female' | 'other', isConnected?: boolean) => {
-  // Only apply gender-based colors when connected
-  if (!isConnected || !gender) {
-    // Default blue theme
-    return {
-      background: '#c8e6f5',
-      glowColor: 'rgba(0, 132, 209, 0.8)',
-      dotColor: 'rgba(0, 132, 209, 0.5)',
-      iconBg: '#a8d8f0',
-      iconColor: '#0084d1',
-      textColor: '#0084d1',
-    };
-  }
+/**
+ * Video theme configuration
+ * Defines color schemes for different gender contexts
+ */
+interface VideoTheme {
+  bgClass: string;
+  glowColor: string;
+  dotColor: string;
+  iconBgClass: string;
+  iconColorClass: string;
+  textColorClass: string;
+}
 
-  if (gender === 'female') {
-    // Pink theme for female
+/**
+ * Get theme configuration based on gender and connection state
+ * Uses Tailwind theme colors defined in globals.css
+ */
+const getTheme = (gender?: 'male' | 'female' | 'other', isConnected?: boolean): VideoTheme => {
+  // Only apply gender-based colors when connected and gender is female
+  if (isConnected && gender === 'female') {
     return {
-      background: '#fce7f3',
+      bgClass: 'bg-video-pink-bg',
       glowColor: 'rgba(236, 72, 153, 0.8)',
       dotColor: 'rgba(236, 72, 153, 0.5)',
-      iconBg: '#fbcfe8',
-      iconColor: '#db2777',
-      textColor: '#db2777',
+      iconBgClass: 'bg-video-pink-icon-bg',
+      iconColorClass: 'text-video-pink-text',
+      textColorClass: 'text-video-pink-text',
     };
   }
 
-  // Default blue theme for male/other
+  // Default blue theme for male/other or when not connected
   return {
-    background: '#c8e6f5',
+    bgClass: 'bg-video-blue-bg',
     glowColor: 'rgba(0, 132, 209, 0.8)',
     dotColor: 'rgba(0, 132, 209, 0.5)',
-    iconBg: '#a8d8f0',
-    iconColor: '#0084d1',
-    textColor: '#0084d1',
+    iconBgClass: 'bg-video-blue-icon-bg',
+    iconColorClass: 'text-video-blue-text',
+    textColorClass: 'text-video-blue-text',
   };
 };
 
@@ -65,9 +68,9 @@ const VideoDisplayComponent = ({
   networkQuality,
   children 
 }: VideoDisplayProps) => {
-  // Get color scheme based on gender and connection state
-  const colorScheme = useMemo(() => 
-    getColorScheme(partnerGender, isConnected), 
+  // Get theme based on gender and connection state
+  const theme = useMemo(() => 
+    getTheme(partnerGender, isConnected), 
     [partnerGender, isConnected]
   );
 
@@ -77,8 +80,7 @@ const VideoDisplayComponent = ({
   
   return (
     <div 
-      className="h-full w-full relative overflow-hidden rounded-lg transition-colors duration-500" 
-      style={{ backgroundColor: colorScheme.background, minHeight: '200px' }}
+      className={`h-full w-full relative overflow-hidden rounded-lg transition-colors duration-500 min-h-[200px] ${theme.bgClass}`}
       role="region"
       aria-label={id === 'local-video' ? 'Your video feed' : 'Partner video feed'}
     >
@@ -87,8 +89,8 @@ const VideoDisplayComponent = ({
         className="absolute inset-0 w-full h-full"
         gap={20}
         radius={1.5}
-        color={colorScheme.dotColor}
-        glowColor={colorScheme.glowColor}
+        color={theme.dotColor}
+        glowColor={theme.glowColor}
         opacity={0.8}
         speedMin={0.3}
         speedMax={0.8}
@@ -98,23 +100,21 @@ const VideoDisplayComponent = ({
       {/* Video Element */}
       <div
         id={id}
-        className="absolute inset-0 w-full h-full"
-        style={{ opacity: showPlaceholder ? 0 : 1, transition: 'opacity 0.3s' }}
+        className={`absolute inset-0 w-full h-full transition-opacity duration-300 ${showPlaceholder ? 'opacity-0' : 'opacity-100'}`}
         aria-label={label}
       />
 
       {/* Placeholder when not connected or camera off */}
       {showPlaceholder && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ pointerEvents: 'none' }}>
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <div 
-            className="w-20 h-20 rounded-full flex items-center justify-center mb-3 transition-colors duration-500" 
-            style={{ backgroundColor: colorScheme.iconBg }}
+            className={`w-20 h-20 rounded-full flex items-center justify-center mb-3 transition-colors duration-500 ${theme.iconBgClass}`}
           >
-            <svg className="w-10 h-10 transition-colors duration-500" style={{ color: colorScheme.iconColor }} fill="currentColor" viewBox="0 0 20 20">
+            <svg className={`w-10 h-10 transition-colors duration-500 ${theme.iconColorClass}`} fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
             </svg>
           </div>
-          <p className="text-sm font-medium transition-colors duration-500" style={{ color: colorScheme.textColor }}>
+          <p className={`text-sm font-medium transition-colors duration-500 ${theme.textColorClass}`}>
             {id === 'local-video' && !isCameraOn ? 'Camera is off' : label}
           </p>
           {id === 'local-video' && !isCameraOn && (
@@ -139,43 +139,23 @@ const VideoDisplayComponent = ({
             <div className="relative w-20 h-20 mb-6 z-10">
               {/* Outer ring - slow rotation */}
               <div 
-                className="absolute inset-0 rounded-full border-[3px] border-transparent opacity-30"
-                style={{
-                  borderTopColor: '#0084d1',
-                  borderRightColor: '#0084d1',
-                  animation: 'spin 3s linear infinite'
-                }}
+                className="absolute inset-0 rounded-full border-[3px] border-transparent border-t-video-blue-text border-r-video-blue-text opacity-30 animate-spin-slow"
               ></div>
               
               {/* Middle ring - medium rotation opposite direction */}
               <div 
-                className="absolute inset-2 rounded-full border-[3px] border-transparent opacity-50"
-                style={{
-                  borderTopColor: '#00a8e8',
-                  borderBottomColor: '#00a8e8',
-                  animation: 'spin 2s linear infinite reverse'
-                }}
+                className="absolute inset-2 rounded-full border-[3px] border-transparent border-t-cyan-500 border-b-cyan-500 opacity-50 animate-spin-medium-reverse"
               ></div>
               
               {/* Inner ring - fast rotation */}
               <div 
-                className="absolute inset-4 rounded-full border-[3px] border-transparent"
-                style={{
-                  borderTopColor: '#0084d1',
-                  borderLeftColor: '#0084d1',
-                  animation: 'spin 1.5s linear infinite'
-                }}
+                className="absolute inset-4 rounded-full border-[3px] border-transparent border-t-video-blue-text border-l-video-blue-text animate-spin-fast"
               ></div>
               
               {/* Center pulsing dot */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div 
-                  className="w-3 h-3 rounded-full"
-                  style={{
-                    backgroundColor: '#0084d1',
-                    boxShadow: '0 0 20px rgba(0, 132, 209, 0.6)',
-                    animation: 'pulse 1.5s ease-in-out infinite'
-                  }}
+                  className="w-3 h-3 rounded-full bg-video-blue-text shadow-[0_0_20px_rgba(0,132,209,0.6)] animate-pulse-glow"
                 ></div>
               </div>
             </div>
@@ -191,18 +171,9 @@ const VideoDisplayComponent = ({
             
             {/* Animated dots indicator */}
             <div className="flex gap-2 mt-4 z-10">
-              <div 
-                className="w-2 h-2 rounded-full bg-blue-500"
-                style={{ animation: 'bounce 1.4s infinite ease-in-out' }}
-              ></div>
-              <div 
-                className="w-2 h-2 rounded-full bg-blue-500"
-                style={{ animation: 'bounce 1.4s infinite ease-in-out 0.2s' }}
-              ></div>
-              <div 
-                className="w-2 h-2 rounded-full bg-blue-500"
-                style={{ animation: 'bounce 1.4s infinite ease-in-out 0.4s' }}
-              ></div>
+              <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce-delay-0"></div>
+              <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce-delay-200"></div>
+              <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce-delay-400"></div>
             </div>
           </div>
         </div>

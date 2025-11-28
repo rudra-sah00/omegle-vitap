@@ -20,7 +20,7 @@ import {
 } from 'livekit-client';
 
 import type { LiveKitConfig, LiveKitCallbacks, DeviceIds, NetworkQualityLevel } from './types';
-import { LIVEKIT_CONFIG, getVideoSettingsForNetwork, getAudioSettingsForNetwork, type NetworkQuality } from './config';
+import { LIVEKIT_CONFIG, type NetworkQuality } from './config';
 
 export class LiveKitService {
   private room: Room | null = null;
@@ -110,7 +110,7 @@ export class LiveKitService {
       if (isLocal) {
         if (networkQuality !== this.currentNetworkQuality) {
           this.currentNetworkQuality = networkQuality;
-          this.adaptQualityToNetwork(networkQuality);
+          this.adaptQualityToNetwork();
         }
       }
       
@@ -122,11 +122,11 @@ export class LiveKitService {
     });
   }
 
-  private async adaptQualityToNetwork(quality: NetworkQuality): Promise<void> {
+  private async adaptQualityToNetwork(): Promise<void> {
     if (!this.room?.localParticipant) return;
 
-    const videoSettings = getVideoSettingsForNetwork(quality);
-    const audioSettings = getAudioSettingsForNetwork(quality);
+    // Quality adaptation is available but not currently applied
+    // Use getVideoSettingsForNetwork() and getAudioSettingsForNetwork() when needed
 
     try {
       const videoPublication = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
@@ -741,14 +741,42 @@ export class LiveKitService {
     return LiveKitService.convertQuality(remoteParticipants[0].connectionQuality);
   }
 
+  /**
+   * Get the local video track
+   * @returns The local video track or null if not available
+   */
   getLocalVideoTrack(): LocalVideoTrack | null {
     return this.localVideoTrack;
   }
 
+  /**
+   * Get the local audio track
+   * @returns The local audio track or null if not available
+   */
   getLocalAudioTrack(): LocalAudioTrack | null {
     return this.localAudioTrack;
   }
 
+  /**
+   * Get the LiveKit Room instance
+   * @returns The Room instance or null if not connected
+   */
+  getRoom(): Room | null {
+    return this.room;
+  }
+
+  /**
+   * Get the local participant's identity
+   * @returns The local participant identity or null
+   */
+  getLocalParticipantIdentity(): string | null {
+    return this.room?.localParticipant?.identity ?? null;
+  }
+
+  /**
+   * Reattach local video to an element
+   * @param elementId - The DOM element ID to attach video to
+   */
   reattachLocalVideo(elementId: string): void {
     if (this.localVideoTrack) {
       this.playLocalVideo(elementId);

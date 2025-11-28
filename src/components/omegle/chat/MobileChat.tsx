@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { ChatHeader } from './ChatHeader';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
 import type { ConnectionState } from '@/types/matchmaking';
@@ -17,7 +16,7 @@ interface MobileChatProps {
   partnerName?: string;
 }
 
-export const MobileChat = ({ isConnected, isStrangerTyping = false, onSendMessage, onTyping, connectionState = 'disconnected', messages = [], partnerName }: MobileChatProps) => {
+export const MobileChat = ({ isConnected, isStrangerTyping = false, onSendMessage, onTyping, messages = [], partnerName }: MobileChatProps) => {
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [isChatOpen, setIsChatOpen] = React.useState(false);
   const lastMessageCountRef = React.useRef(0);
@@ -82,8 +81,7 @@ export const MobileChat = ({ isConnected, isStrangerTyping = false, onSendMessag
       {/* Mobile Chat Toggle Button */}
       <div className="lg:hidden fixed bottom-6 right-6 z-20">
         <button 
-          className="relative w-16 h-16 rounded-full shadow-2xl flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-transform"
-          style={{ backgroundColor: '#0084d1' }}
+          className="relative w-16 h-16 rounded-full shadow-2xl flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-transform bg-video-blue-text"
           onClick={handleOpen}
           title="Open Chat"
         >
@@ -103,15 +101,14 @@ export const MobileChat = ({ isConnected, isStrangerTyping = false, onSendMessag
       {/* Mobile Chat Panel */}
       <div 
         id="mobile-chat" 
-        className="lg:hidden hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-slate-300 z-30 rounded-t-3xl shadow-2xl animate-slide-up overflow-hidden" 
-        style={{ height: '65vh' }}
+        className="lg:hidden hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-slate-300 z-30 rounded-t-3xl shadow-2xl animate-slide-up overflow-hidden h-[65vh]" 
       >
         <div className="flex flex-col h-full overflow-hidden">
           {/* Mobile Header with Close Button */}
           <div className="px-4 py-3 flex items-center justify-between border-b border-slate-200">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span className="text-sm font-medium" style={{ color: '#0084d1' }}>
+              <span className="text-sm font-medium text-video-blue-text">
                 {isConnected ? 'Connected' : 'Not connected'}
               </span>
             </div>

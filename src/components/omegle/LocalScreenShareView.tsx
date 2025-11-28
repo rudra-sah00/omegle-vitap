@@ -47,8 +47,7 @@ export const LocalScreenShareView: FC<LocalScreenShareViewProps> = ({
 }) => {
   return (
     <div
-      className="h-full w-full relative overflow-hidden rounded-lg"
-      style={{ backgroundColor: '#c8e6f5' }}
+      className="h-full w-full relative overflow-hidden rounded-lg bg-video-blue-bg"
     >
       {/* Animated Dotted Glow Background */}
       <DottedGlowBackground
@@ -88,10 +87,9 @@ export const LocalScreenShareView: FC<LocalScreenShareViewProps> = ({
 
       {/* Camera PiP when screen sharing - always render element, hide if camera off */}
       <div
-        className={`absolute bottom-20 right-4 w-36 h-28 rounded-lg overflow-hidden border-2 border-white shadow-xl z-20 transition-opacity ${
+        className={`absolute bottom-20 right-4 w-36 h-28 rounded-lg overflow-hidden border-2 border-white shadow-xl z-20 transition-opacity bg-video-blue-icon-bg ${
           isCameraOn ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
-        style={{ backgroundColor: '#a8d8f0' }}
       >
         <div id="local-video" className="w-full h-full" />
       </div>

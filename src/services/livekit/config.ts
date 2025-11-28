@@ -86,7 +86,7 @@ export function isSlowNetwork(): boolean {
       return slowTypes.includes(networkInfo.effectiveType || '');
     }
   } catch {
-    // Network Information API not available
+    // Network Information API not available in this browser - fallback to false
   }
   return false;
 }

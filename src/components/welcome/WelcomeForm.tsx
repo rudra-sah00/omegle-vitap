@@ -31,7 +31,7 @@ export const WelcomeForm = () => {
         } else {
           setIsOnline(true); // Default to online if no backend URL
         }
-      } catch (error) {
+      } catch {
         // If backend is unreachable, assume offline
         setIsOnline(false);
       } finally {
@@ -87,7 +87,7 @@ export const WelcomeForm = () => {
       // Service is available, navigate to chat
       setIsCheckingService(false);
       router.push('/omegle');
-    } catch (error) {
+    } catch {
       setServiceAvailable(false);
       setServiceMessage('Unable to connect to backend service. Please check your internet connection and try again.');
       setIsLoading(false);

@@ -1,7 +1,39 @@
 /**
  * useMatchmaking Hook
  * Manages WebSocket connection and matchmaking flow
- */
+ * 
+ * @description Provides complete matchmaking functionality including:
+ * - WebSocket connection management with automatic reconnection
+ * - Join/leave/cancel queue operations
+ * - Connection state tracking (disconnected → connecting → connected → waiting → matched)
+ * - Error handling with user-friendly messages
+ * - Search timeout handling with analytics
+ * - Partner left detection and cleanup
+ * 
+ * The hook manages the entire matchmaking lifecycle:
+ * 1. User connects to WebSocket server
+ * 2. User joins queue with their profile data
+ * 3. Server matches two compatible users
+ * 4. Users receive match data including room ID and tokens
+ * 5. Users can leave room or disconnect
+ * 
+ * @example
+ * ```tsx
+ * function MatchmakingComponent() {
+ *   const {
+ *     connectionState,
+ *     matchData,
+ *     isWaiting,
+ *     isMatched,
+ *     join,
+ *     leaveRoom,
+ *     cancelSearch,
+ *   } = useMatchmaking({
+ *     onMatched: (match) => console.log('Matched with:', match.partnerName),
+ *     onPartnerLeft: () => console.log('Partner left'),
+ *   });
+ *   
+ *   if (isWaiting) return <SearchingUI onCancel={cancelSearch} />;\n *   if (isMatched) return <ChatUI match={matchData} onLeave={leaveRoom} />;\n *   \n *   return (\n *     <button onClick={() => join({ uid: 1, name: 'User', gender: 'male' })}>\n *       Find Partner\n *     </button>\n *   );\n * }\n * ```\n */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { getSocketIOService, destroySocketIOService, type SocketIOService } from '@/services/socket';
@@ -15,6 +47,16 @@ import type {
   ServerMessage,
 } from '@/types/matchmaking';
 
+/**
+ * Configuration options for the useMatchmaking hook
+ * 
+ * @property autoConnect - Whether to connect immediately on mount (default: false)
+ * @property userData - Pre-filled user data for auto-joining
+ * @property onAuthenticated - Callback when user is authenticated and in queue
+ * @property onMatched - Callback when matched with another user
+ * @property onPartnerLeft - Callback when chat partner leaves
+ * @property onError - Callback when an error occurs
+ */
 interface UseMatchmakingOptions {
   autoConnect?: boolean;
   userData?: UserData;
@@ -24,6 +66,21 @@ interface UseMatchmakingOptions {
   onError?: (error: string) => void;
 }
 
+/**
+ * Return type for the useMatchmaking hook
+ * 
+ * @property connectionState - Current connection state
+ * @property matchData - Match data when matched (null otherwise)
+ * @property error - Current error message (null if no error)
+ * @property isConnected - Whether socket is connected
+ * @property isAuthenticated - Whether user is authenticated with server
+ * @property isWaiting - Whether user is waiting for a match
+ * @property isMatched - Whether user is currently matched
+ * @property join - Function to join the matchmaking queue
+ * @property leaveRoom - Function to leave current chat room
+ * @property cancelSearch - Function to cancel matchmaking search
+ * @property disconnect - Function to disconnect from server
+ */
 interface UseMatchmakingReturn {
   connectionState: ConnectionState;
   matchData: MatchDataMatched | null;
@@ -362,9 +419,23 @@ export function useMatchmaking(options: UseMatchmakingOptions = {}): UseMatchmak
     }
   }, [connectionState, join]);
 
+  // Track if we should auto-join when connected
+  const shouldAutoJoinRef = useRef(false);
+  
+  // Set flag when we need to auto-join
+  useEffect(() => {
+    shouldAutoJoinRef.current = connectionState === 'connected' && !isAuthenticated && !!userData;
+  }, [connectionState, isAuthenticated, userData]);
+
+  // Handle auto-join via microtask to avoid synchronous setState in effect
   useEffect(() => {
     if (connectionState === 'connected' && !isAuthenticated && userData) {
-      join(userData);
+      // Schedule join in next microtask to avoid synchronous setState
+      queueMicrotask(() => {
+        if (shouldAutoJoinRef.current) {
+          join(userData);
+        }
+      });
     }
   }, [connectionState, isAuthenticated, userData, join]);
 
@@ -408,7 +479,20 @@ export function useMatchmaking(options: UseMatchmakingOptions = {}): UseMatchmak
 }
 
 /**
- * Hook to cleanup WebSocket on app unmount
+ * Hook to cleanup WebSocket connection on app unmount
+ * 
+ * @description Ensures the Socket.IO service is properly destroyed
+ * when the component tree unmounts. This prevents memory leaks
+ * and ensures clean reconnection on subsequent mounts.
+ * 
+ * @example
+ * ```tsx
+ * // In your App component or main layout
+ * function App() {
+ *   useWebSocketCleanup();
+ *   return <MainContent />;
+ * }
+ * ```
  */
 export function useWebSocketCleanup() {
   useEffect(() => {

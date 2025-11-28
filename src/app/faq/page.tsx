@@ -54,7 +54,7 @@ export default function FAQPage() {
         },
         {
           question: "How do you protect my privacy?",
-          answer: "We don't store chat logs or video recordings. No personal data is required to use the platform. Connections are peer-to-peer whenever possible, and we use end-to-end encryption for all communications."
+          answer: "We don&apos;t store chat logs or video recordings. No personal data is required to use the platform. Connections are peer-to-peer whenever possible, and we use end-to-end encryption for all communications."
         },
         {
           question: "What should I do if someone behaves inappropriately?",
@@ -193,7 +193,7 @@ export default function FAQPage() {
                   Still Have Questions?
                 </h3>
                 <p className="text-amber-800 leading-relaxed">
-                  Can't find the answer you're looking for? Check out our{' '}
+                  Can&apos;t find the answer you&apos;re looking for? Check out our{' '}
                   <Link href="/community-guidelines" className="font-semibold underline hover:text-amber-900">
                     Community Guidelines
                   </Link>

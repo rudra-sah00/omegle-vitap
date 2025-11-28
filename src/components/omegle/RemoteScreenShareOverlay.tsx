@@ -17,8 +17,7 @@ export const RemoteScreenShareOverlay: FC<RemoteScreenShareOverlayProps> = ({
 }) => {
   return (
     <div
-      className="absolute inset-0 z-30 rounded-lg overflow-hidden"
-      style={{ backgroundColor: '#1a1a2e' }}
+      className="absolute inset-0 z-30 rounded-lg overflow-hidden bg-slate-900"
     >
       <div id="remote-screen-share" className="w-full h-full" />
       
@@ -47,8 +46,7 @@ export const RemoteScreenShareOverlay: FC<RemoteScreenShareOverlayProps> = ({
         <div className="absolute bottom-4 right-4 w-32 h-24 rounded-lg overflow-hidden border-2 border-white/70 shadow-xl">
           <div
             id="remote-video-pip"
-            className="w-full h-full"
-            style={{ backgroundColor: '#1e293b' }}
+            className="w-full h-full bg-slate-800"
           />
         </div>
       )}

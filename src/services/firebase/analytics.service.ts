@@ -139,7 +139,7 @@ class AnalyticsService {
     try {
       setUserId(this.analytics, uid);
     } catch {
-      // Failed to set user ID
+      // Analytics SDK failed to set user ID - tracking will continue with anonymous data
     }
   }
 
@@ -153,6 +153,7 @@ class AnalyticsService {
       localStorage.setItem('omegle_session_count', this.sessionCount.toString());
       localStorage.setItem('omegle_last_visit', new Date().toISOString());
     } catch {
+      // localStorage not available (private mode, SSR, etc.) - use default session count
       this.sessionCount = 1;
     }
   }
@@ -221,7 +222,7 @@ class AnalyticsService {
         session_count: this.sessionCount.toString(),
       });
     } catch {
-      // Setting user properties failed
+      // User properties failed to set - non-critical, analytics will continue without device info
     }
   }
 

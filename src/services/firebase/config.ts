@@ -66,7 +66,8 @@ export function initializeFirebase(): { app: FirebaseApp | null; analytics: Anal
     try {
       analytics = getAnalytics(app);
     } catch {
-      // Analytics initialization failed - likely ad blocker or missing measurementId
+      // Analytics initialization failed - likely ad blocker, privacy extension, or missing measurementId
+      // App will continue to work without analytics tracking
     }
   }
 

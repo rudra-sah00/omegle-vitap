@@ -6,12 +6,17 @@ import { useRouter } from 'next/navigation';
 
 const MAINTENANCE_MODE = process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true';
 
+/**
+ * Maintenance Page Component
+ * 
+ * @description Displays a maintenance notice when NEXT_PUBLIC_MAINTENANCE_MODE is 'true'.
+ * Automatically redirects to welcome page when maintenance mode is disabled.
+ * Page title is set in layout.tsx using Next.js metadata API.
+ */
 export default function MaintenancePage() {
   const router = useRouter();
 
   useEffect(() => {
-    document.title = 'Under Maintenance - Omegle VITAP';
-    
     // If maintenance mode is off, redirect immediately
     if (!MAINTENANCE_MODE) {
       router.replace('/welcome');
@@ -56,7 +61,7 @@ export default function MaintenancePage() {
               Under Maintenance
             </h1>
             <p className="text-xl text-slate-600 max-w-lg mx-auto">
-              We're currently performing scheduled maintenance to improve your experience
+              We&apos;re currently performing scheduled maintenance to improve your experience
             </p>
           </div>
         </div>

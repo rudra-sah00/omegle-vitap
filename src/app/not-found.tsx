@@ -37,8 +37,8 @@ export default function NotFound() {
         </h2>
         
         <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-          Oops! The page you're looking for doesn't exist. 
-          Don't worry, we'll redirect you to the home page in <span className="font-bold text-blue-600">{countdown}</span> seconds.
+          Oops! The page you&apos;re looking for doesn&apos;t exist. 
+          Don&apos;t worry, we&apos;ll redirect you to the home page in <span className="font-bold text-blue-600">{countdown}</span> seconds.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">

@@ -68,7 +68,7 @@ export default function CommunityGuidelinesPage() {
           <div className="grid gap-8 md:grid-cols-2 mb-12">
             <div className="bg-slate-50 p-8 rounded-3xl border border-slate-100">
               <h3 className="text-xl font-bold text-green-600 mb-4 flex items-center gap-2">
-                <span className="text-2xl">✅</span> Do's
+                <span className="text-2xl">✅</span> Do&apos;s
               </h3>
               <ul className="space-y-3 text-slate-600 list-none pl-0">
                 <li className="flex gap-3">
@@ -92,7 +92,7 @@ export default function CommunityGuidelinesPage() {
 
             <div className="bg-slate-50 p-8 rounded-3xl border border-slate-100">
               <h3 className="text-xl font-bold text-red-600 mb-4 flex items-center gap-2">
-                <span className="text-2xl">❌</span> Don'ts
+                <span className="text-2xl">❌</span> Don&apos;ts
               </h3>
               <ul className="space-y-3 text-slate-600 list-none pl-0">
                 <li className="flex gap-3">

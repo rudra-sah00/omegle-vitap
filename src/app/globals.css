@@ -41,6 +41,23 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  
+  /* Video Theme Colors - Blue (default/male) */
+  --color-video-blue-bg: #c8e6f5;
+  --color-video-blue-icon-bg: #a8d8f0;
+  --color-video-blue-text: #0084d1;
+  --color-video-blue-glow: rgba(0, 132, 209, 0.8);
+  --color-video-blue-dot: rgba(0, 132, 209, 0.5);
+  
+  /* Video Theme Colors - Pink (female) */
+  --color-video-pink-bg: #fce7f3;
+  --color-video-pink-icon-bg: #fbcfe8;
+  --color-video-pink-text: #db2777;
+  --color-video-pink-glow: rgba(236, 72, 153, 0.8);
+  --color-video-pink-dot: rgba(236, 72, 153, 0.5);
+  
+  /* Page Theme Colors */
+  --color-page-bg: #e8f4f8;
 }
 
 @keyframes fade-in {
@@ -87,6 +104,37 @@
 
 .animation-delay-4000 {
   animation-delay: 4s;
+}
+
+/* Custom spin animations for video search spinner */
+.animate-spin-slow {
+  animation: spin 3s linear infinite;
+}
+
+.animate-spin-medium-reverse {
+  animation: spin 2s linear infinite reverse;
+}
+
+.animate-spin-fast {
+  animation: spin 1.5s linear infinite;
+}
+
+/* Bounce animation with delays for loading dots */
+.animate-bounce-delay-0 {
+  animation: bounce 1.4s infinite ease-in-out;
+}
+
+.animate-bounce-delay-200 {
+  animation: bounce 1.4s infinite ease-in-out 0.2s;
+}
+
+.animate-bounce-delay-400 {
+  animation: bounce 1.4s infinite ease-in-out 0.4s;
+}
+
+/* Pulsing glow effect */
+.animate-pulse-glow {
+  animation: pulse 1.5s ease-in-out infinite;
 }
 
 @keyframes gradient-xy {

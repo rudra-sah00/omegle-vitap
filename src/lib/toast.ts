@@ -1,10 +1,30 @@
 /**
  * Toast Notification Utilities
  * Centralized toast management with deduplication and error tracking
+ * 
+ * @description Provides a unified interface for displaying toast notifications
+ * with automatic deduplication, consistent styling, and error code tracking.
+ * 
+ * @example
+ * ```tsx
+ * import { showError, showSuccess, ErrorCode } from '@/lib/toast';
+ * 
+ * showError('Connection failed', ErrorCode.CONNECTION_LOST);
+ * showSuccess('Connected successfully!');
+ * ```
  */
 
 import toast from 'react-hot-toast';
+import { analytics } from '@/services/firebase';
 
+/**
+ * Error codes for categorizing and tracking errors
+ * Format: E[Category][Sequence]
+ * - E0xx: Connection/Backend errors
+ * - E1xx: Media/Permission errors
+ * - E2xx: RTC/Channel errors
+ * - E3xx: Messaging errors
+ */
 export enum ErrorCode {
   BACKEND_UNAVAILABLE = 'E001',
   CONNECTION_TIMEOUT = 'E002',
@@ -58,6 +78,8 @@ const TOAST_STYLES = {
 /**
  * Toast Manager Class
  * Encapsulates toast state for better testability and control
+ * 
+ * @internal This class is used internally by the toast utility functions
  */
 class ToastManager {
   private activeToastIds = new Set<string>();
@@ -66,6 +88,8 @@ class ToastManager {
 
   /**
    * Check if toast should be deduplicated
+   * @param message - The message to check
+   * @returns Whether this message should be skipped
    */
   private shouldDedupe(message: string): boolean {
     const now = Date.now();
@@ -75,6 +99,7 @@ class ToastManager {
 
   /**
    * Update last toast tracking
+   * @param message - The message to track
    */
   private trackToast(message: string): void {
     this.lastToastMessage = message;
@@ -82,7 +107,7 @@ class ToastManager {
   }
 
   /**
-   * Clear all active toasts
+   * Clear all active toasts from the screen
    */
   private clearActiveToasts(): void {
     toast.dismiss();
@@ -90,12 +115,43 @@ class ToastManager {
   }
 
   /**
-   * Show error toast
+   * Log error to analytics for tracking
+   * @param message - Error message
+   * @param code - Error code for categorization
    */
-  error(message: string, _code?: ErrorCode): void {
+  private logErrorToAnalytics(message: string, code?: ErrorCode): void {
+    if (code) {
+      const errorType = this.getErrorTypeFromCode(code);
+      analytics.trackError(errorType, `[${code}] ${message}`);
+    }
+  }
+
+  /**
+   * Map error code to analytics error type
+   * @param code - The error code
+   * @returns The analytics error type
+   */
+  private getErrorTypeFromCode(code: ErrorCode): 'camera_permission' | 'microphone_permission' | 'connection' | 'rtc' | 'websocket' | 'media_device' {
+    if (code === ErrorCode.CAMERA_PERMISSION_DENIED) return 'camera_permission';
+    if (code === ErrorCode.MIC_PERMISSION_DENIED) return 'microphone_permission';
+    if (code === ErrorCode.CAMERA_IN_USE || code === ErrorCode.MIC_IN_USE || code === ErrorCode.MEDIA_DEVICE_NOT_FOUND) return 'media_device';
+    if (code === ErrorCode.CHANNEL_JOIN_FAILED || code === ErrorCode.CHANNEL_LEAVE_FAILED || code === ErrorCode.PUBLISH_FAILED) return 'rtc';
+    if (code === ErrorCode.MESSAGE_SEND_FAILED || code === ErrorCode.MESSAGE_SERVICE_UNAVAILABLE) return 'websocket';
+    return 'connection';
+  }
+
+  /**
+   * Show error toast with optional error code tracking
+   * @param message - The error message to display
+   * @param code - Optional error code for analytics
+   */
+  error(message: string, code?: ErrorCode): void {
     if (this.shouldDedupe(message)) return;
     
     this.clearActiveToasts();
+    
+    // Track error in analytics
+    this.logErrorToAnalytics(message, code);
     
     const toastId = toast.error(message, {
       duration: TOAST_CONFIG.ERROR_DURATION,
@@ -178,42 +234,85 @@ class ToastManager {
 const toastManager = new ToastManager();
 
 /**
- * Show error toast
+ * Show an error toast notification
+ * 
+ * @param message - The error message to display
+ * @param code - Optional error code for analytics tracking
+ * 
+ * @example
+ * ```tsx
+ * showError('Failed to connect', ErrorCode.CONNECTION_LOST);
+ * ```
  */
 export function showError(message: string, code?: ErrorCode): void {
   toastManager.error(message, code);
 }
 
 /**
- * Show success toast
+ * Show a success toast notification
+ * 
+ * @param message - The success message to display
+ * 
+ * @example
+ * ```tsx
+ * showSuccess('Connected successfully!');
+ * ```
  */
 export function showSuccess(message: string): void {
   toastManager.success(message);
 }
 
 /**
- * Show info toast
+ * Show an info toast notification
+ * 
+ * @param message - The info message to display
+ * 
+ * @example
+ * ```tsx
+ * showInfo('Your partner left the chat');
+ * ```
  */
 export function showInfo(message: string): void {
   toastManager.info(message);
 }
 
 /**
- * Show warning toast
+ * Show a warning toast notification
+ * 
+ * @param message - The warning message to display
+ * 
+ * @example
+ * ```tsx
+ * showWarning('Connection quality is poor');
+ * ```
  */
 export function showWarning(message: string): void {
   toastManager.warning(message);
 }
 
 /**
- * Reset toast manager (for testing)
+ * Reset toast manager state
+ * Useful for testing or clearing toast state
  */
 export function resetToastManager(): void {
   toastManager.reset();
 }
 
 /**
- * Parse media errors into user-friendly messages
+ * Parse media-related errors into user-friendly messages
+ * 
+ * @param error - The error to parse (can be Error, string, or unknown)
+ * @returns Object with user-friendly message and error code
+ * 
+ * @example
+ * ```tsx
+ * try {
+ *   await startCamera();
+ * } catch (error) {
+ *   const { message, code } = parseMediaError(error);
+ *   showError(message, code);
+ * }
+ * ```
  */
 export function parseMediaError(error: unknown): { message: string; code: ErrorCode } {
   const errorStr = String(error).toLowerCase();
@@ -328,7 +427,20 @@ export function parseMediaError(error: unknown): { message: string; code: ErrorC
 }
 
 /**
- * Parse connection errors
+ * Parse connection-related errors into user-friendly messages
+ * 
+ * @param error - The error to parse (can be Error, string, or unknown)
+ * @returns Object with user-friendly message and error code
+ * 
+ * @example
+ * ```tsx
+ * try {
+ *   await connectToServer();
+ * } catch (error) {
+ *   const { message, code } = parseConnectionError(error);
+ *   showError(message, code);
+ * }
+ * ```
  */
 export function parseConnectionError(error: unknown): { message: string; code: ErrorCode } {
   const errorStr = String(error).toLowerCase();

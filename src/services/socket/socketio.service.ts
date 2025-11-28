@@ -240,6 +240,7 @@ export class SocketIOService implements ISocketService {
       this.socket.emit(message.type, message.data);
       return true;
     } catch {
+      // Socket emit failed - likely disconnected, return false to signal failure
       return false;
     }
   }

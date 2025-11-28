@@ -1,7 +1,48 @@
 /**
  * useVideoChat Hook
  * Manages the complete video chat session including matchmaking, RTC, and messaging
- */
+ * 
+ * @description This is the main orchestration hook that combines:
+ * - `useMatchmaking` - WebSocket connection and partner matching
+ * - `useLiveKit` - WebRTC video/audio streaming via LiveKit
+ * - `useChat` - Text messaging and typing indicators
+ * 
+ * The hook provides a unified API for the entire video chat experience:
+ * 1. **Search Phase**: User starts search → joins matchmaking queue
+ * 2. **Match Phase**: Server finds partner → establishes WebRTC connection
+ * 3. **Session Phase**: Video/audio streaming + text chat with partner
+ * 4. **End Phase**: User leaves or partner disconnects → cleanup
+ * 
+ * Key features:
+ * - Automatic retry logic for RTC connection failures
+ * - Camera/microphone toggle and device switching
+ * - Screen sharing support
+ * - Network quality indicators for both users
+ * - "Find Next" to quickly match with new partner
+ * - Proper cleanup on unmount to prevent memory leaks
+ * 
+ * @example
+ * ```tsx
+ * function VideoChatPage() {
+ *   const {
+ *     connectionState,
+ *     isInSession,
+ *     isCameraOn,
+ *     isMicOn,
+ *     messages,
+ *     startSearch,
+ *     stopSearch,
+ *     endSession,
+ *     findNext,
+ *     toggleCamera,
+ *     toggleMicrophone,
+ *     sendMessage,
+ *   } = useVideoChat({
+ *     localVideoElementId: 'local-video',
+ *     remoteVideoElementId: 'remote-video',
+ *   });
+ *   
+ *   return (\n *     <div>\n *       <video id=\"local-video\" />\n *       <video id=\"remote-video\" />\n *       <MediaControls \n *         onToggleCamera={toggleCamera}\n *         onToggleMic={toggleMicrophone}\n *       />\n *       <ChatPanel \n *         messages={messages}\n *         onSend={sendMessage}\n *       />\n *       {isInSession ? (\n *         <button onClick={findNext}>Next</button>\n *       ) : (\n *         <button onClick={() => startSearch({ name: 'User', gender: 'male' })}>\n *           Start\n *         </button>\n *       )}\n *     </div>\n *   );\n * }\n * ```\n */
 
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { useMatchmaking } from './useMatchmaking';
@@ -13,11 +54,27 @@ import { useUser } from './useUser';
 import { RETRY_BASE_DELAY, FIND_NEXT_DEBOUNCE_DELAY } from '@/constants';
 import type { MatchDataMatched } from '@/types/matchmaking';
 
+/**
+ * Configuration options for the useVideoChat hook
+ * 
+ * @property localVideoElementId - DOM element ID for local video feed
+ * @property remoteVideoElementId - DOM element ID for remote video feed
+ */
 interface UseVideoChatOptions {
   localVideoElementId: string;
   remoteVideoElementId: string;
 }
 
+/**
+ * Main hook for managing complete video chat sessions
+ * 
+ * @param options - Configuration options including video element IDs
+ * @returns Complete video chat state and control functions
+ * 
+ * @see {@link useMatchmaking} for matchmaking functionality
+ * @see {@link useLiveKit} for WebRTC functionality
+ * @see {@link useChat} for messaging functionality
+ */
 export function useVideoChat(options: UseVideoChatOptions) {
   const { localVideoElementId, remoteVideoElementId } = options;
   
@@ -321,7 +378,7 @@ export function useVideoChat(options: UseVideoChatOptions) {
           await leaveRTCRef.current();
           await leaveRoomRef.current();
         } catch {
-          // Silently handle cleanup errors
+          // Cleanup errors on unmount are expected - component is being destroyed
         }
       };
       

@@ -71,7 +71,7 @@ export default function TermsPage() {
           <section className="mb-12">
             <h2 className="text-2xl font-bold mb-4">1. Acceptance of Terms</h2>
             <p className="text-slate-600 leading-relaxed">
-              By accessing and using Omegle VITAP ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. In addition, when using this Service, you shall be subject to any posted guidelines or rules applicable to such services.
+              By accessing and using Omegle VITAP (&quot;the Service&quot;), you accept and agree to be bound by the terms and provision of this agreement. In addition, when using this Service, you shall be subject to any posted guidelines or rules applicable to such services.
             </p>
           </section>
 
@@ -106,7 +106,7 @@ export default function TermsPage() {
           <section className="mb-12">
             <h2 className="text-2xl font-bold mb-4">4. Disclaimer of Warranties</h2>
             <p className="text-slate-600 leading-relaxed">
-              The Service is provided on an "as is" and "as available" basis. Omegle VITAP expressly disclaims all warranties of any kind, whether express or implied, including, but not limited to the implied warranties of merchantability, fitness for a particular purpose and non-infringement.
+              The Service is provided on an &quot;as is&quot; and &quot;as available&quot; basis. Omegle VITAP expressly disclaims all warranties of any kind, whether express or implied, including, but not limited to the implied warranties of merchantability, fitness for a particular purpose and non-infringement.
             </p>
           </section>
 

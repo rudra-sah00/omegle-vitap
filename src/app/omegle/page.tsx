@@ -182,9 +182,9 @@ function OmeglePageContent() {
   }
 
   return (
-    <div className="h-screen flex" style={{ backgroundColor: '#e8f4f8' }}>
+    <div className="h-screen flex bg-page-bg">
       {/* Match Confetti Overlay */}
-      <MatchConfetti isActive={showMatchConfetti} duration={1500} />
+      <MatchConfetti isActive={showMatchConfetti} />
       
       {/* Screen Share Indicator */}
       <ScreenShareIndicator isSharing={isScreenSharing} onStop={toggleScreenShare} />
@@ -275,7 +275,7 @@ function OmeglePageContent() {
         {/* Right Side - Desktop Chat Window */}
         <ChatWindow 
           isConnected={isMatched} 
-          isStrangerTyping={isPartnerTyping}
+          isStrangerTyping={isPartnerTyping ?? false}
           onSendMessage={sendMessage}
           onTyping={handleTyping}
           connectionState={connectionState}
@@ -286,7 +286,7 @@ function OmeglePageContent() {
         {/* Mobile Chat */}
         <MobileChat 
           isConnected={isMatched} 
-          isStrangerTyping={isPartnerTyping}
+          isStrangerTyping={isPartnerTyping ?? false}
           onSendMessage={sendMessage}
           onTyping={handleTyping}
           connectionState={connectionState}

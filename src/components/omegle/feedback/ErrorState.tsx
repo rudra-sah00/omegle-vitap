@@ -8,16 +8,16 @@ export function ErrorState({ error, onGoBack, onRetry }: ErrorStateProps) {
   const isBackendDown = error.includes('Backend') || error.includes('unavailable') || error.includes('not responding') || error.includes('server');
   
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#e8f4f8' }}>
+    <div className="min-h-screen flex items-center justify-center bg-page-bg">
       <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
         <div className="flex flex-col items-center">
           <div 
-            className="w-20 h-20 rounded-full flex items-center justify-center mb-6"
-            style={{ backgroundColor: isBackendDown ? '#fff3cd' : '#ffebee' }}
+            className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 ${
+              isBackendDown ? 'bg-amber-100' : 'bg-red-50'
+            }`}
           >
             <svg 
-              className="w-10 h-10" 
-              style={{ color: isBackendDown ? '#ff9800' : '#f44336' }} 
+              className={`w-10 h-10 ${isBackendDown ? 'text-amber-500' : 'text-red-500'}`}
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -53,16 +53,14 @@ export function ErrorState({ error, onGoBack, onRetry }: ErrorStateProps) {
             {onRetry && (
               <button
                 onClick={onRetry}
-                className="flex-1 py-3 px-6 rounded-lg text-white font-medium transition-colors hover:opacity-90"
-                style={{ backgroundColor: '#4caf50' }}
+                className="flex-1 py-3 px-6 rounded-lg text-white font-medium transition-colors hover:opacity-90 bg-green-500"
               >
                 Retry
               </button>
             )}
             <button
               onClick={onGoBack}
-              className="flex-1 py-3 px-6 rounded-lg text-white font-medium transition-colors hover:opacity-90"
-              style={{ backgroundColor: '#0084d1' }}
+              className="flex-1 py-3 px-6 rounded-lg text-white font-medium transition-colors hover:opacity-90 bg-video-blue-text"
             >
               Go Back
             </button>

@@ -102,7 +102,7 @@ export const ChatInput = ({ isConnected, onSend, onTyping }: ChatInputProps) => 
     };
   }, []);
 
-  const handleEmojiClick = useCallback((emojiData: any) => {
+  const handleEmojiClick = useCallback((emojiData: { emoji: string }) => {
     setMessage(prev => prev + emojiData.emoji);
     setShowEmojiPicker(false);
     onTyping?.(true);

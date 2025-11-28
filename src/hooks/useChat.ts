@@ -1,6 +1,40 @@
 /**
  * useChat Hook
- * Manages chat messages and typing indicators
+ * Manages chat messages and typing indicators for real-time messaging
+ * 
+ * @description Provides complete chat functionality including:
+ * - Sending and receiving messages via WebSocket
+ * - Real-time typing indicators with debouncing
+ * - Message deduplication to prevent duplicates
+ * - Automatic cleanup on session end
+ * 
+ * The hook handles all the complexity of:
+ * - Typing indicator timeouts (auto-hide after 5s)
+ * - Debounced typing state updates (prevent spam)
+ * - Pending message tracking (prevent duplicate sends)
+ * 
+ * @example
+ * ```tsx
+ * function ChatRoom() {
+ *   const { messages, isPartnerTyping, sendMessage, sendTypingIndicator } = useChat({
+ *     ws: socketService,
+ *     isInSession: true,
+ *     onMessageReceived: (msg) => console.log('New message:', msg),
+ *   });
+ *   
+ *   return (
+ *     <div>
+ *       {messages.map(msg => <Message key={msg.id} {...msg} />)}
+ *       {isPartnerTyping && <TypingIndicator />}
+ *       <ChatInput 
+ *         onSend={sendMessage}
+ *         onTyping={() => sendTypingIndicator(true)}
+ *         onStopTyping={() => sendTypingIndicator(false)}
+ *       />
+ *     </div>
+ *   );
+ * }
+ * ```
  */
 
 import { useRef, useState, useCallback, useEffect } from 'react';
@@ -11,6 +45,15 @@ import {
 } from '@/constants';
 import type { SocketIOService } from '@/services/socket';
 
+/**
+ * Structure of a chat message
+ * 
+ * @property id - Unique identifier for the message
+ * @property text - Message content
+ * @property senderId - ID of the sender ('self' for own messages)
+ * @property senderName - Display name of the sender
+ * @property timestamp - Unix timestamp when message was sent
+ */
 export interface MessageData {
   id: string;
   text: string;
@@ -19,6 +62,14 @@ export interface MessageData {
   timestamp: number;
 }
 
+/**
+ * Options for configuring the useChat hook
+ * 
+ * @property ws - Socket.IO service instance for real-time communication
+ * @property isInSession - Whether user is currently in an active chat session
+ * @property onMessageReceived - Optional callback when a new message arrives
+ * @property onTypingIndicator - Optional callback when partner typing state changes
+ */
 interface UseChatOptions {
   ws: SocketIOService | null;
   isInSession: boolean;
@@ -26,18 +77,30 @@ interface UseChatOptions {
   onTypingIndicator?: (isTyping: boolean) => void;
 }
 
+/**
+ * Hook for managing chat messages and typing indicators
+ * 
+ * @param options - Configuration options for the chat hook
+ * @returns Chat state and functions for messaging
+ * 
+ * @see {@link MessageData} for message structure
+ * @see {@link UseChatOptions} for configuration options
+ */
 export function useChat(options: UseChatOptions) {
   const { ws, isInSession, onMessageReceived, onTypingIndicator } = options;
 
   const [messages, setMessages] = useState<MessageData[]>([]);
-  const [isPartnerTyping, setIsPartnerTyping] = useState(false);
+  const [isPartnerTypingInternal, setIsPartnerTypingInternal] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingMessages = useRef<Set<string>>(new Set());
   const messageIdCounter = useRef<number>(0);
 
+  // Derive actual typing state - only true if in session AND partner is typing
+  const isPartnerTyping = isInSession && ws && isPartnerTypingInternal;
+
   useEffect(() => {
     if (!ws || !isInSession) {
-      setIsPartnerTyping(false);
+      // Clear timeout when session ends
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = null;
@@ -59,7 +122,7 @@ export function useChat(options: UseChatOptions) {
         onMessageReceived?.(messageData);
       } else if (msg.type === 'typing') {
         const isTyping = msg.data.isTyping;
-        setIsPartnerTyping(isTyping);
+        setIsPartnerTypingInternal(isTyping);
         onTypingIndicator?.(isTyping);
 
         if (isTyping) {
@@ -67,7 +130,7 @@ export function useChat(options: UseChatOptions) {
             clearTimeout(typingTimeoutRef.current);
           }
           typingTimeoutRef.current = setTimeout(() => {
-            setIsPartnerTyping(false);
+            setIsPartnerTypingInternal(false);
           }, TYPING_INDICATOR_TIMEOUT);
         }
       }
@@ -152,7 +215,7 @@ export function useChat(options: UseChatOptions) {
 
   const clearMessages = useCallback(() => {
     setMessages([]);
-    setIsPartnerTyping(false);
+    setIsPartnerTypingInternal(false);
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = null;

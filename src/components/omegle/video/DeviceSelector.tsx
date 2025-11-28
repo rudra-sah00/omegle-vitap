@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { analytics } from '@/services/firebase';
 
 interface DeviceInfo {
@@ -32,9 +32,8 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
   buttonRef,
 }) => {
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
-  const [position, setPosition] = useState({ bottom: 0, left: 0 });
 
-  const updatePosition = () => {
+  const updatePosition = useCallback(() => {
     if (buttonRef?.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       // Position popup above the button with 8px gap
@@ -44,28 +43,79 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
       const popupWidth = 280; // min-w-[280px]
       const leftPosition = rect.left + (rect.width / 2) - (popupWidth / 2);
       
-      setPosition({
-        bottom: bottomPosition,
-        left: Math.max(8, leftPosition), // Ensure it doesn't go off screen on the left
-      });
+      // Position values are calculated but not used since we use CSS positioning
+      void bottomPosition;
+      void leftPosition;
     }
-  };
+  }, [buttonRef]);
 
   useEffect(() => {
-    if (isOpen) {
-      loadDevices();
-      updatePosition();
-      
-      // Update position on scroll or resize
-      window.addEventListener('scroll', updatePosition);
-      window.addEventListener('resize', updatePosition);
-      
-      return () => {
-        window.removeEventListener('scroll', updatePosition);
-        window.removeEventListener('resize', updatePosition);
-      };
-    }
-  }, [isOpen]);
+    // Skip if not open
+    if (!isOpen) return;
+    
+    // Use flag to prevent state updates after unmount
+    let isMounted = true;
+    
+    const fetchDevices = async () => {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+          return;
+        }
+
+        const deviceInfos = await navigator.mediaDevices.enumerateDevices();
+        const kind = type === 'camera' ? 'videoinput' : 'audioinput';
+        const hasLabels = deviceInfos.some(d => d.label !== '');
+        
+        if (!hasLabels) {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+              video: type === 'camera', 
+              audio: type === 'microphone' 
+            });
+            stream.getTracks().forEach(track => track.stop());
+            
+            const newDeviceInfos = await navigator.mediaDevices.enumerateDevices();
+            const filteredDevices = newDeviceInfos
+              .filter((device) => device.kind === kind && device.deviceId)
+              .map((device, index) => ({
+                deviceId: device.deviceId,
+                label: device.label || `${type === 'camera' ? 'Camera' : 'Microphone'} ${index + 1}`,
+                kind: device.kind as 'videoinput' | 'audioinput',
+              }));
+            if (isMounted) setDevices(filteredDevices);
+            return;
+          } catch {
+            // Permission denied - continue with no labels
+          }
+        }
+        
+        const filteredDevices = deviceInfos
+          .filter((device) => device.kind === kind && device.deviceId)
+          .map((device, index) => ({
+            deviceId: device.deviceId,
+            label: device.label || `${type === 'camera' ? 'Camera' : 'Microphone'} ${index + 1}`,
+            kind: device.kind as 'videoinput' | 'audioinput',
+          }));
+
+        if (isMounted) setDevices(filteredDevices);
+      } catch {
+        if (isMounted) setDevices([]);
+      }
+    };
+
+    fetchDevices();
+    updatePosition();
+    
+    // Update position on scroll or resize
+    window.addEventListener('scroll', updatePosition);
+    window.addEventListener('resize', updatePosition);
+    
+    return () => {
+      isMounted = false;
+      window.removeEventListener('scroll', updatePosition);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [isOpen, type, updatePosition]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -93,62 +143,6 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen, onClose, type]);
-
-  const loadDevices = async () => {
-    try {
-      // Check if mediaDevices API is available (Safari compatibility)
-      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-        return;
-      }
-
-      // First try to enumerate devices without requesting permissions
-      const deviceInfos = await navigator.mediaDevices.enumerateDevices();
-      const kind = type === 'camera' ? 'videoinput' : 'audioinput';
-      
-      // Check if we have labels (permissions already granted)
-      const hasLabels = deviceInfos.some(d => d.label !== '');
-      
-      if (!hasLabels) {
-        // No labels means permissions not granted yet - request them
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: type === 'camera', 
-            audio: type === 'microphone' 
-          });
-          // Stop the stream immediately - we just needed it for permissions
-          stream.getTracks().forEach(track => track.stop());
-          
-          // Now re-enumerate to get labels
-          const newDeviceInfos = await navigator.mediaDevices.enumerateDevices();
-          const filteredDevices = newDeviceInfos
-            .filter((device) => device.kind === kind && device.deviceId)
-            .map((device, index) => ({
-              deviceId: device.deviceId,
-              label: device.label || `${type === 'camera' ? 'Camera' : 'Microphone'} ${index + 1}`,
-              kind: device.kind as 'videoinput' | 'audioinput',
-            }));
-          setDevices(filteredDevices);
-          return;
-        } catch (permError) {
-          // Permission denied - continue with no labels
-        }
-      }
-      
-      // Use existing device infos (with or without labels)
-      const filteredDevices = deviceInfos
-        .filter((device) => device.kind === kind && device.deviceId)
-        .map((device, index) => ({
-          deviceId: device.deviceId,
-          label: device.label || `${type === 'camera' ? 'Camera' : 'Microphone'} ${index + 1}`,
-          kind: device.kind as 'videoinput' | 'audioinput',
-        }));
-
-      setDevices(filteredDevices);
-    } catch (error) {
-      // Fallback for any errors
-      setDevices([]);
-    }
-  };
 
   const handleDeviceSelect = (deviceId: string) => {
     onDeviceChange(deviceId);

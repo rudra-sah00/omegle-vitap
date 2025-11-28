@@ -10,9 +10,15 @@ import { IDLE_TIMEOUT } from '@/constants';
 
 export function useAnalytics() {
   const pathname = usePathname();
-  const pageStartTimeRef = useRef<number>(Date.now());
+  // Initialize with 0, will be set to actual time in useEffect
+  const pageStartTimeRef = useRef<number>(0);
   const idleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const engagementActionsRef = useRef<string[]>([]);
+
+  // Initialize page start time on mount
+  useEffect(() => {
+    pageStartTimeRef.current = Date.now();
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.performance) {

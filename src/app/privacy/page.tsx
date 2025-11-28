@@ -110,7 +110,7 @@ export default function PrivacyPage() {
           <section className="mb-12">
             <h2 className="text-2xl font-bold mb-4">6. Third-Party Links</h2>
             <p className="text-slate-600 leading-relaxed">
-              Our Service may contain links to external sites that are not operated by us. If you click on a third-party link, you will be directed to that third party's site. We strongly advise you to review the Privacy Policy and terms and conditions of every site you visit.
+              Our Service may contain links to external sites that are not operated by us. If you click on a third-party link, you will be directed to that third party&apos;s site. We strongly advise you to review the Privacy Policy and terms and conditions of every site you visit.
             </p>
           </section>
 

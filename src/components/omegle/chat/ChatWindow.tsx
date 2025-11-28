@@ -17,7 +17,7 @@ interface ChatWindowProps {
   partnerName?: string;
 }
 
-const ChatWindowComponent = ({ isConnected, isStrangerTyping = false, onSendMessage, onTyping, connectionState = 'disconnected', messages = [], partnerName }: ChatWindowProps) => {
+const ChatWindowComponent = ({ isConnected, isStrangerTyping = false, onSendMessage, onTyping, messages = [], partnerName }: ChatWindowProps) => {
   return (
     <div className="hidden lg:flex flex-col bg-white border-l border-slate-300 w-full lg:w-[45%] h-screen shadow-xl overflow-hidden">
       <ChatHeader isConnected={isConnected} />

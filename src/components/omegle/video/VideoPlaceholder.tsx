@@ -22,7 +22,7 @@ export const VideoPlaceholder = ({
   isMatched = false,
 }: VideoPlaceholderProps) => {
   return (
-    <div className="flex-1 relative overflow-hidden rounded-lg" style={{ backgroundColor: '#c8e6f5', minHeight: '300px' }}>
+    <div className="flex-1 relative overflow-hidden rounded-lg bg-video-blue-bg min-h-[300px]">
       <DottedGlowBackground
         className="absolute inset-0"
         gap={15}
@@ -35,12 +35,12 @@ export const VideoPlaceholder = ({
         backgroundOpacity={0.05}
       />
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="w-20 h-20 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: '#a8d8f0' }}>
-          <svg className="w-10 h-10" style={{ color: '#0084d1' }} fill="currentColor" viewBox="0 0 20 20">
+        <div className="w-20 h-20 rounded-full flex items-center justify-center mb-3 bg-video-blue-icon-bg">
+          <svg className="w-10 h-10 text-video-blue-text" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
           </svg>
         </div>
-        <p className="text-sm font-medium" style={{ color: '#0084d1' }}>
+        <p className="text-sm font-medium text-video-blue-text">
           {partnerName || label}
         </p>
         {isWaiting && !isMatched && (
@@ -86,8 +86,7 @@ export const VideoPlaceholder = ({
             </button>
           ) : (
             <button 
-              className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ backgroundColor: '#0084d1' }}
+              className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed bg-video-blue-text"
               title={isWaiting ? 'Searching...' : 'Start Matching'}
               onClick={onStart}
               disabled={isWaiting}

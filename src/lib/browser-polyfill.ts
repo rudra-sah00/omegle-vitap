@@ -9,6 +9,25 @@
 // Track if polyfills have been initialized to prevent duplicate initialization
 let isInitialized = false;
 
+// Type definitions for legacy webkit-prefixed APIs
+interface LegacyWindow extends Window {
+  webkitRTCPeerConnection?: typeof RTCPeerConnection;
+  mozRTCPeerConnection?: typeof RTCPeerConnection;
+}
+
+type LegacyGetUserMedia = (
+  constraints: MediaStreamConstraints,
+  successCallback: (stream: MediaStream) => void,
+  errorCallback: (error: Error) => void
+) => void;
+
+interface LegacyNavigator extends Navigator {
+  webkitGetUserMedia?: LegacyGetUserMedia;
+  mozGetUserMedia?: LegacyGetUserMedia;
+  msGetUserMedia?: LegacyGetUserMedia;
+  MSStream?: unknown;
+}
+
 /**
  * Initialize browser polyfills
  * Should be called once at application startup (in root layout)
@@ -25,23 +44,30 @@ export function initBrowserPolyfills(): void {
     return;
   }
 
+  const legacyWindow = window as LegacyWindow;
+  const legacyNavigator = navigator as LegacyNavigator;
+
   try {
     // Polyfill for RTCPeerConnection (Safari with webkit prefix)
-    if (!window.RTCPeerConnection && (window as any).webkitRTCPeerConnection) {
-      (window as any).RTCPeerConnection = (window as any).webkitRTCPeerConnection;
+    if (!window.RTCPeerConnection && legacyWindow.webkitRTCPeerConnection) {
+      window.RTCPeerConnection = legacyWindow.webkitRTCPeerConnection;
     }
     
     // Polyfill for mediaDevices object
-    if (!navigator.mediaDevices && (navigator as any).webkitGetUserMedia) {
+    if (!navigator.mediaDevices && legacyNavigator.webkitGetUserMedia) {
       // Create a minimal mediaDevices object for legacy browsers
-      (navigator as any).mediaDevices = {};
+      Object.defineProperty(navigator, 'mediaDevices', {
+        value: {},
+        writable: true,
+        configurable: true
+      });
     }
     
     // Polyfill for getUserMedia (convert callback-based to Promise-based)
     if (navigator.mediaDevices && !navigator.mediaDevices.getUserMedia) {
-      const getUserMedia = (navigator as any).webkitGetUserMedia || 
-                          (navigator as any).mozGetUserMedia ||
-                          (navigator as any).msGetUserMedia;
+      const getUserMedia = legacyNavigator.webkitGetUserMedia || 
+                          legacyNavigator.mozGetUserMedia ||
+                          legacyNavigator.msGetUserMedia;
       
       if (getUserMedia) {
         navigator.mediaDevices.getUserMedia = function(constraints: MediaStreamConstraints) {
@@ -53,7 +79,7 @@ export function initBrowserPolyfills(): void {
     }
 
     isInitialized = true;
-  } catch (error) {
+  } catch {
     // Failed to initialize browser polyfills
   }
 }
@@ -79,19 +105,22 @@ export function isBrowserSupported(): boolean {
     return false;
   }
 
+  const legacyWindow = window as LegacyWindow;
+  const legacyNavigator = navigator as LegacyNavigator;
+
   // Check for RTCPeerConnection (with webkit prefix support)
   const hasWebRTC = !!(
     window.RTCPeerConnection || 
-    (window as any).webkitRTCPeerConnection || 
-    (window as any).mozRTCPeerConnection
+    legacyWindow.webkitRTCPeerConnection || 
+    legacyWindow.mozRTCPeerConnection
   );
 
   // Check for getUserMedia (with webkit prefix support)
   const hasGetUserMedia = !!(
     (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ||
-    (navigator as any).webkitGetUserMedia ||
-    (navigator as any).mozGetUserMedia ||
-    (navigator as any).msGetUserMedia
+    legacyNavigator.webkitGetUserMedia ||
+    legacyNavigator.mozGetUserMedia ||
+    legacyNavigator.msGetUserMedia
   );
 
   return hasWebRTC && hasGetUserMedia;
@@ -141,5 +170,6 @@ export function isIOS(): boolean {
     return false;
   }
   
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  const legacyNavigator = navigator as LegacyNavigator;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !legacyNavigator.MSStream;
 }

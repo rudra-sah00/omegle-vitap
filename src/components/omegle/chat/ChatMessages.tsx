@@ -37,7 +37,7 @@ export const ChatMessages = ({ isConnected, isStrangerTyping = false, messages =
               </svg>
             </div>
             <p className="text-slate-600 text-sm font-medium">
-              Click "Start" to begin chatting
+              Click &quot;Start&quot; to begin chatting
             </p>
             <p className="text-slate-400 text-xs">
               Connect with a stranger and start a conversation
