@@ -2,7 +2,7 @@
 
 import type { FC } from 'react';
 import { DottedGlowBackground } from '@/components/ui/dotted-glow-background';
-import { RoomControls } from './controls/RoomControls';
+import { RoomControls } from '../controls/RoomControls';
 
 interface LocalScreenShareViewProps {
   isCameraOn: boolean;
