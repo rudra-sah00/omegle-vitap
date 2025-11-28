@@ -22,20 +22,7 @@ interface ErrorReport {
  * Send error to tracking service
  * Can be integrated with Sentry, LogRocket, etc.
  */
-function reportError(report: ErrorReport): void {
-  // In development, log to console
-  if (process.env.NODE_ENV === 'development') {
-    console.group(`🔴 [GlobalErrorHandler] ${report.type}`);
-    console.error('Message:', report.message);
-    if (report.stack) {
-      console.error('Stack:', report.stack);
-    }
-    console.log('URL:', report.url);
-    console.log('Time:', report.timestamp);
-    console.groupEnd();
-  }
-  
-  // In production, send to error tracking service
+function reportError(_report: ErrorReport): void {
   // TODO: Integrate with Sentry or similar service
   // Example:
   // if (typeof Sentry !== 'undefined') {

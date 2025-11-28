@@ -124,6 +124,10 @@ export function useVideoChat(options: UseVideoChatOptions) {
     
     setIsSearching(false);
     currentMatchRef.current = matchData;
+    
+    // Set session active immediately so text chat works via Socket.IO
+    // This allows chat even if video/LiveKit fails
+    setIsInSession(true);
 
     const maxRetries = 2;
     let lastError: unknown = null;
@@ -133,9 +137,7 @@ export function useVideoChat(options: UseVideoChatOptions) {
         const uid = currentUidRef.current;
         
         await initializeRTC(matchData, uid, localVideoElementId, remoteVideoElementId);
-
-        setIsInSession(true);
-        return;
+        return; // RTC initialized successfully
       } catch (error) {
         lastError = error;
         
@@ -149,25 +151,34 @@ export function useVideoChat(options: UseVideoChatOptions) {
       }
     }
 
+    // RTC failed but text chat should still work
     const errorMsg = lastError instanceof Error ? lastError.message : 'Unknown error';
     const errorLower = errorMsg.toLowerCase();
     
+    // Only show error and end session for critical failures
     if (errorMsg.includes('PERMISSION_DENIED') || errorLower.includes('permission') || errorLower.includes('denied')) {
-      showError('Camera/microphone permission denied. Please allow access in your browser settings and refresh the page.', ErrorCode.CAMERA_PERMISSION_DENIED);
+      showError('Camera/microphone permission denied. Text chat is still available.', ErrorCode.CAMERA_PERMISSION_DENIED);
+      // Don't end session - text chat can still work
     } else if (errorMsg.includes('DEVICE_NOT_FOUND') || errorLower.includes('not found')) {
-      showError('Camera or microphone not found. Please connect a device and try again.', ErrorCode.MEDIA_DEVICE_NOT_FOUND);
+      showError('Camera or microphone not found. Text chat is still available.', ErrorCode.MEDIA_DEVICE_NOT_FOUND);
+      // Don't end session - text chat can still work
     } else if (errorMsg.includes('DEVICE_IN_USE') || errorLower.includes('in use') || errorLower.includes('being used')) {
-      showError('Camera or microphone is being used by another app. Please close other apps and try again.', ErrorCode.CAMERA_IN_USE);
+      showError('Camera or microphone is being used by another app. Text chat is still available.', ErrorCode.CAMERA_IN_USE);
+      // Don't end session - text chat can still work
     } else if (errorLower.includes('timeout') || errorLower.includes('timed out')) {
-      showError('Connection timeout. This may be due to slow device or network. Please try again.', ErrorCode.CONNECTION_TIMEOUT);
+      showError('Video connection timeout. Text chat is still available.', ErrorCode.CONNECTION_TIMEOUT);
+      // Don't end session - text chat can still work
     } else if (errorLower.includes('token') || errorLower.includes('invalid')) {
       showError('Session token expired. Please try again.', ErrorCode.AUTH_FAILED);
+      await endSessionRef.current?.();
     } else if (errorLower.includes('network') || errorLower.includes('offline')) {
       showError('No internet connection. Please check your network and try again.', ErrorCode.CONNECTION_LOST);
+      await endSessionRef.current?.();
     } else {
-      showError('Failed to connect. Please try again.', ErrorCode.CHANNEL_JOIN_FAILED);
+      // For other errors, keep text chat working
+      showError('Video unavailable. Text chat is still available.', ErrorCode.CHANNEL_JOIN_FAILED);
+      // Don't end session - text chat can still work
     }
-    await endSessionRef.current?.();
   }, [isInSession, isRTCInitialized, initializeRTC, localVideoElementId, remoteVideoElementId]);
 
   const handleMatchmakingError = useCallback((error: string) => {
