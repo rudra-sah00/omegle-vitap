@@ -1,8 +1,48 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 
+export const metadata: Metadata = {
+  title: 'Terms of Service - Rules & Guidelines | Omegle VITAP',
+  description: 'Read the terms of service for Omegle VITAP random video chat platform. Understand our rules, eligibility requirements, and user conduct guidelines.',
+  alternates: {
+    canonical: 'https://vitap.in/terms',
+  },
+  openGraph: {
+    title: 'Terms of Service | Omegle VITAP',
+    description: 'Terms and conditions for using Omegle VITAP random video chat platform.',
+    url: 'https://vitap.in/terms',
+    type: 'website',
+  },
+};
+
 export default function TermsPage() {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Terms of Service",
+    "description": "Terms of service for Omegle VITAP random video chat platform",
+    "url": "https://vitap.in/terms",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "Omegle VITAP",
+      "url": "https://vitap.in"
+    },
+    "breadcrumb": {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://vitap.in" },
+        { "@type": "ListItem", "position": 2, "name": "Terms of Service", "item": "https://vitap.in/terms" }
+      ]
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-100">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-100">
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/welcome" className="font-bold text-xl tracking-tight hover:text-blue-600 transition-colors">
@@ -92,5 +132,6 @@ export default function TermsPage() {
         </div>
       </main>
     </div>
+    </>
   );
 }

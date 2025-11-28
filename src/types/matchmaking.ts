@@ -51,8 +51,10 @@ export interface MatchDataMatched {
   channelName: string;
   rtcToken: string;
   rtmToken: string;
+  livekitHost: string;
   partnerName: string;
   partnerUid: number;
+  partnerGender?: 'male' | 'female' | 'other';
   expiresAt: number;
 }
 

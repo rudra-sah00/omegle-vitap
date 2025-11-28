@@ -6,7 +6,8 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Button } from '@heroui/button';
 import { JoinButton } from './JoinButton';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/hooks';
+import { ONLINE_STATUS_CHECK_INTERVAL, BACKEND_CHECK_TIMEOUT } from '@/constants';
 
 export const WelcomeForm = () => {
   const { name, setName, gender, setGender } = useUser();
@@ -39,7 +40,7 @@ export const WelcomeForm = () => {
     };
 
     checkOnlineStatus();
-    const interval = setInterval(checkOnlineStatus, 60000); // Check every minute
+    const interval = setInterval(checkOnlineStatus, ONLINE_STATUS_CHECK_INTERVAL);
 
     return () => clearInterval(interval);
   }, []);
@@ -66,7 +67,7 @@ export const WelcomeForm = () => {
       }
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), BACKEND_CHECK_TIMEOUT);
 
       const res = await fetch(`${backendUrl}/status`, {
         signal: controller.signal,

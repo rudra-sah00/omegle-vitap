@@ -3,7 +3,7 @@ import { MetadataRoute } from 'next'
 export const dynamic = 'force-static';
  
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://omegle-vitap.vercel.app';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://vitap.in';
   
   return {
     rules: [

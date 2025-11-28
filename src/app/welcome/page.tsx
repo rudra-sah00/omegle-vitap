@@ -1,19 +1,8 @@
 'use client';
 
 import { WelcomeForm } from '@/components/welcome/WelcomeForm';
-import { useEffect } from 'react';
 
 export default function WelcomePage() {
-  useEffect(() => {
-    document.title = 'Random Video Chat with Strangers - Free Omegle Alternative | Omegle VITAP';
-    
-    // Update meta description dynamically
-    const metaDescription = document.querySelector('meta[name="description"]');
-    if (metaDescription) {
-      metaDescription.setAttribute('content', 'Start free random video chat with strangers instantly. Talk to random people online, meet new friends anonymously. Best Omegle alternative for random stranger chat.');
-    }
-  }, []);
-
   return (
     <div className="relative flex items-center justify-center min-h-screen overflow-hidden px-4 sm:px-6 md:px-8 py-8">
       {/* Animated gradient background - sky blue */}

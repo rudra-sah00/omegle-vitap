@@ -1,13 +1,14 @@
-import { UserProvider } from "@/context/UserContext";
-import { MediaStateProvider } from "@/context/MediaStateContext";
-import { BrowserInit } from "@/components/BrowserInit";
-import { ErrorBoundaryHandler } from "@/components/ErrorBoundaryHandler";
-import { MaintenanceGuard } from "@/components/MaintenanceGuard";
-import { FirebaseProvider } from "@/components/FirebaseProvider";
+import {
+  UserProvider,
+  MediaStateProvider,
+  FirebaseProvider,
+  MaintenanceGuard,
+  ToastProvider,
+} from "@/providers";
+import { BrowserPolyfillInit, GlobalErrorHandler } from "@/components/common";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { HeroUIProvider } from "@heroui/system";
-import { HeroUIToastProvider } from "@/components/HeroUIToastProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -21,7 +22,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://omegle-vitap.vercel.app'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://vitap.in'),
   title: "Omegle VITAP - Free Random Video Chat with Strangers | Talk to Strangers Online",
   description: "Free random video chat and text chat with strangers online. Talk to random people, meet new friends anonymously. Omegle alternative for random stranger chat, video call, and instant messaging. Connect with thousands of users worldwide for free random chat.",
   keywords: [
@@ -99,7 +100,7 @@ export const metadata: Metadata = {
     siteName: "Omegle VITAP",
     images: [
       {
-        url: "/public_brand.png",
+        url: "https://vitap.in/public_brand.png",
         width: 1200,
         height: 630,
         alt: "Omegle VITAP - Talk to strangers",
@@ -112,11 +113,11 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Omegle VITAP - Random Video Chat with Strangers",
     description: "random video chat and text chat with strangers. Talk to random people, meet new friends anonymously. Omegle alternative for instant stranger chat.",
-    images: ["/public_brand.png"],
+    images: ["https://vitap.in/public_brand.png"],
     creator: "@omeglevitap",
   },
   alternates: {
-    canonical: "https://vita.in",
+    canonical: "https://vitap.in",
   },
   category: "social networking",
   classification: "Random Video Chat, Stranger Chat, Social Networking",
@@ -151,7 +152,7 @@ export default function RootLayout({
     "@type": "WebApplication",
     "name": "Omegle VITAP",
     "description": "Free random video chat and text chat with strangers online. Talk to random people, meet new friends anonymously.",
-    "url": "https://omegle-vitap.vercel.app",
+    "url": "https://vitap.in",
     "applicationCategory": "SocialNetworkingApplication",
     "operatingSystem": "Any",
     "offers": {
@@ -184,16 +185,17 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
-        <meta name="google-site-verification" content="your-verification-code-here" />
-        <link rel="canonical" href="https://omegle-vitap.vercel.app" />
+        {/* Add your Google Search Console verification code here */}
+        {/* <meta name="google-site-verification" content="YOUR_CODE" /> */}
+        <link rel="canonical" href="https://vitap.in" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <BrowserInit />
-        <ErrorBoundaryHandler />
+        <BrowserPolyfillInit />
+        <GlobalErrorHandler />
         <HeroUIProvider>
-          <HeroUIToastProvider>
+          <ToastProvider>
             <MaintenanceGuard>
               <FirebaseProvider>
                 <UserProvider>
@@ -203,7 +205,7 @@ export default function RootLayout({
                 </UserProvider>
               </FirebaseProvider>
             </MaintenanceGuard>
-          </HeroUIToastProvider>
+          </ToastProvider>
         </HeroUIProvider>
       </body>
     </html>

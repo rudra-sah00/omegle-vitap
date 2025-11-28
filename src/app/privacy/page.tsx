@@ -1,8 +1,48 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 
+export const metadata: Metadata = {
+  title: 'Privacy Policy - Your Data & Anonymity | Omegle VITAP',
+  description: 'Read our privacy policy to understand how Omegle VITAP protects your data. Anonymous random video chat with no personal data required. Your privacy is our priority.',
+  alternates: {
+    canonical: 'https://vitap.in/privacy',
+  },
+  openGraph: {
+    title: 'Privacy Policy | Omegle VITAP',
+    description: 'Learn how we protect your privacy during anonymous random video chat. No personal data required.',
+    url: 'https://vitap.in/privacy',
+    type: 'website',
+  },
+};
+
 export default function PrivacyPage() {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Privacy Policy",
+    "description": "Privacy policy for Omegle VITAP random video chat platform",
+    "url": "https://vitap.in/privacy",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "Omegle VITAP",
+      "url": "https://vitap.in"
+    },
+    "breadcrumb": {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://vitap.in" },
+        { "@type": "ListItem", "position": 2, "name": "Privacy Policy", "item": "https://vitap.in/privacy" }
+      ]
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-100">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-100">
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/welcome" className="font-bold text-xl tracking-tight hover:text-blue-600 transition-colors">
@@ -82,5 +122,6 @@ export default function PrivacyPage() {
         </div>
       </main>
     </div>
+    </>
   );
 }

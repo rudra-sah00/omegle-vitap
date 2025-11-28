@@ -1,7 +1,6 @@
 /**
  * Library Exports
- * Centralized exports for lib utilities and services
- * Follows production structure best practices
+ * Centralized exports for lib utilities
  */
 
 // Browser Utilities
@@ -25,6 +24,15 @@ export {
 // General Utilities
 export { cn } from './utils';
 
+// Media Utilities
+export {
+  getPersistedCameraState,
+  getPersistedMicState,
+  persistCameraState,
+  persistMicState,
+  getPersistedMediaStates,
+  clearPersistedMediaStates,
+} from './media';
+
 // Types
-export type { AgoraRTCConfig } from './agora/agora-rtc';
-export type { MessageData } from '@/hooks/useSocketIOChat';
+export type { MessageData } from '@/hooks';

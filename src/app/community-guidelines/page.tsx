@@ -1,8 +1,48 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 
+export const metadata: Metadata = {
+  title: 'Community Guidelines - Safe Chat Rules | Omegle VITAP',
+  description: 'Community guidelines for safe random video chatting. Learn the do\'s and don\'ts for a positive experience on Omegle VITAP. Zero tolerance for harassment.',
+  alternates: {
+    canonical: 'https://vitap.in/community-guidelines',
+  },
+  openGraph: {
+    title: 'Community Guidelines | Omegle VITAP',
+    description: 'Guidelines for safe and respectful random video chat on Omegle VITAP.',
+    url: 'https://vitap.in/community-guidelines',
+    type: 'website',
+  },
+};
+
 export default function CommunityGuidelinesPage() {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Community Guidelines",
+    "description": "Community guidelines for safe random video chatting on Omegle VITAP",
+    "url": "https://vitap.in/community-guidelines",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "Omegle VITAP",
+      "url": "https://vitap.in"
+    },
+    "breadcrumb": {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://vitap.in" },
+        { "@type": "ListItem", "position": 2, "name": "Community Guidelines", "item": "https://vitap.in/community-guidelines" }
+      ]
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-100">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-100">
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/welcome" className="font-bold text-xl tracking-tight hover:text-blue-600 transition-colors">
@@ -114,5 +154,6 @@ export default function CommunityGuidelinesPage() {
         </div>
       </main>
     </div>
+    </>
   );
 }
