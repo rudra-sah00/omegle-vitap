@@ -164,6 +164,16 @@ export function useLiveKit(options: UseLiveKitOptions = {}) {
       });
 
       rtcServiceRef.current.setOnUserLeft((participant: RemoteParticipant) => {
+        // Admin subscribers join with UIDs in the 900000-999999 range
+        // Don't trigger partner left callback for admin observers
+        const participantUid = parseInt(participant.identity, 10);
+        const isAdminObserver = !isNaN(participantUid) && participantUid >= 900000 && participantUid <= 999999;
+        
+        if (isAdminObserver) {
+          // Admin observer left - ignore, don't affect user session
+          return;
+        }
+        
         setIsRemoteCameraOn(false);
         setIsRemoteMicOn(false);
         setRemoteNetworkQuality('unknown');

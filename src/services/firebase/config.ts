@@ -47,10 +47,12 @@ export function initializeFirebase(): { app: FirebaseApp | null; analytics: Anal
   // Validate configuration
   if (!validateFirebaseConfig()) {
     if (!initializationWarningShown) {
-      console.warn(
-        '[Firebase] Missing required configuration. Please check your environment variables.',
-        '\nRequired: NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, NEXT_PUBLIC_FIREBASE_PROJECT_ID, NEXT_PUBLIC_FIREBASE_APP_ID'
-      );
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(
+          '[Firebase] Missing required configuration. Please check your environment variables.',
+          '\nRequired: NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, NEXT_PUBLIC_FIREBASE_PROJECT_ID, NEXT_PUBLIC_FIREBASE_APP_ID'
+        );
+      }
       initializationWarningShown = true;
     }
     return { app: null, analytics: null };

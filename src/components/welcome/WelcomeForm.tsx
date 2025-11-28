@@ -17,7 +17,34 @@ export const WelcomeForm = () => {
   const [serviceMessage, setServiceMessage] = useState('');
   const [isCheckingService, setIsCheckingService] = useState(false);
   const [isCheckingOnlineStatus, setIsCheckingOnlineStatus] = useState(true);
+  const [nameError, setNameError] = useState('');
   const router = useRouter();
+
+  // Validate name: at least 3 characters, no numbers
+  const validateName = (value: string): string => {
+    const trimmedName = value.trim();
+    if (trimmedName.length === 0) {
+      return '';
+    }
+    if (trimmedName.length < 3) {
+      return 'Name must be at least 3 characters';
+    }
+    if (/\d/.test(trimmedName)) {
+      return 'Name cannot contain numbers';
+    }
+    if (!/^[a-zA-Z\s]+$/.test(trimmedName)) {
+      return 'Name can only contain letters and spaces';
+    }
+    return '';
+  };
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setName(value);
+    setNameError(validateName(value));
+  };
+
+  const isNameValid = name.trim().length >= 3 && !/\d/.test(name) && /^[a-zA-Z\s]+$/.test(name.trim());
 
   useEffect(() => {
     const checkOnlineStatus = async () => {
@@ -46,7 +73,7 @@ export const WelcomeForm = () => {
   }, []);
 
   const handleJoin = async () => {
-    if (!name.trim() || isLoading) {
+    if (!isNameValid || isLoading) {
       return;
     }
 
@@ -138,13 +165,16 @@ export const WelcomeForm = () => {
             <div className="relative group">
               <input
                 type="text"
-                placeholder="Enter your name"
+                placeholder="Enter your name (letters only)"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-5 sm:px-6 py-4 sm:py-4 rounded-2xl bg-white/95 backdrop-blur-sm border-2 border-white/40 focus:outline-none focus:ring-4 focus:ring-white/50 focus:border-white text-gray-900 text-sm sm:text-base placeholder:text-gray-500 transition-all shadow-xl font-medium hover:bg-white group-hover:shadow-2xl"
+                onChange={handleNameChange}
+                className={`w-full px-5 sm:px-6 py-4 sm:py-4 rounded-2xl bg-white/95 backdrop-blur-sm border-2 ${nameError ? 'border-red-400 focus:ring-red-300/50 focus:border-red-400' : 'border-white/40 focus:ring-white/50 focus:border-white'} focus:outline-none focus:ring-4 text-gray-900 text-sm sm:text-base placeholder:text-gray-500 transition-all shadow-xl font-medium hover:bg-white group-hover:shadow-2xl`}
               />
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-400/20 to-pink-400/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
             </div>
+            {nameError && (
+              <p className="text-red-200 text-xs ml-1 font-medium">{nameError}</p>
+            )}
           </div>
 
           {/* Gender Selection */}
@@ -210,7 +240,7 @@ export const WelcomeForm = () => {
             <JoinButton
               isOnline={isOnline}
               onClick={handleJoin}
-              disabled={!name.trim() || isLoading}
+              disabled={!isNameValid || isLoading}
               isChecking={isCheckingService}
               isCheckingOnlineStatus={isCheckingOnlineStatus}
             />
