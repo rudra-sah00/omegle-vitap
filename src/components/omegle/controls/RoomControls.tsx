@@ -81,7 +81,7 @@ export const RoomControls = memo(
     };
 
     return (
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-4 z-30">
+      <div className="absolute bottom-4 lg:bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2 lg:gap-4 z-30 px-2">
         {/* Camera Control */}
         <MediaControlWithSelector
           type="camera"

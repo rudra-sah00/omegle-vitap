@@ -228,9 +228,9 @@ function OmeglePageContent() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Video Areas - Fill screen on mobile, 55% on desktop */}
-        <div className="w-full lg:w-[55%] flex flex-col p-2 gap-2 lg:p-4 lg:gap-4 h-full overflow-hidden">
-          {/* Stranger Video - Takes 50% height on mobile */}
-          <div className="flex-1 relative">
+        <div className="w-full lg:w-[55%] flex flex-col p-2 gap-2 lg:p-4 lg:gap-4 h-full overflow-hidden pb-24 lg:pb-4">
+          {/* Stranger Video - Takes available height minus controls on mobile */}
+          <div className="flex-1 relative min-h-0">
             <VideoDisplay
               id="remote-video"
               label={matchData?.partnerName || 'Stranger'}
@@ -251,8 +251,8 @@ function OmeglePageContent() {
             )}
           </div>
 
-          {/* Your Video - Takes 50% height on mobile */}
-          <div className="flex-1 relative">
+          {/* Your Video - Takes available height minus controls on mobile */}
+          <div className="flex-1 relative min-h-0">
             {isScreenSharing ? (
               <LocalScreenShareView
                 isCameraOn={isCameraOn}

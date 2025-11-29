@@ -33,7 +33,7 @@ export const StartButton = memo(({ onClick, disabled }: ActionButtonProps) => (
     isIconOnly
     radius="full"
     isDisabled={disabled}
-    className="w-12 h-12 min-w-12 bg-green-500 hover:bg-green-600 text-white"
+    className="w-11 h-11 min-w-11 lg:w-12 lg:h-12 lg:min-w-12 bg-green-500 hover:bg-green-600 text-white"
     title="Start matching"
     aria-label="Start matching with a stranger"
   >
@@ -51,7 +51,7 @@ export const StopButton = memo(({ onClick, disabled }: ActionButtonProps) => (
     isIconOnly
     radius="full"
     isDisabled={disabled}
-    className="w-12 h-12 min-w-12 bg-red-500 hover:bg-red-600 text-white"
+    className="w-11 h-11 min-w-11 lg:w-12 lg:h-12 lg:min-w-12 bg-red-500 hover:bg-red-600 text-white"
     title="Stop searching"
     aria-label="Stop searching for a match"
   >
@@ -69,7 +69,7 @@ export const NextButton = memo(({ onClick, disabled }: ActionButtonProps) => (
     isIconOnly
     radius="full"
     isDisabled={disabled}
-    className="w-12 h-12 min-w-12 text-white"
+    className="w-11 h-11 min-w-11 lg:w-12 lg:h-12 lg:min-w-12 text-white"
     style={{ backgroundColor: '#0084d1' }}
     title="Next stranger"
     aria-label="Skip to next stranger"
@@ -88,7 +88,7 @@ export const LeaveButton = memo(({ onClick, disabled }: ActionButtonProps) => (
     isIconOnly
     radius="full"
     isDisabled={disabled}
-    className="w-12 h-12 min-w-12 bg-red-500 hover:bg-red-600 text-white"
+    className="w-11 h-11 min-w-11 lg:w-12 lg:h-12 lg:min-w-12 bg-red-500 hover:bg-red-600 text-white"
     title="Leave room"
     aria-label="Leave the chat room"
   >
@@ -112,7 +112,7 @@ export const ScreenShareButton = memo(
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors ${
+      className={`w-11 h-11 lg:w-12 lg:h-12 rounded-full flex items-center justify-center text-white transition-colors ${
         isSharing ? 'bg-red-500 hover:bg-red-600' : 'bg-slate-600 hover:bg-slate-700'
       }`}
       title={isSharing ? 'Stop sharing screen' : 'Share screen'}
@@ -152,7 +152,7 @@ export const ChatButton = memo(({ onClick, disabled, unreadCount = 0 }: ChatButt
   <button
     onClick={onClick}
     disabled={disabled}
-    className="w-12 h-12 rounded-full bg-slate-600 hover:bg-slate-700 flex items-center justify-center text-white transition-colors relative"
+    className="w-11 h-11 lg:w-12 lg:h-12 rounded-full bg-slate-600 hover:bg-slate-700 flex items-center justify-center text-white transition-colors relative"
     title="Open chat"
     aria-label="Open chat"
   >

@@ -27,7 +27,7 @@ export const MediaToggleButton = memo(({ isOn, onToggle, type }: MediaToggleButt
   return (
     <button
       onClick={onToggle}
-      className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors ${
+      className={`w-11 h-11 lg:w-12 lg:h-12 rounded-full flex items-center justify-center text-white transition-colors ${
         isOn ? 'bg-slate-600 hover:bg-slate-700' : 'bg-red-500 hover:bg-red-600'
       }`}
       title={title}
