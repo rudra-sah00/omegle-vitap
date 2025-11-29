@@ -23,7 +23,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://vitap.in'),
-  title: 'Omegle VITAP - Free Random Video Chat with Strangers | Talk to Strangers Online',
+  title: 'Omegle - Free Random Video Chat with Strangers | Talk to Strangers Online',
   description:
     'Free random video chat and text chat with strangers online. Talk to random people, meet new friends anonymously. Omegle alternative for random stranger chat, video call, and instant messaging. Connect with thousands of users worldwide for free random chat.',
   keywords: [
@@ -81,7 +81,6 @@ export const metadata: Metadata = {
     'stranger video chat',
 
     // Location-specific
-    'vitap',
     'vellore chat',
     'indian chat',
     'chat india',
@@ -93,19 +92,19 @@ export const metadata: Metadata = {
     'skip chat',
     'next stranger',
   ],
-  authors: [{ name: 'Omegle VITAP Team' }],
+  authors: [{ name: 'Omegle Team' }],
   openGraph: {
-    title: 'Omegle VITAP - Free Random Video Chat with Strangers',
+    title: 'Omegle - Free Random Video Chat with Strangers',
     description:
       'Free random video chat and text chat with strangers online. Talk to random people, meet new friends anonymously. Connect instantly, no registration required.',
     url: 'https://vitap.in/',
-    siteName: 'Omegle VITAP',
+    siteName: 'Omegle',
     images: [
       {
         url: 'https://vitap.in/public_brand.png',
         width: 1200,
         height: 630,
-        alt: 'Omegle VITAP - Talk to strangers',
+        alt: 'Omegle - Talk to strangers',
       },
     ],
     locale: 'en_US',
@@ -113,11 +112,11 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Omegle VITAP - Random Video Chat with Strangers',
+    title: 'Omegle - Random Video Chat with Strangers',
     description:
       'random video chat and text chat with strangers. Talk to random people, meet new friends anonymously. Omegle alternative for instant stranger chat.',
     images: ['https://vitap.in/public_brand.png'],
-    creator: '@omeglevitap',
+    creator: '@omegle',
   },
   alternates: {
     canonical: 'https://vitap.in',
@@ -150,7 +149,7 @@ export default function RootLayout({
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
-    name: 'Omegle VITAP',
+    name: 'Omegle',
     description:
       'Free random video chat and text chat with strangers online. Talk to random people, meet new friends anonymously.',
     url: 'https://vitap.in',

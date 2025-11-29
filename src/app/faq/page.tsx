@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'FAQ - Random Video Chat Questions | Omegle VITAP',
+  title: 'FAQ - Random Video Chat Questions | Omegle',
   description:
-    'Frequently asked questions about random video chat, stranger chat, and how to use Omegle VITAP for free anonymous chatting.',
+    'Frequently asked questions about random video chat, stranger chat, and how to use Omegle for free anonymous chatting.',
 };
 
 export default function FAQPage() {
@@ -14,9 +14,9 @@ export default function FAQPage() {
       icon: '🚀',
       questions: [
         {
-          question: 'What is Omegle VITAP?',
+          question: 'What is Omegle?',
           answer:
-            "Omegle VITAP is a free random video chat platform where you can talk to strangers online. Connect with random people worldwide for video chat, text chat, or voice chat anonymously. It's designed specifically for students to make new friends and have interesting conversations.",
+            "Omegle is a free random video chat platform where you can talk to strangers online. Connect with random people worldwide for video chat, text chat, or voice chat anonymously. It's designed specifically for college students to make new friends and have interesting conversations.",
         },
         {
           question: 'Do I need to register to use random chat?',
@@ -35,9 +35,9 @@ export default function FAQPage() {
       icon: '💰',
       questions: [
         {
-          question: 'Is Omegle VITAP free?',
+          question: 'Is Omegle free?',
           answer:
-            'Yes! Omegle VITAP is completely free to use. No registration, no subscription, no hidden fees. Start random video chat with strangers instantly without any cost, forever.',
+            'Yes! Omegle is completely free to use. No registration, no subscription, no hidden fees. Start random video chat with strangers instantly without any cost, forever.',
         },
         {
           question: 'Can I use text chat instead of video?',
@@ -79,7 +79,7 @@ export default function FAQPage() {
         {
           question: 'What browsers are supported?',
           answer:
-            'Omegle VITAP works best on modern browsers like Chrome, Firefox, Safari, and Edge. Make sure your browser has permission to access your camera and microphone.',
+            'Omegle works best on modern browsers like Chrome, Firefox, Safari, and Edge. Make sure your browser has permission to access your camera and microphone.',
         },
         {
           question: "Why can't others see or hear me?",
@@ -87,9 +87,9 @@ export default function FAQPage() {
             'Check if your browser has permission to access your camera and microphone. Also verify that no other application is using your devices. Try refreshing the page or restarting your browser if issues persist.',
         },
         {
-          question: 'What makes this different from Omegle?',
+          question: 'What makes this different from other chat platforms?',
           answer:
-            "Omegle VITAP offers the same random chat experience with improved performance, better matching algorithm, enhanced safety features, and a more modern interface designed for today's users.",
+            "Omegle offers an authentic random chat experience with improved performance, better matching algorithm, enhanced safety features, and a modern interface designed for today's college students.",
         },
       ],
     },
@@ -123,7 +123,7 @@ export default function FAQPage() {
               href="/welcome"
               className="font-bold text-xl tracking-tight hover:text-blue-600 transition-colors"
             >
-              Omegle VITAP
+              Omegle
             </Link>
             <div className="flex items-center gap-6">
               <Link
@@ -152,7 +152,7 @@ export default function FAQPage() {
             </h1>
             <p className="text-lg sm:text-xl text-slate-600 leading-relaxed max-w-3xl mx-auto">
               Everything you need to know about random video chat, stranger chat, and how to use
-              Omegle VITAP
+              Omegle
             </p>
           </header>
 
@@ -240,7 +240,7 @@ export default function FAQPage() {
                 Community Guidelines
               </Link>
             </div>
-            <p>© 2025 Omegle VITAP. Free random video chat with strangers.</p>
+            <p>© 2025 Omegle. Free random video chat with strangers.</p>
           </div>
         </footer>
       </div>

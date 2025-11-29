@@ -12,6 +12,7 @@ interface LocalScreenShareViewProps {
   isScreenSharing: boolean;
   currentCameraId?: string;
   currentMicId?: string;
+  userGender?: 'male' | 'female' | 'other';
   onStart: () => void;
   onStop: () => void;
   onNext: () => void;
@@ -35,6 +36,7 @@ export const LocalScreenShareView: FC<LocalScreenShareViewProps> = ({
   isScreenSharing,
   currentCameraId,
   currentMicId,
+  userGender,
   onStart,
   onStop,
   onNext,
@@ -45,14 +47,20 @@ export const LocalScreenShareView: FC<LocalScreenShareViewProps> = ({
   onSwitchMicrophone,
   onLeave,
 }) => {
+  // Apply gender-based theming - case-insensitive comparison
+  const isPink = userGender?.toLowerCase() === 'female';
+  const bgClass = isPink ? 'bg-video-pink-bg' : 'bg-video-blue-bg';
+  const gridColor = isPink ? 'rgb(236, 72, 153)' : 'rgb(0, 132, 209)';
+  const iconBgClass = isPink ? 'bg-video-pink-icon-bg' : 'bg-video-blue-icon-bg';
+
   return (
-    <div className="h-full w-full relative overflow-hidden rounded-lg bg-video-blue-bg">
+    <div className={`h-full w-full relative overflow-hidden rounded-lg ${bgClass}`}>
       {/* Flickering Grid Background */}
       <FlickeringGrid
         className="absolute inset-0 w-full h-full"
         squareSize={4}
         gridGap={6}
-        color="rgb(0, 132, 209)"
+        color={gridColor}
         maxOpacity={0.4}
         flickerChance={0.3}
       />
@@ -82,7 +90,7 @@ export const LocalScreenShareView: FC<LocalScreenShareViewProps> = ({
 
       {/* Camera PiP when screen sharing - always render element, hide if camera off */}
       <div
-        className={`absolute bottom-24 right-4 w-36 h-28 rounded-lg overflow-hidden border-2 border-white shadow-xl z-20 transition-opacity bg-video-blue-icon-bg ${
+        className={`absolute bottom-24 right-4 w-36 h-28 rounded-lg overflow-hidden border-2 border-white shadow-xl z-20 transition-opacity ${iconBgClass} ${
           isCameraOn ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >

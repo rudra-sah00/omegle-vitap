@@ -2,15 +2,15 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Community Guidelines - Safe Chat Rules | Omegle VITAP',
+  title: 'Community Guidelines - Safe Chat Rules | Omegle',
   description:
-    "Community guidelines for safe random video chatting. Learn the do's and don'ts for a positive experience on Omegle VITAP. Zero tolerance for harassment.",
+    "Community guidelines for safe random video chatting. Learn the do's and don'ts for a positive experience on Omegle. Zero tolerance for harassment.",
   alternates: {
     canonical: 'https://vitap.in/community-guidelines',
   },
   openGraph: {
-    title: 'Community Guidelines | Omegle VITAP',
-    description: 'Guidelines for safe and respectful random video chat on Omegle VITAP.',
+    title: 'Community Guidelines | Omegle',
+    description: 'Guidelines for safe and respectful random video chat on Omegle.',
     url: 'https://vitap.in/community-guidelines',
     type: 'website',
   },
@@ -21,11 +21,11 @@ export default function CommunityGuidelinesPage() {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
     name: 'Community Guidelines',
-    description: 'Community guidelines for safe random video chatting on Omegle VITAP',
+    description: 'Community guidelines for safe random video chatting on Omegle',
     url: 'https://vitap.in/community-guidelines',
     isPartOf: {
       '@type': 'WebSite',
-      name: 'Omegle VITAP',
+      name: 'Omegle',
       url: 'https://vitap.in',
     },
     breadcrumb: {
@@ -55,7 +55,7 @@ export default function CommunityGuidelinesPage() {
               href="/welcome"
               className="font-bold text-xl tracking-tight hover:text-blue-600 transition-colors"
             >
-              Omegle VITAP
+              Omegle
             </Link>
             <Link
               href="/welcome"
@@ -72,7 +72,8 @@ export default function CommunityGuidelinesPage() {
               Community Guidelines
             </h1>
             <p className="text-lg text-slate-600 leading-relaxed">
-              Omegle VITAP is a community for students to connect. To keep this community safe and
+              Omegle is a community for college and university students to connect, make friends,
+              and have meaningful conversations. To keep this community safe, respectful, and
               enjoyable for everyone, we ask that you follow these guidelines.
             </p>
           </header>
@@ -133,23 +134,31 @@ export default function CommunityGuidelinesPage() {
             </div>
 
             <section className="mb-12">
-              <h2 className="text-2xl font-bold mb-4">Safety Tips for Unauthenticated Chats</h2>
+              <h2 className="text-2xl font-bold mb-4">Safety Tips for College Students</h2>
               <p className="text-slate-600 leading-relaxed mb-4">
-                Since you are chatting with strangers without authentication, please be extra
-                vigilant:
+                While we strive to create a safe environment, you are chatting with strangers.
+                Please follow these safety guidelines:
               </p>
               <ul className="list-disc pl-6 space-y-2 text-slate-600">
                 <li>
                   <strong>Never share personal details:</strong> Do not reveal your full name, phone
-                  number, address, or social media handles.
+                  number, address, dorm location, class schedule, or social media handles.
+                </li>
+                <li>
+                  <strong>Protect your identity:</strong> Avoid sharing your college name, student
+                  ID, or any information that could identify your campus location.
                 </li>
                 <li>
                   <strong>Be careful with links:</strong> Do not click on links sent by strangers as
-                  they may be malicious.
+                  they may be malicious or phishing attempts.
                 </li>
                 <li>
                   <strong>Trust your instincts:</strong> If a conversation makes you uncomfortable,
-                  disconnect immediately.
+                  disconnect immediately. Your comfort and safety come first.
+                </li>
+                <li>
+                  <strong>Report violations:</strong> If someone violates these guidelines,
+                  disconnect and report the behavior if possible.
                 </li>
               </ul>
             </section>
@@ -159,7 +168,7 @@ export default function CommunityGuidelinesPage() {
               <p className="text-slate-600 leading-relaxed">
                 We have a zero-tolerance policy for harassment, hate speech, and illegal content.
                 Users found violating these rules will be permanently banned from the platform. We
-                cooperate with university administration and law enforcement when necessary.
+                cooperate with college administration and law enforcement when necessary.
               </p>
             </section>
 
@@ -173,12 +182,36 @@ export default function CommunityGuidelinesPage() {
 
             <section className="bg-blue-50 p-8 rounded-3xl border border-blue-100 mt-12">
               <h2 className="text-xl font-bold text-blue-900 mb-2">Need Help?</h2>
-              <p className="text-blue-700 mb-0">
-                If you are in immediate danger or need urgent assistance, please contact campus
-                security or local emergency services.
+              <p className="text-blue-700 mb-4">
+                If you are in immediate danger or need urgent assistance, please contact:
               </p>
+              <ul className="text-blue-700 list-disc pl-6 space-y-1 mb-0">
+                <li>Your campus security office</li>
+                <li>Local emergency services (911)</li>
+                <li>Campus counseling or student support services</li>
+                <li>Title IX office for harassment or discrimination issues</li>
+              </ul>
             </section>
           </div>
+
+          {/* University Partners */}
+          <section className="mt-16 mb-12 px-6">
+            <div className="max-w-3xl mx-auto">
+              <div className="flex flex-wrap items-center justify-center gap-6 md:gap-8">
+                <div className="px-8 py-5 bg-slate-50 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                  <span className="font-bold text-slate-900 text-2xl tracking-tight">VIT-AP</span>
+                </div>
+                <span className="text-3xl font-bold text-slate-400">✕</span>
+                <div className="px-8 py-5 bg-slate-50 rounded-xl border border-slate-200 hover:border-green-300 hover:bg-green-50 transition-all">
+                  <span className="font-bold text-slate-900 text-2xl tracking-tight">SRM-AP</span>
+                </div>
+                <span className="text-3xl font-bold text-slate-400">✕</span>
+                <div className="px-8 py-5 bg-slate-50 rounded-xl border border-slate-200 hover:border-purple-300 hover:bg-purple-50 transition-all">
+                  <span className="font-bold text-slate-900 text-2xl tracking-tight">NID-AP</span>
+                </div>
+              </div>
+            </div>
+          </section>
         </main>
       </div>
     </>

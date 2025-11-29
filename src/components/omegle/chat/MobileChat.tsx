@@ -110,14 +110,14 @@ export const MobileChat = ({
         </button>
       </div>
 
-      {/* Mobile Chat Panel */}
+      {/* Mobile Chat Panel - Full screen overlay without sidebars */}
       <div
         id="mobile-chat"
-        className="lg:hidden hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-slate-300 z-30 rounded-t-3xl shadow-2xl animate-slide-up overflow-hidden h-[65vh]"
+        className="lg:hidden hidden fixed inset-0 bg-white z-50 overflow-hidden"
       >
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col h-full w-full overflow-hidden">
           {/* Mobile Header with Close Button */}
-          <div className="px-4 py-3 flex items-center justify-between border-b border-slate-200">
+          <div className="flex-shrink-0 px-4 py-3 flex items-center justify-between border-b border-slate-200 bg-white">
             <div className="flex items-center gap-2">
               <div
                 className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
@@ -147,13 +147,17 @@ export const MobileChat = ({
             </button>
           </div>
 
-          <ChatMessages
-            isConnected={isConnected}
-            isStrangerTyping={isStrangerTyping}
-            messages={messages}
-            partnerName={partnerName}
-          />
-          <ChatInput isConnected={isConnected} onSend={onSendMessage} onTyping={onTyping} />
+          <div className="flex-1 overflow-hidden">
+            <ChatMessages
+              isConnected={isConnected}
+              isStrangerTyping={isStrangerTyping}
+              messages={messages}
+              partnerName={partnerName}
+            />
+          </div>
+          <div className="flex-shrink-0">
+            <ChatInput isConnected={isConnected} onSend={onSendMessage} onTyping={onTyping} />
+          </div>
         </div>
       </div>
     </>

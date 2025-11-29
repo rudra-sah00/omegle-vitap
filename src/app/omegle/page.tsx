@@ -186,7 +186,7 @@ function OmeglePageContent() {
   }
 
   return (
-    <div className="h-screen flex bg-page-bg">
+    <div className="h-screen w-screen flex bg-page-bg overflow-hidden fixed inset-0">
       {/* Match Confetti Overlay */}
       <MatchConfetti isActive={showMatchConfetti} />
 
@@ -194,9 +194,9 @@ function OmeglePageContent() {
       <ScreenShareIndicator isSharing={isScreenSharing} onStop={toggleScreenShare} />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col lg:flex-row">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Video Areas - Fill screen on mobile, 55% on desktop */}
-        <div className="w-full lg:w-[55%] flex flex-col p-2 gap-2 lg:p-4 lg:gap-4 h-full">
+        <div className="w-full lg:w-[55%] flex flex-col p-2 gap-2 lg:p-4 lg:gap-4 h-full overflow-hidden">
           {/* Stranger Video - Takes 50% height on mobile */}
           <div className="flex-1 relative">
             <VideoDisplay
@@ -230,6 +230,7 @@ function OmeglePageContent() {
                 isScreenSharing={isScreenSharing}
                 currentCameraId={devices.cameraId}
                 currentMicId={devices.micId}
+                userGender={gender}
                 onStart={handleStart}
                 onStop={handleStop}
                 onNext={handleNext}
@@ -249,6 +250,7 @@ function OmeglePageContent() {
                 isMicOn={isMicOn}
                 isSearching={false}
                 showConnectionIndicator={false}
+                userGender={gender}
               >
                 {/* Control Buttons */}
                 <RoomControls

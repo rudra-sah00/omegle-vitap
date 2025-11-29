@@ -1,5 +1,5 @@
 /**
- * WebSocket Types for Omegle VITAP Backend Integration
+ * WebSocket Types for Omegle Backend Integration
  * Based on backend API documentation v1.0.0
  * Last Updated: November 22, 2025
  */

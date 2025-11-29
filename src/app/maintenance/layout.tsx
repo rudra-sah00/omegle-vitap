@@ -9,9 +9,8 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Under Maintenance - Omegle VITAP',
-  description:
-    'Omegle VITAP is currently undergoing scheduled maintenance. Service will resume shortly.',
+  title: 'Under Maintenance - Omegle',
+  description: 'Omegle is currently undergoing scheduled maintenance. Service will resume shortly.',
   robots: {
     index: false,
     follow: false,

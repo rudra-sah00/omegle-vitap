@@ -10,6 +10,7 @@ interface VideoDisplayProps {
   isCameraOn?: boolean;
   isMicOn?: boolean;
   partnerGender?: 'male' | 'female' | 'other';
+  userGender?: 'male' | 'female' | 'other';
   children?: ReactNode;
 }
 
@@ -29,9 +30,20 @@ interface VideoTheme {
  * Get theme configuration based on gender and connection state
  * Uses Tailwind theme colors defined in globals.css
  */
-const getTheme = (gender?: 'male' | 'female' | 'other', isConnected?: boolean): VideoTheme => {
-  // Only apply gender-based colors when connected and gender is female
-  if (isConnected && gender === 'female') {
+const getTheme = (
+  partnerGender?: 'male' | 'female' | 'other',
+  userGender?: 'male' | 'female' | 'other',
+  isConnected?: boolean,
+  isLocalVideo?: boolean
+): VideoTheme => {
+  // For local video, use user's gender
+  // For remote video, use partner's gender when connected
+  const genderToUse = isLocalVideo ? userGender : partnerGender;
+  // Case-insensitive comparison to handle "Female" or "female"
+  const isFemale = genderToUse?.toLowerCase() === 'female';
+  const shouldApplyPink = isLocalVideo ? isFemale : isConnected && isFemale;
+
+  if (shouldApplyPink) {
     return {
       bgClass: 'bg-video-pink-bg',
       gridColor: 'rgb(236, 72, 153)',
@@ -60,10 +72,15 @@ const VideoDisplayComponent = ({
   isCameraOn = true,
   isMicOn = true,
   partnerGender,
+  userGender,
   children,
 }: VideoDisplayProps) => {
+  const isLocalVideo = id === 'local-video';
   // Get theme based on gender and connection state
-  const theme = useMemo(() => getTheme(partnerGender, isConnected), [partnerGender, isConnected]);
+  const theme = useMemo(
+    () => getTheme(partnerGender, userGender, isConnected, isLocalVideo),
+    [partnerGender, userGender, isConnected, isLocalVideo]
+  );
 
   // For local video: show placeholder only when camera is off
   // For remote video: show placeholder when not connected OR when partner's camera is off

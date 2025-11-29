@@ -2,14 +2,14 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy - Your Data & Anonymity | Omegle VITAP',
+  title: 'Privacy Policy - Your Data & Anonymity | Omegle',
   description:
-    'Read our privacy policy to understand how Omegle VITAP protects your data. Anonymous random video chat with no personal data required. Your privacy is our priority.',
+    'Read our privacy policy to understand how Omegle protects your data. Anonymous random video chat with no personal data required. Your privacy is our priority.',
   alternates: {
     canonical: 'https://vitap.in/privacy',
   },
   openGraph: {
-    title: 'Privacy Policy | Omegle VITAP',
+    title: 'Privacy Policy | Omegle',
     description:
       'Learn how we protect your privacy during anonymous random video chat. No personal data required.',
     url: 'https://vitap.in/privacy',
@@ -22,11 +22,11 @@ export default function PrivacyPage() {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
     name: 'Privacy Policy',
-    description: 'Privacy policy for Omegle VITAP random video chat platform',
+    description: 'Privacy policy for Omegle random video chat platform',
     url: 'https://vitap.in/privacy',
     isPartOf: {
       '@type': 'WebSite',
-      name: 'Omegle VITAP',
+      name: 'Omegle',
       url: 'https://vitap.in',
     },
     breadcrumb: {
@@ -56,7 +56,7 @@ export default function PrivacyPage() {
               href="/welcome"
               className="font-bold text-xl tracking-tight hover:text-blue-600 transition-colors"
             >
-              Omegle VITAP
+              Omegle
             </Link>
             <Link
               href="/welcome"
@@ -73,11 +73,11 @@ export default function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="text-lg text-slate-600 leading-relaxed">
-              Your privacy is critically important to us. At Omegle VITAP, we have a few fundamental
+              Your privacy is critically important to us. At Omegle, we have a few fundamental
               principles regarding your data and anonymity.
             </p>
             <div className="mt-6 flex items-center gap-2 text-sm text-slate-400 font-medium">
-              <span>Last updated: November 21, 2025</span>
+              <span>Last updated: November 29, 2025</span>
             </div>
           </header>
 
@@ -86,7 +86,7 @@ export default function PrivacyPage() {
               <h2 className="text-2xl font-bold mb-4">1. Information We Collect</h2>
               <p className="text-slate-600 leading-relaxed mb-4">
                 We collect very little information about you. We do not require you to create an
-                account to use the basic features of Omegle VITAP. However, for safety and
+                account to use the basic features of Omegle. However, for safety, security, and
                 moderation purposes:
               </p>
               <ul className="list-disc pl-6 space-y-2 text-slate-600">
@@ -104,12 +104,19 @@ export default function PrivacyPage() {
             </section>
 
             <section className="mb-12">
-              <h2 className="text-2xl font-bold mb-4">2. Law Enforcement Cooperation</h2>
+              <h2 className="text-2xl font-bold mb-4">
+                2. Law Enforcement & Academic Institution Cooperation
+              </h2>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                We cooperate fully with law enforcement agencies and academic institutions when
+                necessary. If we detect illegal activities, including but not limited to child
+                exploitation, severe harassment, threats of violence, or other serious violations,
+                we will report your IP address and any available metadata to the appropriate
+                authorities.
+              </p>
               <p className="text-slate-600 leading-relaxed">
-                We cooperate fully with law enforcement agencies. If we detect illegal activities,
-                including but not limited to child exploitation, severe harassment, or threats of
-                violence, we will report your IP address and any available metadata to the
-                appropriate authorities.
+                We may also cooperate with college and university administrations in cases of
+                serious policy violations that affect campus safety or student wellbeing.
               </p>
             </section>
 
@@ -117,9 +124,9 @@ export default function PrivacyPage() {
               <h2 className="text-2xl font-bold mb-4">3. How We Use Information</h2>
               <p className="text-slate-600 leading-relaxed">
                 We use the information we collect primarily to provide, maintain, protect, and
-                improve our Service, to develop new ones, and to protect Omegle VITAP and our users.
-                We may also use this information to offer you tailored content – like giving you
-                more relevant search results and ads.
+                improve our Service, to develop new ones, and to protect Omegle and our users. We
+                may also use this information to offer you tailored content – like giving you more
+                relevant search results and ads.
               </p>
             </section>
 

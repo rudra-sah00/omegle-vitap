@@ -64,45 +64,26 @@ export const WelcomeForm = () => {
   const handleJoin = async () => {
     if (!isNameValid || isLoading) return;
 
+    // Check if backend is online (reuse the status from useEffect)
+    if (!isOnline) {
+      setServiceAvailable(false);
+      setServiceMessage(
+        'Service is currently offline. Please try again during active hours (9 PM - 2 AM IST).'
+      );
+      return;
+    }
+
+    setIsLoading(true);
+    setIsCheckingService(true);
+    setServiceAvailable(true);
+    setServiceMessage('');
+
     try {
-      setIsLoading(true);
-      setIsCheckingService(true);
-      setServiceAvailable(true);
-      setServiceMessage('');
-
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-      if (!backendUrl) {
-        setServiceAvailable(false);
-        setServiceMessage('Backend service not configured. Please contact support.');
-        setIsLoading(false);
-        setIsCheckingService(false);
-        return;
-      }
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), BACKEND_CHECK_TIMEOUT);
-
-      const res = await fetch(`${backendUrl}/status`, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      const data = await res.json();
-
-      if (!data.status) {
-        setServiceAvailable(false);
-        setServiceMessage(
-          'Service is currently offline. Please try again during active hours (9 PM - 2 AM IST).'
-        );
-        setIsLoading(false);
-        setIsCheckingService(false);
-        return;
-      }
-
       setIsCheckingService(false);
       router.push('/omegle');
     } catch {
       setServiceAvailable(false);
-      setServiceMessage(
-        'Unable to connect to backend service. Please check your internet connection and try again.'
-      );
+      setServiceMessage('Unable to navigate. Please try again.');
       setIsLoading(false);
       setIsCheckingService(false);
     }
@@ -113,18 +94,7 @@ export const WelcomeForm = () => {
       <div className="bg-white/15 backdrop-blur-2xl rounded-[2rem] pt-4 px-8 pb-8 sm:pt-6 sm:px-10 sm:pb-10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] border border-white/30 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-purple-500/10 pointer-events-none"></div>
         <div className="relative z-10 space-y-4">
-          <div className="flex justify-center -mb-4 -mt-4">
-            <div className="relative w-52 h-52 sm:w-56 sm:h-56 drop-shadow-2xl">
-              <Image
-                src="/omegle.png"
-                alt="Omegle VITAP"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
-          </div>
-          <div className="text-center space-y-1">
+          <div className="text-center space-y-1 pt-4">
             <h1 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-2xl tracking-tight">
               Welcome Back
             </h1>
@@ -244,6 +214,23 @@ export const WelcomeForm = () => {
               Guidelines
             </Link>
           </p>
+
+          {/* University Partners */}
+          <div className="mt-6 pt-4 border-t border-white/20">
+            <div className="flex items-center justify-center gap-3">
+              <div className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
+                <span className="font-bold text-white text-base tracking-tight">VIT-AP</span>
+              </div>
+              <span className="text-xl font-bold text-white/60">✕</span>
+              <div className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
+                <span className="font-bold text-white text-base tracking-tight">SRM-AP</span>
+              </div>
+              <span className="text-xl font-bold text-white/60">✕</span>
+              <div className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
+                <span className="font-bold text-white text-base tracking-tight">NID-AP</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

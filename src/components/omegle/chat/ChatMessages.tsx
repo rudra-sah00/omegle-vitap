@@ -24,10 +24,11 @@ export const ChatMessages = ({
   // Track which message IDs have been animated (to not re-animate on re-render)
   const [animatedIds, setAnimatedIds] = useState<Set<string>>(new Set());
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive - using scrollTop to prevent page scroll
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (containerRef.current) {
+      // Use scrollTop instead of scrollIntoView to keep scroll within container
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
   }, [messages, isStrangerTyping]);
 
@@ -51,7 +52,7 @@ export const ChatMessages = ({
   return (
     <div
       ref={containerRef}
-      className="flex-1 overflow-y-auto overflow-x-hidden p-4 bg-gradient-to-b from-white to-slate-50/30"
+      className="h-full overflow-y-auto overflow-x-hidden p-4 bg-gradient-to-b from-white to-slate-50/30 scroll-smooth hide-scrollbar"
     >
       {!isConnected ? (
         <div className="h-full flex items-center justify-center">
@@ -93,7 +94,7 @@ export const ChatMessages = ({
             const shouldAnimate = !isYou && isNewMessage && !hasLinks;
 
             return (
-              <div key={message.id} className="flex items-start gap-2 max-w-full">
+              <div key={message.id} className="flex items-start gap-2 w-full">
                 <span
                   className={`text-sm font-semibold min-w-[70px] flex-shrink-0 ${
                     isYou ? 'text-blue-600' : 'text-slate-600'
@@ -101,7 +102,7 @@ export const ChatMessages = ({
                 >
                   {isYou ? 'You:' : `${partnerName || 'Stranger'}:`}
                 </span>
-                <div className="flex-1 text-sm text-slate-800 break-words overflow-wrap-anywhere whitespace-pre-wrap min-w-0">
+                <div className="flex-1 text-sm text-slate-800 break-words break-all overflow-hidden whitespace-pre-wrap min-w-0">
                   {shouldAnimate ? (
                     <TextAnimate
                       animation="slideLeft"
@@ -122,7 +123,7 @@ export const ChatMessages = ({
             );
           })}
           {isStrangerTyping && (
-            <div className="flex items-start gap-2 max-w-full">
+            <div className="flex items-start gap-2 w-full">
               <span className="text-sm font-semibold min-w-[70px] flex-shrink-0 text-slate-600">
                 {partnerName || 'Stranger'}:
               </span>
