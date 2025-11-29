@@ -36,14 +36,15 @@ export function GlobalErrorHandler() {
     if (process.env.NODE_ENV === 'production') {
       event.preventDefault();
     }
-    
+
     const reason = event.reason;
-    const message = reason instanceof Error 
-      ? reason.message 
-      : typeof reason === 'string' 
-        ? reason 
-        : 'Unknown promise rejection';
-    
+    const message =
+      reason instanceof Error
+        ? reason.message
+        : typeof reason === 'string'
+          ? reason
+          : 'Unknown promise rejection';
+
     reportError({
       message,
       stack: reason instanceof Error ? reason.stack : undefined,
@@ -59,7 +60,7 @@ export function GlobalErrorHandler() {
     if (process.env.NODE_ENV === 'production') {
       event.preventDefault();
     }
-    
+
     reportError({
       message: event.message || 'Unknown error',
       stack: event.error?.stack,

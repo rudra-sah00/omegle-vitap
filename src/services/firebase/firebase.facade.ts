@@ -1,9 +1,9 @@
 /**
  * Analytics Facade
- * 
+ *
  * Main entry point for analytics tracking. This facade provides a unified API
  * that delegates to specialized tracker modules:
- * 
+ *
  * - FunnelTracker: User journey through conversion funnel
  * - MatchTracker: Match lifecycle and quality metrics
  * - MediaTracker: Camera, mic, screen share, and messaging
@@ -11,7 +11,7 @@
  * - PerformanceTracker: Page load, video frames, network quality
  * - ErrorTracker: All error events
  * - EngagementTracker: Page views, navigation, user behavior
- * 
+ *
  * This facade maintains backward compatibility with the original monolithic
  * AnalyticsService API while providing better code organization.
  */
@@ -29,7 +29,14 @@ import { errorTracker } from './analytics/error.tracker';
 import { engagementTracker } from './analytics/engagement.tracker';
 
 // Import types for method signatures
-import type { ErrorType, NetworkQuality, MediaContext, DeviceType, ReconnectionType, MatchEndReason } from './analytics/types';
+import type {
+  ErrorType,
+  NetworkQuality,
+  MediaContext,
+  DeviceType,
+  ReconnectionType,
+  MatchEndReason,
+} from './analytics/types';
 
 class AnalyticsFacade {
   private analytics: Analytics | null = null;
@@ -42,7 +49,7 @@ class AnalyticsFacade {
     if (typeof window === 'undefined') return;
 
     this.analytics = getFirebaseAnalytics();
-    
+
     // Set analytics instance on all trackers
     const trackers = [
       funnelTracker,
@@ -53,8 +60,8 @@ class AnalyticsFacade {
       errorTracker,
       engagementTracker,
     ];
-    
-    trackers.forEach(tracker => tracker.setAnalytics(this.analytics));
+
+    trackers.forEach((tracker) => tracker.setAnalytics(this.analytics));
 
     // Initialize engagement tracking
     engagementTracker.loadSessionCount();

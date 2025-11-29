@@ -15,7 +15,7 @@ import type { LiveKitState } from './types';
 
 /**
  * TrackManager Class
- * 
+ *
  * Manages local camera and microphone tracks:
  * - Track creation with device selection
  * - Toggle on/off with mutex protection
@@ -62,8 +62,8 @@ export class TrackManager {
     if (this.state.isJoined) return;
 
     const devices = await navigator.mediaDevices.enumerateDevices();
-    const hasCamera = devices.some(d => d.kind === 'videoinput');
-    const hasMic = devices.some(d => d.kind === 'audioinput');
+    const hasCamera = devices.some((d) => d.kind === 'videoinput');
+    const hasMic = devices.some((d) => d.kind === 'audioinput');
 
     if (cameraOn && !hasCamera) {
       throw new Error('DEVICE_NOT_FOUND: No camera device found');
@@ -112,9 +112,9 @@ export class TrackManager {
    */
   async toggleCamera(enabled: boolean): Promise<void> {
     if (this.state.isLeaving || this.state.isTogglingCamera) return;
-    
+
     this.state.isTogglingCamera = true;
-    
+
     try {
       if (enabled) {
         await this.enableCamera();
@@ -124,7 +124,11 @@ export class TrackManager {
     } catch (error) {
       // Cleanup on error
       if (this.state.localVideoTrack) {
-        try { this.state.localVideoTrack.stop(); } catch { /* ignore */ }
+        try {
+          this.state.localVideoTrack.stop();
+        } catch {
+          /* ignore */
+        }
         this.state.localVideoTrack = null;
       }
       throw error;
@@ -136,18 +140,18 @@ export class TrackManager {
   private async enableCamera(): Promise<void> {
     if (!this.state.localVideoTrack) {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      if (!devices.some(d => d.kind === 'videoinput')) {
+      if (!devices.some((d) => d.kind === 'videoinput')) {
         throw new Error('DEVICE_NOT_FOUND: No camera found');
       }
       this.state.localVideoTrack = await this.createVideoTrack();
     }
-    
+
     attachLocalVideo(this.state.localVideoTrack, 'local-video');
-    
+
     if (this.state.isJoined && this.state.room?.localParticipant) {
       await this.state.room.localParticipant.publishTrack(this.state.localVideoTrack);
     }
-    
+
     await this.updateDeviceIdsFromTracks();
   }
 
@@ -170,9 +174,9 @@ export class TrackManager {
    */
   async toggleMicrophone(enabled: boolean): Promise<void> {
     if (this.state.isLeaving || this.state.isTogglingMic) return;
-    
+
     this.state.isTogglingMic = true;
-    
+
     try {
       if (enabled) {
         await this.enableMicrophone();
@@ -182,7 +186,11 @@ export class TrackManager {
     } catch (error) {
       // Cleanup on error
       if (this.state.localAudioTrack) {
-        try { this.state.localAudioTrack.stop(); } catch { /* ignore */ }
+        try {
+          this.state.localAudioTrack.stop();
+        } catch {
+          /* ignore */
+        }
         this.state.localAudioTrack = null;
       }
       throw error;
@@ -194,16 +202,16 @@ export class TrackManager {
   private async enableMicrophone(): Promise<void> {
     if (!this.state.localAudioTrack) {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      if (!devices.some(d => d.kind === 'audioinput')) {
+      if (!devices.some((d) => d.kind === 'audioinput')) {
         throw new Error('DEVICE_NOT_FOUND: No microphone found');
       }
       this.state.localAudioTrack = await this.createAudioTrack();
     }
-    
+
     if (this.state.isJoined && this.state.room?.localParticipant) {
       await this.state.room.localParticipant.publishTrack(this.state.localAudioTrack);
     }
-    
+
     await this.updateDeviceIdsFromTracks();
   }
 
@@ -226,22 +234,22 @@ export class TrackManager {
    */
   async switchCamera(deviceId: string): Promise<void> {
     if (this.state.isLeaving) return;
-    
+
     this.state.currentCameraId = deviceId;
-    
+
     if (this.state.localVideoTrack) {
       if (this.state.isJoined && this.state.room?.localParticipant) {
         await this.state.room.localParticipant.unpublishTrack(this.state.localVideoTrack);
       }
       this.state.localVideoTrack.stop();
-      
+
       this.state.localVideoTrack = await createLocalVideoTrack({
         resolution: LIVEKIT_CONFIG.VIDEO.resolution,
         deviceId,
       });
-      
+
       attachLocalVideo(this.state.localVideoTrack, 'local-video');
-      
+
       if (this.state.isJoined && this.state.room?.localParticipant) {
         await this.state.room.localParticipant.publishTrack(this.state.localVideoTrack);
       }
@@ -253,22 +261,22 @@ export class TrackManager {
    */
   async switchMicrophone(deviceId: string): Promise<void> {
     if (this.state.isLeaving) return;
-    
+
     this.state.currentMicId = deviceId;
-    
+
     if (this.state.localAudioTrack) {
       if (this.state.isJoined && this.state.room?.localParticipant) {
         await this.state.room.localParticipant.unpublishTrack(this.state.localAudioTrack);
       }
       this.state.localAudioTrack.stop();
-      
+
       this.state.localAudioTrack = await createLocalAudioTrack({
         echoCancellation: LIVEKIT_CONFIG.AUDIO.echoCancellation,
         noiseSuppression: LIVEKIT_CONFIG.AUDIO.noiseSuppression,
         autoGainControl: LIVEKIT_CONFIG.AUDIO.autoGainControl,
         deviceId,
       });
-      
+
       if (this.state.isJoined && this.state.room?.localParticipant) {
         await this.state.room.localParticipant.publishTrack(this.state.localAudioTrack);
       }
@@ -290,7 +298,7 @@ export class TrackManager {
           this.state.currentCameraId = settings.deviceId;
         }
       }
-      
+
       if (this.state.localAudioTrack) {
         const settings = this.state.localAudioTrack.mediaStreamTrack?.getSettings();
         if (settings?.deviceId) {
@@ -309,8 +317,8 @@ export class TrackManager {
     if (!this.state.room?.localParticipant) return;
 
     const devices = await navigator.mediaDevices.enumerateDevices();
-    const hasCamera = devices.some(d => d.kind === 'videoinput');
-    const hasMic = devices.some(d => d.kind === 'audioinput');
+    const hasCamera = devices.some((d) => d.kind === 'videoinput');
+    const hasMic = devices.some((d) => d.kind === 'audioinput');
 
     if (cameraOn && hasCamera) {
       if (!this.state.localVideoTrack) {

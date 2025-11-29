@@ -1,43 +1,38 @@
 /**
  * Library Exports
  * Centralized exports for lib utilities
- * 
+ *
  * @description This module provides utility functions for:
  * - Browser compatibility and polyfills
  * - Toast notifications with error tracking
  * - CSS class name utilities
  * - Media state persistence
- * 
+ *
  * @example
  * ```tsx
  * import { showError, cn, isBrowserSupported, ErrorCode } from '@/lib';
- * 
+ *
  * if (!isBrowserSupported()) {
  *   showError('Browser not supported', ErrorCode.MEDIA_DEVICE_NOT_FOUND);
  * }
- * 
+ *
  * const className = cn('base-class', isActive && 'active');
  * ```
  */
 
 // Browser Utilities
-export { 
-  initBrowserPolyfills, 
-  isBrowserSupported, 
-  isSafari, 
-  isIOS 
-} from './browser-polyfill';
+export { initBrowserPolyfills, isBrowserSupported, isSafari, isIOS } from './browser-polyfill';
 
 // Toast Notifications
-export { 
-  showError, 
-  showSuccess, 
-  showInfo, 
-  showWarning, 
+export {
+  showError,
+  showSuccess,
+  showInfo,
+  showWarning,
   parseMediaError,
   parseConnectionError,
   resetToastManager,
-  ErrorCode 
+  ErrorCode,
 } from './toast';
 
 // General Utilities

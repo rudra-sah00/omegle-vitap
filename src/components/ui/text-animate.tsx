@@ -1,22 +1,22 @@
-"use client";
+'use client';
 
-import { ElementType, memo, useMemo } from "react";
-import { AnimatePresence, motion, MotionProps, Variants } from "motion/react";
+import { ElementType, memo, useMemo } from 'react';
+import { AnimatePresence, motion, MotionProps, Variants } from 'motion/react';
 
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
-type AnimationType = "text" | "word" | "character" | "line";
+type AnimationType = 'text' | 'word' | 'character' | 'line';
 type AnimationVariant =
-  | "fadeIn"
-  | "blurIn"
-  | "blurInUp"
-  | "blurInDown"
-  | "slideUp"
-  | "slideDown"
-  | "slideLeft"
-  | "slideRight"
-  | "scaleUp"
-  | "scaleDown";
+  | 'fadeIn'
+  | 'blurIn'
+  | 'blurInUp'
+  | 'blurInDown'
+  | 'slideUp'
+  | 'slideDown'
+  | 'slideLeft'
+  | 'slideRight'
+  | 'scaleUp'
+  | 'scaleDown';
 
 interface TextAnimateProps extends MotionProps {
   /**
@@ -129,17 +129,17 @@ const defaultItemAnimationVariants: Record<
   blurIn: {
     container: defaultContainerVariants,
     item: {
-      hidden: { opacity: 0, filter: "blur(10px)" },
+      hidden: { opacity: 0, filter: 'blur(10px)' },
       show: {
         opacity: 1,
-        filter: "blur(0px)",
+        filter: 'blur(0px)',
         transition: {
           duration: 0.3,
         },
       },
       exit: {
         opacity: 0,
-        filter: "blur(10px)",
+        filter: 'blur(10px)',
         transition: { duration: 0.3 },
       },
     },
@@ -147,10 +147,10 @@ const defaultItemAnimationVariants: Record<
   blurInUp: {
     container: defaultContainerVariants,
     item: {
-      hidden: { opacity: 0, filter: "blur(10px)", y: 20 },
+      hidden: { opacity: 0, filter: 'blur(10px)', y: 20 },
       show: {
         opacity: 1,
-        filter: "blur(0px)",
+        filter: 'blur(0px)',
         y: 0,
         transition: {
           y: { duration: 0.3 },
@@ -160,7 +160,7 @@ const defaultItemAnimationVariants: Record<
       },
       exit: {
         opacity: 0,
-        filter: "blur(10px)",
+        filter: 'blur(10px)',
         y: 20,
         transition: {
           y: { duration: 0.3 },
@@ -173,10 +173,10 @@ const defaultItemAnimationVariants: Record<
   blurInDown: {
     container: defaultContainerVariants,
     item: {
-      hidden: { opacity: 0, filter: "blur(10px)", y: -20 },
+      hidden: { opacity: 0, filter: 'blur(10px)', y: -20 },
       show: {
         opacity: 1,
-        filter: "blur(0px)",
+        filter: 'blur(0px)',
         y: 0,
         transition: {
           y: { duration: 0.3 },
@@ -264,7 +264,7 @@ const defaultItemAnimationVariants: Record<
         transition: {
           duration: 0.3,
           scale: {
-            type: "spring",
+            type: 'spring',
             damping: 15,
             stiffness: 300,
           },
@@ -287,7 +287,7 @@ const defaultItemAnimationVariants: Record<
         transition: {
           duration: 0.3,
           scale: {
-            type: "spring",
+            type: 'spring',
             damping: 15,
             stiffness: 300,
           },
@@ -309,23 +309,23 @@ const TextAnimateBase = ({
   variants,
   className,
   segmentClassName,
-  as: Component = "p",
+  as: Component = 'p',
   startOnView = true,
   once = false,
-  by = "word",
-  animation = "fadeIn",
+  by = 'word',
+  animation = 'fadeIn',
   accessible = true,
   ...props
 }: TextAnimateProps) => {
   const segments = useMemo(() => {
     switch (by) {
-      case "word":
+      case 'word':
         return children.split(/(\s+)/);
-      case "character":
-        return children.split("");
-      case "line":
-        return children.split("\n");
-      case "text":
+      case 'character':
+        return children.split('');
+      case 'line':
+        return children.split('\n');
+      case 'text':
       default:
         return [children];
     }
@@ -355,7 +355,7 @@ const TextAnimateBase = ({
         item: variants,
       };
     }
-    
+
     if (animation) {
       return {
         container: {
@@ -378,24 +378,23 @@ const TextAnimateBase = ({
         item: defaultItemAnimationVariants[animation].item,
       };
     }
-    
+
     return { container: defaultContainerVariants, item: defaultItemVariants };
   }, [variants, animation, delay, duration, segments.length]);
 
   // Use motion.div/span/p based on the Component type
-  const MotionWrapper = Component === "span" ? motion.span : 
-                        Component === "div" ? motion.div : 
-                        motion.p;
+  const MotionWrapper =
+    Component === 'span' ? motion.span : Component === 'div' ? motion.div : motion.p;
 
   return (
     <AnimatePresence mode="popLayout">
       <MotionWrapper
         variants={finalVariants.container as Variants}
         initial="hidden"
-        whileInView={startOnView ? "show" : undefined}
-        animate={startOnView ? undefined : "show"}
+        whileInView={startOnView ? 'show' : undefined}
+        animate={startOnView ? undefined : 'show'}
         exit="exit"
-        className={cn("whitespace-pre-wrap", className)}
+        className={cn('whitespace-pre-wrap', className)}
         viewport={{ once }}
         aria-label={accessible ? children : undefined}
         {...props}
@@ -407,8 +406,8 @@ const TextAnimateBase = ({
             variants={finalVariants.item}
             custom={i * staggerTimings[by]}
             className={cn(
-              by === "line" ? "block" : "inline-block whitespace-pre",
-              by === "character" && "",
+              by === 'line' ? 'block' : 'inline-block whitespace-pre',
+              by === 'character' && '',
               segmentClassName
             )}
             aria-hidden={accessible ? true : undefined}

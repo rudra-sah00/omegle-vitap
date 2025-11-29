@@ -1,18 +1,18 @@
 /**
  * useChat Hook
  * Manages chat messages and typing indicators for real-time messaging
- * 
+ *
  * @description Provides complete chat functionality including:
  * - Sending and receiving messages via WebSocket
  * - Real-time typing indicators with debouncing
  * - Message deduplication to prevent duplicates
  * - Automatic cleanup on session end
- * 
+ *
  * The hook handles all the complexity of:
  * - Typing indicator timeouts (auto-hide after 5s)
  * - Debounced typing state updates (prevent spam)
  * - Pending message tracking (prevent duplicate sends)
- * 
+ *
  * @example
  * ```tsx
  * function ChatRoom() {
@@ -21,12 +21,12 @@
  *     isInSession: true,
  *     onMessageReceived: (msg) => console.log('New message:', msg),
  *   });
- *   
+ *
  *   return (
  *     <div>
  *       {messages.map(msg => <Message key={msg.id} {...msg} />)}
  *       {isPartnerTyping && <TypingIndicator />}
- *       <ChatInput 
+ *       <ChatInput
  *         onSend={sendMessage}
  *         onTyping={() => sendTypingIndicator(true)}
  *         onStopTyping={() => sendTypingIndicator(false)}
@@ -38,16 +38,16 @@
  */
 
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { 
-  TYPING_INDICATOR_TIMEOUT, 
-  TYPING_DEBOUNCE_DELAY, 
-  MESSAGE_PENDING_CLEAR_DELAY 
+import {
+  TYPING_INDICATOR_TIMEOUT,
+  TYPING_DEBOUNCE_DELAY,
+  MESSAGE_PENDING_CLEAR_DELAY,
 } from '@/constants';
 import type { SocketIOService } from '@/services/socket';
 
 /**
  * Structure of a chat message
- * 
+ *
  * @property id - Unique identifier for the message
  * @property text - Message content
  * @property senderId - ID of the sender ('self' for own messages)
@@ -64,7 +64,7 @@ export interface MessageData {
 
 /**
  * Options for configuring the useChat hook
- * 
+ *
  * @property ws - Socket.IO service instance for real-time communication
  * @property isInSession - Whether user is currently in an active chat session
  * @property onMessageReceived - Optional callback when a new message arrives
@@ -79,10 +79,10 @@ interface UseChatOptions {
 
 /**
  * Hook for managing chat messages and typing indicators
- * 
+ *
  * @param options - Configuration options for the chat hook
  * @returns Chat state and functions for messaging
- * 
+ *
  * @see {@link MessageData} for message structure
  * @see {@link UseChatOptions} for configuration options
  */
@@ -117,7 +117,7 @@ export function useChat(options: UseChatOptions) {
           senderName: 'Stranger',
           timestamp: msg.data.timestamp,
         };
-        
+
         setMessages((prev) => [...prev, messageData]);
         onMessageReceived?.(messageData);
       } else if (msg.type === 'typing') {
@@ -144,74 +144,80 @@ export function useChat(options: UseChatOptions) {
     };
   }, [ws, isInSession, onMessageReceived, onTypingIndicator]);
 
-  const sendMessage = useCallback((text: string) => {
-    if (!ws || !text.trim() || !isInSession) {
-      return;
-    }
+  const sendMessage = useCallback(
+    (text: string) => {
+      if (!ws || !text.trim() || !isInSession) {
+        return;
+      }
 
-    const trimmedText = text.trim();
-    
-    if (pendingMessages.current.has(trimmedText)) {
-      return;
-    }
-    
-    pendingMessages.current.add(trimmedText);
-    
-    const messageId = `msg-${Date.now()}-${messageIdCounter.current++}`;
-    
-    const sent = ws.send({ 
-      type: 'message', 
-      data: { text: trimmedText } 
-    });
+      const trimmedText = text.trim();
 
-    if (sent) {
-      const timestamp = Date.now();
-      const messageData: MessageData = {
-        id: messageId,
-        text: trimmedText,
-        senderId: 'self',
-        senderName: 'You',
-        timestamp,
-      };
-      
-      setMessages((prev) => [...prev, messageData]);
-      
-      setTimeout(() => {
+      if (pendingMessages.current.has(trimmedText)) {
+        return;
+      }
+
+      pendingMessages.current.add(trimmedText);
+
+      const messageId = `msg-${Date.now()}-${messageIdCounter.current++}`;
+
+      const sent = ws.send({
+        type: 'message',
+        data: { text: trimmedText },
+      });
+
+      if (sent) {
+        const timestamp = Date.now();
+        const messageData: MessageData = {
+          id: messageId,
+          text: trimmedText,
+          senderId: 'self',
+          senderName: 'You',
+          timestamp,
+        };
+
+        setMessages((prev) => [...prev, messageData]);
+
+        setTimeout(() => {
+          pendingMessages.current.delete(trimmedText);
+        }, MESSAGE_PENDING_CLEAR_DELAY);
+      } else {
         pendingMessages.current.delete(trimmedText);
-      }, MESSAGE_PENDING_CLEAR_DELAY);
-    } else {
-      pendingMessages.current.delete(trimmedText);
-    }
-  }, [ws, isInSession]);
+      }
+    },
+    [ws, isInSession]
+  );
 
   const typingDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const lastTypingStateRef = useRef<boolean>(false);
 
-  const sendTypingIndicator = useCallback((isTyping: boolean) => {
-    if (!ws || !isInSession) return;
+  const sendTypingIndicator = useCallback(
+    (isTyping: boolean) => {
+      if (!ws || !isInSession) return;
 
-    if (typingDebounceRef.current) {
-      clearTimeout(typingDebounceRef.current);
-    }
-
-    if (isTyping) {
-      if (!lastTypingStateRef.current) {
-        ws.send({ 
-          type: 'typing', 
-          data: { isTyping: true } 
-        });
-        lastTypingStateRef.current = true;
+      if (typingDebounceRef.current) {
+        clearTimeout(typingDebounceRef.current);
       }
-    } else {
-      typingDebounceRef.current = setTimeout(() => {
-        ws.send({ 
-          type: 'typing', 
-          data: { isTyping: false } 
-        });
-        lastTypingStateRef.current = false;
-      }, TYPING_DEBOUNCE_DELAY);
-    }
-  }, [ws, isInSession]);
+
+      if (isTyping) {
+        if (!lastTypingStateRef.current) {
+          ws.send({
+            type: 'typing',
+            data: { isTyping: true },
+          });
+          lastTypingStateRef.current = true;
+        }
+      } else {
+        typingDebounceRef.current = setTimeout(() => {
+          ws.send({
+            type: 'typing',
+            data: { isTyping: false },
+          });
+          lastTypingStateRef.current = false;
+        }, TYPING_DEBOUNCE_DELAY);
+      }
+    },
+    [ws, isInSession]
+  );
 
   const clearMessages = useCallback(() => {
     setMessages([]);

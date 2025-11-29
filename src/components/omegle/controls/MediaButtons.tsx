@@ -20,8 +20,8 @@ interface MediaToggleButtonProps {
  */
 export const MediaToggleButton = memo(({ isOn, onToggle, type }: MediaToggleButtonProps) => {
   const isCam = type === 'camera';
-  const title = isOn 
-    ? `Turn off ${type} (stays off until you turn it back on)` 
+  const title = isOn
+    ? `Turn off ${type} (stays off until you turn it back on)`
     : `Turn on ${type} (stays on for next matches)`;
 
   return (
@@ -34,7 +34,7 @@ export const MediaToggleButton = memo(({ isOn, onToggle, type }: MediaToggleButt
       aria-label={isOn ? `Turn off ${type}` : `Turn on ${type}`}
       aria-pressed={isOn}
     >
-      {isCam ? (isOn ? <CameraOnIcon /> : <CameraOffIcon />) : (isOn ? <MicOnIcon /> : <MicOffIcon />)}
+      {isCam ? isOn ? <CameraOnIcon /> : <CameraOffIcon /> : isOn ? <MicOnIcon /> : <MicOffIcon />}
     </button>
   );
 });
@@ -82,41 +82,43 @@ interface MediaControlWithSelectorProps {
 /**
  * Complete media control with toggle button + device selector
  */
-export const MediaControlWithSelector = memo(({
-  type,
-  isOn,
-  currentDeviceId,
-  showMenu,
-  buttonRef,
-  onToggle,
-  onToggleMenu,
-  onCloseMenu,
-  onSwitchDevice,
-}: MediaControlWithSelectorProps) => {
-  return (
-    <div ref={buttonRef} className="relative device-selector-button">
-      <MediaToggleButton isOn={isOn} onToggle={onToggle} type={type} />
-      
-      {onSwitchDevice && (
-        <DeviceMenuTrigger
-          isOn={isOn}
-          showMenu={showMenu}
-          onToggleMenu={onToggleMenu}
-          type={type}
-        />
-      )}
-      
-      {onSwitchDevice && (
-        <DeviceSelector
-          type={type}
-          currentDeviceId={currentDeviceId}
-          onDeviceChange={onSwitchDevice}
-          isOpen={showMenu}
-          onClose={onCloseMenu}
-          buttonRef={buttonRef}
-        />
-      )}
-    </div>
-  );
-});
+export const MediaControlWithSelector = memo(
+  ({
+    type,
+    isOn,
+    currentDeviceId,
+    showMenu,
+    buttonRef,
+    onToggle,
+    onToggleMenu,
+    onCloseMenu,
+    onSwitchDevice,
+  }: MediaControlWithSelectorProps) => {
+    return (
+      <div ref={buttonRef} className="relative device-selector-button">
+        <MediaToggleButton isOn={isOn} onToggle={onToggle} type={type} />
+
+        {onSwitchDevice && (
+          <DeviceMenuTrigger
+            isOn={isOn}
+            showMenu={showMenu}
+            onToggleMenu={onToggleMenu}
+            type={type}
+          />
+        )}
+
+        {onSwitchDevice && (
+          <DeviceSelector
+            type={type}
+            currentDeviceId={currentDeviceId}
+            onDeviceChange={onSwitchDevice}
+            isOpen={showMenu}
+            onClose={onCloseMenu}
+            buttonRef={buttonRef}
+          />
+        )}
+      </div>
+    );
+  }
+);
 MediaControlWithSelector.displayName = 'MediaControlWithSelector';

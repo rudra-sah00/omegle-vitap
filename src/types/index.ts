@@ -1,6 +1,6 @@
 /**
  * Central Type Exports
- * 
+ *
  * Re-exports all types from the types folder for cleaner imports
  */
 
@@ -15,4 +15,3 @@ export interface User {
 
 // Note: ChatMessage is defined in matchmaking.ts as a client message type
 // For the hook's internal message format, use MessageData from useChat
-

@@ -137,6 +137,22 @@
   animation: pulse 1.5s ease-in-out infinite;
 }
 
+/* Connection indicator blink animation */
+@keyframes connection-blink {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.8);
+  }
+  50% {
+    opacity: 0.5;
+    box-shadow: 0 0 12px rgba(34, 197, 94, 1);
+  }
+}
+
+.animate-connection-blink {
+  animation: connection-blink 1.5s ease-in-out infinite;
+}
+
 @keyframes gradient-xy {
 
   0%,

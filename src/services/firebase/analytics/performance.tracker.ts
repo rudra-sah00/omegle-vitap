@@ -1,7 +1,7 @@
 /**
  * Performance Tracker
  * Tracks performance and quality metrics
- * 
+ *
  * Covers:
  * - Page load time
  * - First video frame time

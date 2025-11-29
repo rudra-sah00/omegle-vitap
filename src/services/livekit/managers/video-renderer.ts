@@ -12,7 +12,10 @@ type AttachableTrack = { attach: (element: HTMLMediaElement) => HTMLMediaElement
 /**
  * Create a video element with standard styling
  */
-function createVideoElement(objectFit: 'cover' | 'contain' = 'cover', muted: boolean = false): HTMLVideoElement {
+function createVideoElement(
+  objectFit: 'cover' | 'contain' = 'cover',
+  muted: boolean = false
+): HTMLVideoElement {
   const videoEl = document.createElement('video');
   videoEl.style.width = '100%';
   videoEl.style.height = '100%';
@@ -25,7 +28,7 @@ function createVideoElement(objectFit: 'cover' | 'contain' = 'cover', muted: boo
 
 /**
  * Attach a video track to a DOM element
- * 
+ *
  * Handles both direct video elements and container divs.
  * For containers, creates a video element with proper styling.
  */
@@ -35,10 +38,10 @@ export function attachTrackToElement(
   options: { objectFit?: 'cover' | 'contain'; muted?: boolean } = {}
 ): void {
   const { objectFit = 'cover', muted = false } = options;
-  
+
   const element = document.getElementById(elementId);
   if (!element) return;
-  
+
   if (element instanceof HTMLVideoElement) {
     track.attach(element);
   } else {
@@ -53,29 +56,25 @@ export function attachTrackToElement(
  * Attach local video track to element
  * Detaches first to prevent multiple attachments
  */
-export function attachLocalVideo(
-  track: LocalVideoTrack | null,
-  elementId: string
-): void {
+export function attachLocalVideo(track: LocalVideoTrack | null, elementId: string): void {
   if (!track) return;
-  
+
   // Detach from any previous elements
   track.detach();
-  
+
   attachTrackToElement(track, elementId, { muted: true });
 }
 
 /**
  * Attach remote participant's camera video
  */
-export function attachRemoteVideo(
-  participant: RemoteParticipant,
-  elementId: string
-): void {
-  const videoTrack = participant.getTrackPublications().find(
-    pub => pub.track?.kind === TrackConstants.Kind.Video && 
-           pub.source === TrackConstants.Source.Camera
-  )?.track;
+export function attachRemoteVideo(participant: RemoteParticipant, elementId: string): void {
+  const videoTrack = participant
+    .getTrackPublications()
+    .find(
+      (pub) =>
+        pub.track?.kind === TrackConstants.Kind.Video && pub.source === TrackConstants.Source.Camera
+    )?.track;
 
   if (videoTrack) {
     attachTrackToElement(videoTrack, elementId, { objectFit: 'cover' });
@@ -86,14 +85,14 @@ export function attachRemoteVideo(
  * Attach remote participant's screen share
  * Uses 'contain' to preserve aspect ratio
  */
-export function attachRemoteScreenShare(
-  participant: RemoteParticipant,
-  elementId: string
-): void {
-  const screenTrack = participant.getTrackPublications().find(
-    pub => pub.source === TrackConstants.Source.ScreenShare && 
-           pub.track?.kind === TrackConstants.Kind.Video
-  )?.track;
+export function attachRemoteScreenShare(participant: RemoteParticipant, elementId: string): void {
+  const screenTrack = participant
+    .getTrackPublications()
+    .find(
+      (pub) =>
+        pub.source === TrackConstants.Source.ScreenShare &&
+        pub.track?.kind === TrackConstants.Kind.Video
+    )?.track;
 
   if (screenTrack) {
     attachTrackToElement(screenTrack, elementId, { objectFit: 'contain' });
@@ -104,14 +103,13 @@ export function attachRemoteScreenShare(
  * Attach remote participant's camera to PiP element
  * Used during screen share to show camera in small window
  */
-export function attachRemoteCameraToPip(
-  participant: RemoteParticipant,
-  elementId: string
-): void {
-  const cameraTrack = participant.getTrackPublications().find(
-    pub => pub.source === TrackConstants.Source.Camera && 
-           pub.track?.kind === TrackConstants.Kind.Video
-  )?.track;
+export function attachRemoteCameraToPip(participant: RemoteParticipant, elementId: string): void {
+  const cameraTrack = participant
+    .getTrackPublications()
+    .find(
+      (pub) =>
+        pub.source === TrackConstants.Source.Camera && pub.track?.kind === TrackConstants.Kind.Video
+    )?.track;
 
   if (cameraTrack) {
     attachTrackToElement(cameraTrack, elementId, { objectFit: 'cover' });

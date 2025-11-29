@@ -4,21 +4,17 @@
  */
 
 // Socket.IO Service
-export { 
-  SocketIOService, 
-  getSocketIOService, 
-  destroySocketIOService 
-} from './socket';
-export type { 
-  MessageHandler, 
-  ErrorHandler, 
-  CloseHandler, 
+export { SocketIOService, getSocketIOService, destroySocketIOService } from './socket';
+export type {
+  MessageHandler,
+  ErrorHandler,
+  CloseHandler,
   OpenHandler,
   ISocketService,
 } from './socket';
 
 // LiveKit Service
-export { 
+export {
   LiveKitService,
   LIVEKIT_CONFIG,
   getVideoSettingsForNetwork,
@@ -27,18 +23,18 @@ export {
   isSafariBrowser,
   isSlowNetwork,
 } from './livekit';
-export type { 
-  LiveKitConfig, 
-  LiveKitCallbacks, 
-  DeviceIds, 
+export type {
+  LiveKitConfig,
+  LiveKitCallbacks,
+  DeviceIds,
   NetworkQualityLevel,
   NetworkQuality,
 } from './livekit';
 
 // Firebase Service
-export { 
-  initializeFirebase, 
-  getFirebaseApp, 
+export {
+  initializeFirebase,
+  getFirebaseApp,
   getFirebaseAnalytics,
   analytics,
   AnalyticsEvents,

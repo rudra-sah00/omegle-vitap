@@ -1,7 +1,7 @@
 /**
  * Browser Polyfills for Safari and older browsers
  * Ensures compatibility with webkit-prefixed APIs
- * 
+ *
  * This module provides polyfills for WebRTC and Media Devices APIs
  * to ensure cross-browser compatibility, especially for Safari.
  */
@@ -52,25 +52,26 @@ export function initBrowserPolyfills(): void {
     if (!window.RTCPeerConnection && legacyWindow.webkitRTCPeerConnection) {
       window.RTCPeerConnection = legacyWindow.webkitRTCPeerConnection;
     }
-    
+
     // Polyfill for mediaDevices object
     if (!navigator.mediaDevices && legacyNavigator.webkitGetUserMedia) {
       // Create a minimal mediaDevices object for legacy browsers
       Object.defineProperty(navigator, 'mediaDevices', {
         value: {},
         writable: true,
-        configurable: true
+        configurable: true,
       });
     }
-    
+
     // Polyfill for getUserMedia (convert callback-based to Promise-based)
     if (navigator.mediaDevices && !navigator.mediaDevices.getUserMedia) {
-      const getUserMedia = legacyNavigator.webkitGetUserMedia || 
-                          legacyNavigator.mozGetUserMedia ||
-                          legacyNavigator.msGetUserMedia;
-      
+      const getUserMedia =
+        legacyNavigator.webkitGetUserMedia ||
+        legacyNavigator.mozGetUserMedia ||
+        legacyNavigator.msGetUserMedia;
+
       if (getUserMedia) {
-        navigator.mediaDevices.getUserMedia = function(constraints: MediaStreamConstraints) {
+        navigator.mediaDevices.getUserMedia = function (constraints: MediaStreamConstraints) {
           return new Promise((resolve, reject) => {
             getUserMedia.call(navigator, constraints, resolve, reject);
           });
@@ -86,13 +87,13 @@ export function initBrowserPolyfills(): void {
 
 /**
  * Check if browser supports WebRTC and Media Devices APIs
- * 
+ *
  * Performs comprehensive compatibility check including:
  * - RTCPeerConnection support (with webkit/moz prefixes)
  * - getUserMedia API availability
- * 
+ *
  * @returns {boolean} True if browser supports required WebRTC features
- * 
+ *
  * @example
  * ```typescript
  * if (!isBrowserSupported()) {
@@ -110,8 +111,8 @@ export function isBrowserSupported(): boolean {
 
   // Check for RTCPeerConnection (with webkit prefix support)
   const hasWebRTC = !!(
-    window.RTCPeerConnection || 
-    legacyWindow.webkitRTCPeerConnection || 
+    window.RTCPeerConnection ||
+    legacyWindow.webkitRTCPeerConnection ||
     legacyWindow.mozRTCPeerConnection
   );
 
@@ -128,12 +129,12 @@ export function isBrowserSupported(): boolean {
 
 /**
  * Detect if the current browser is Safari
- * 
+ *
  * Uses user agent string to identify Safari browser.
  * Excludes Chrome and Android browsers that may contain "safari" in UA.
- * 
+ *
  * @returns {boolean} True if browser is Safari
- * 
+ *
  * @example
  * ```typescript
  * if (isSafari()) {
@@ -145,19 +146,19 @@ export function isSafari(): boolean {
   if (typeof navigator === 'undefined') {
     return false;
   }
-  
+
   const ua = navigator.userAgent.toLowerCase();
   return /^((?!chrome|android).)*safari/i.test(ua);
 }
 
 /**
  * Detect if running on iOS device
- * 
+ *
  * Checks for iPad, iPhone, or iPod in user agent.
  * Excludes Windows Phone's MSStream to avoid false positives.
- * 
+ *
  * @returns {boolean} True if running on iOS
- * 
+ *
  * @example
  * ```typescript
  * if (isIOS()) {
@@ -169,7 +170,7 @@ export function isIOS(): boolean {
   if (typeof navigator === 'undefined') {
     return false;
   }
-  
+
   const legacyNavigator = navigator as LegacyNavigator;
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !legacyNavigator.MSStream;
 }

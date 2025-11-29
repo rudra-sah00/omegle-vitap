@@ -9,7 +9,7 @@ interface MatchConfettiProps {
 
 /**
  * Optimized confetti for match celebration
- * 
+ *
  * Performance optimizations:
  * - Detects low-end devices and reduces particle count
  * - Uses simpler shapes on low-end devices
@@ -19,47 +19,67 @@ interface MatchConfettiProps {
  */
 const MatchConfettiComponent = ({ isActive }: MatchConfettiProps) => {
   const wasActiveRef = useRef(false);
-  const [isLowEnd, setIsLowEnd] = useState(false);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const isLowEndRef = useRef(false);
 
-  // Detect device capabilities on mount
+  // Initialize with a function to avoid hydration mismatch
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  });
+
+  // Detect device capabilities and listen for motion preference changes
   useEffect(() => {
-    // Check for reduced motion preference
+    // Listen for changes to reduced motion preference
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setPrefersReducedMotion(motionQuery.matches);
-    
+    const handleMotionChange = (e: MediaQueryListEvent) => {
+      setPrefersReducedMotion(e.matches);
+    };
+    motionQuery.addEventListener('change', handleMotionChange);
+
     // Detect low-end device heuristics
     const detectLowEnd = () => {
       // Check hardware concurrency (CPU cores)
       const cores = navigator.hardwareConcurrency || 4;
-      
+
       // Check device memory (if available)
       const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 8;
-      
+
       // Check if mobile
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
+
       // Consider low-end if: few cores, low memory, or older mobile
       return cores <= 2 || memory <= 2 || (isMobile && cores <= 4);
     };
-    
-    setIsLowEnd(detectLowEnd());
+
+    isLowEndRef.current = detectLowEnd();
+
+    return () => {
+      motionQuery.removeEventListener('change', handleMotionChange);
+    };
   }, []);
+
+  const prefersReducedMotionRef = useRef(prefersReducedMotion);
+  useEffect(() => {
+    prefersReducedMotionRef.current = prefersReducedMotion;
+  }, [prefersReducedMotion]);
 
   const fireConfetti = useCallback(() => {
     // Skip confetti entirely if user prefers reduced motion
-    if (prefersReducedMotion) return;
+    if (prefersReducedMotionRef.current) return;
+
+    const isLowEnd = isLowEndRef.current;
 
     // Optimized settings based on device capability
     const particleMultiplier = isLowEnd ? 0.4 : 1;
-    const burstCount = isLowEnd ? 1 : 3;
-    
+
     // Simple shapes for better performance (avoid custom paths on low-end)
-    const shapes: confetti.Shape[] = isLowEnd 
-      ? ['circle', 'square'] 
+    const shapes: confetti.Shape[] = isLowEnd
+      ? ['circle', 'square']
       : (() => {
-          const triangle = confetti.shapeFromPath({ path: "M0 10 L5 0 L10 10z" });
-          const square = confetti.shapeFromPath({ path: "M0 0 L10 0 L10 10 L0 10 Z" });
+          const triangle = confetti.shapeFromPath({ path: 'M0 10 L5 0 L10 10z' });
+          const square = confetti.shapeFromPath({ path: 'M0 0 L10 0 L10 10 L0 10 Z' });
           return [triangle, square, 'circle'];
         })();
 
@@ -104,15 +124,16 @@ const MatchConfettiComponent = ({ isActive }: MatchConfettiProps) => {
     };
 
     // Fire confetti - fewer bursts on low-end
+    const burstCount = isLowEnd ? 1 : 3;
     shoot();
-    
+
     if (burstCount > 1) {
       setTimeout(shoot, 200);
     }
     if (burstCount > 2) {
       setTimeout(shoot, 400);
     }
-  }, [isLowEnd, prefersReducedMotion]);
+  }, []);
 
   useEffect(() => {
     const wasActive = wasActiveRef.current;
@@ -121,14 +142,16 @@ const MatchConfettiComponent = ({ isActive }: MatchConfettiProps) => {
     // Rising edge detection: fire confetti when isActive changes from false to true
     if (isActive && !wasActive) {
       // Use requestIdleCallback on low-end devices for better main thread performance
-      if (isLowEnd && 'requestIdleCallback' in window) {
-        (window as Window & { requestIdleCallback: (cb: () => void) => void }).requestIdleCallback(fireConfetti);
+      if (isLowEndRef.current && 'requestIdleCallback' in window) {
+        (window as Window & { requestIdleCallback: (cb: () => void) => void }).requestIdleCallback(
+          fireConfetti
+        );
       } else {
         // Use microtask for capable devices
         queueMicrotask(fireConfetti);
       }
     }
-  }, [isActive, fireConfetti, isLowEnd]);
+  }, [isActive, fireConfetti]);
 
   // Show "MATCHED!" text when active (CSS animation is lightweight)
   if (!isActive) return null;
@@ -136,7 +159,7 @@ const MatchConfettiComponent = ({ isActive }: MatchConfettiProps) => {
   return (
     <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
       <div className="animate-match-popup">
-        <div 
+        <div
           className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500"
           style={{
             textShadow: prefersReducedMotion ? 'none' : '0 0 30px rgba(168, 85, 247, 0.5)',
@@ -165,11 +188,11 @@ const MatchConfettiComponent = ({ isActive }: MatchConfettiProps) => {
             opacity: 0;
           }
         }
-        
+
         :global(.animate-match-popup) {
           animation: match-popup 1.2s ease-out forwards;
         }
-        
+
         @media (prefers-reduced-motion: reduce) {
           :global(.animate-match-popup) {
             animation: none;

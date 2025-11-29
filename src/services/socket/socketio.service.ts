@@ -31,7 +31,7 @@ export function getSocketIOService(): SocketIOService {
   if (socketIOInstance) {
     return socketIOInstance;
   }
-  
+
   // Create new instance (synchronous for compatibility)
   socketIOInstance = new SocketIOService(WS_URL, API_KEY);
   return socketIOInstance;
@@ -108,7 +108,7 @@ export class SocketIOService implements ISocketService {
 
     // Validate configuration
     if (!this.url) {
-      this.errorHandlers.forEach(handler => 
+      this.errorHandlers.forEach((handler) =>
         handler(new Error('Backend URL not configured. Check NEXT_PUBLIC_BACKEND_URL.'))
       );
       return;
@@ -136,13 +136,13 @@ export class SocketIOService implements ISocketService {
         this.reconnectAttempts = 0;
         this.isConnecting = false;
         this.clearReconnectTimer();
-        this.openHandlers.forEach(handler => handler());
+        this.openHandlers.forEach((handler) => handler());
       });
 
       this.socket.on('disconnect', (reason) => {
         this.isConnecting = false;
         if (!this.isIntentionalClose) {
-          this.closeHandlers.forEach(handler => handler());
+          this.closeHandlers.forEach((handler) => handler());
           // Attempt manual reconnection for certain disconnect reasons
           if (reason === 'io server disconnect' || reason === 'transport close') {
             this.scheduleReconnect();
@@ -153,10 +153,14 @@ export class SocketIOService implements ISocketService {
       this.socket.on('connect_error', (error) => {
         this.reconnectAttempts++;
         this.isConnecting = false;
-        
+
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-          this.errorHandlers.forEach(handler => 
-            handler(new Error(`Connection failed after ${this.maxReconnectAttempts} attempts: ${error.message}`))
+          this.errorHandlers.forEach((handler) =>
+            handler(
+              new Error(
+                `Connection failed after ${this.maxReconnectAttempts} attempts: ${error.message}`
+              )
+            )
           );
         } else {
           // Schedule reconnection
@@ -165,22 +169,29 @@ export class SocketIOService implements ISocketService {
       });
 
       this.socket.onAny((eventName: string, ...args: unknown[]) => {
-        if (eventName === 'connect' || eventName === 'disconnect' || eventName === 'connect_error') {
+        if (
+          eventName === 'connect' ||
+          eventName === 'disconnect' ||
+          eventName === 'connect_error'
+        ) {
           return;
         }
-        
+
         const message = {
           type: eventName,
-          data: args[0] || {}
+          data: args[0] || {},
         } as ServerMessage;
-        
-        this.messageHandlers.forEach(handler => handler(message));
-      });
 
+        this.messageHandlers.forEach((handler) => handler(message));
+      });
     } catch (error) {
       this.isConnecting = false;
-      this.errorHandlers.forEach(handler => 
-        handler(new Error(`Unable to connect to server: ${error instanceof Error ? error.message : 'Unknown error'}`))
+      this.errorHandlers.forEach((handler) =>
+        handler(
+          new Error(
+            `Unable to connect to server: ${error instanceof Error ? error.message : 'Unknown error'}`
+          )
+        )
       );
     }
   }
@@ -194,9 +205,10 @@ export class SocketIOService implements ISocketService {
     }
 
     this.clearReconnectTimer();
-    
-    const delay = this.reconnectDelays[Math.min(this.reconnectAttempts, this.reconnectDelays.length - 1)];
-    
+
+    const delay =
+      this.reconnectDelays[Math.min(this.reconnectAttempts, this.reconnectDelays.length - 1)];
+
     this.reconnectTimer = setTimeout(() => {
       if (!this.isIntentionalClose && !this.socket?.connected) {
         this.socket?.connect();

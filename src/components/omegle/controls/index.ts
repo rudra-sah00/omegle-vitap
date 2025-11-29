@@ -7,11 +7,7 @@
 export * from './Icons';
 
 // Media Buttons
-export { 
-  MediaToggleButton, 
-  DeviceMenuTrigger, 
-  MediaControlWithSelector 
-} from './MediaButtons';
+export { MediaToggleButton, DeviceMenuTrigger, MediaControlWithSelector } from './MediaButtons';
 
 // Action Buttons
 export {

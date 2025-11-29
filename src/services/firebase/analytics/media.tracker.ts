@@ -1,7 +1,7 @@
 /**
  * Media Tracker
  * Tracks media device and streaming events
- * 
+ *
  * Covers:
  * - Camera toggle events
  * - Microphone toggle events
@@ -54,9 +54,8 @@ export class MediaTracker extends BaseTracker {
   /** Track camera or microphone device switch */
   trackDeviceSwitch(deviceType: DeviceType, deviceLabel?: string): void {
     this.safeTrack(() => {
-      const eventName = deviceType === 'camera' 
-        ? AnalyticsEvents.CAMERA_SWITCH 
-        : AnalyticsEvents.MICROPHONE_SWITCH;
+      const eventName =
+        deviceType === 'camera' ? AnalyticsEvents.CAMERA_SWITCH : AnalyticsEvents.MICROPHONE_SWITCH;
 
       logEvent(this.analytics!, eventName, {
         device_type: deviceType,
@@ -146,9 +145,8 @@ export class MediaTracker extends BaseTracker {
   /** Track chat window open/close */
   trackChatWindow(action: 'opened' | 'closed'): void {
     this.safeTrack(() => {
-      const eventName = action === 'opened' 
-        ? AnalyticsEvents.CHAT_OPENED 
-        : AnalyticsEvents.CHAT_CLOSED;
+      const eventName =
+        action === 'opened' ? AnalyticsEvents.CHAT_OPENED : AnalyticsEvents.CHAT_CLOSED;
       logEvent(this.analytics!, eventName, {
         timestamp: this.getTimestamp(),
       });

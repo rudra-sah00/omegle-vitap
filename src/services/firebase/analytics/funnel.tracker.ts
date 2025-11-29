@@ -1,7 +1,7 @@
 /**
  * Funnel Tracker
  * Tracks user journey through the conversion funnel
- * 
+ *
  * Funnel stages:
  * 1. Welcome View - User lands on welcome page
  * 2. Name Entered - User enters their name

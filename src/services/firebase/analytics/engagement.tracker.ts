@@ -1,7 +1,7 @@
 /**
  * Engagement Tracker
  * Tracks user engagement and behavior metrics
- * 
+ *
  * Covers:
  * - Page views and navigation
  * - Button and link clicks
@@ -44,7 +44,7 @@ export class EngagementTracker extends BaseTracker {
   /** Set anonymous user ID for cross-session tracking */
   setAnonymousUserId(uid: string): void {
     if (!this.analytics) return;
-    
+
     this.userId = uid;
     try {
       setUserId(this.analytics, uid);
@@ -61,7 +61,7 @@ export class EngagementTracker extends BaseTracker {
       const userAgent = navigator.userAgent;
       const isMobile = /iPhone|iPad|iPod|Android/i.test(userAgent);
       const isTablet = /iPad|Android/i.test(userAgent) && !/Mobile/i.test(userAgent);
-      
+
       let browser = 'unknown';
       if (userAgent.includes('Chrome')) browser = 'chrome';
       else if (userAgent.includes('Firefox')) browser = 'firefox';
@@ -99,12 +99,12 @@ export class EngagementTracker extends BaseTracker {
     try {
       const lastVisit = localStorage.getItem('omegle_last_visit');
       const isReturning = !!lastVisit;
-      
+
       if (isReturning) {
-        const daysSinceLastVisit = lastVisit 
+        const daysSinceLastVisit = lastVisit
           ? Math.floor((Date.now() - new Date(lastVisit).getTime()) / (1000 * 60 * 60 * 24))
           : 0;
-        
+
         logEvent(this.analytics, AnalyticsEvents.RETURNING_USER, {
           session_number: this.sessionCount,
           days_since_last_visit: daysSinceLastVisit,
@@ -206,7 +206,7 @@ export class EngagementTracker extends BaseTracker {
         gender: gender.toLowerCase(),
         timestamp: this.getTimestamp(),
       });
-      
+
       setUserProperties(this.analytics!, {
         user_gender: gender.toLowerCase(),
       });
@@ -220,7 +220,7 @@ export class EngagementTracker extends BaseTracker {
         preference: preference.toLowerCase(),
         timestamp: this.getTimestamp(),
       });
-      
+
       setUserProperties(this.analytics!, {
         gender_preference: preference.toLowerCase(),
       });

@@ -1,14 +1,14 @@
 /**
  * Toast Notification Utilities
  * Centralized toast management with deduplication and error tracking
- * 
+ *
  * @description Provides a unified interface for displaying toast notifications
  * with automatic deduplication, consistent styling, and error code tracking.
- * 
+ *
  * @example
  * ```tsx
  * import { showError, showSuccess, ErrorCode } from '@/lib/toast';
- * 
+ *
  * showError('Connection failed', ErrorCode.CONNECTION_LOST);
  * showSuccess('Connected successfully!');
  * ```
@@ -54,7 +54,7 @@ const TOAST_CONFIG = {
 /**
  * Toast Manager Class
  * Encapsulates toast state for better testability and control
- * 
+ *
  * @internal This class is used internally by the toast utility functions
  */
 class ToastManager {
@@ -69,8 +69,9 @@ class ToastManager {
    */
   private shouldDedupe(message: string): boolean {
     const now = Date.now();
-    return message === this.lastToastMessage && 
-           now - this.lastToastTime < TOAST_CONFIG.DEDUPE_WINDOW_MS;
+    return (
+      message === this.lastToastMessage && now - this.lastToastTime < TOAST_CONFIG.DEDUPE_WINDOW_MS
+    );
   }
 
   /**
@@ -107,12 +108,31 @@ class ToastManager {
    * @param code - The error code
    * @returns The analytics error type
    */
-  private getErrorTypeFromCode(code: ErrorCode): 'camera_permission' | 'microphone_permission' | 'connection' | 'rtc' | 'websocket' | 'media_device' {
+  private getErrorTypeFromCode(
+    code: ErrorCode
+  ):
+    | 'camera_permission'
+    | 'microphone_permission'
+    | 'connection'
+    | 'rtc'
+    | 'websocket'
+    | 'media_device' {
     if (code === ErrorCode.CAMERA_PERMISSION_DENIED) return 'camera_permission';
     if (code === ErrorCode.MIC_PERMISSION_DENIED) return 'microphone_permission';
-    if (code === ErrorCode.CAMERA_IN_USE || code === ErrorCode.MIC_IN_USE || code === ErrorCode.MEDIA_DEVICE_NOT_FOUND) return 'media_device';
-    if (code === ErrorCode.CHANNEL_JOIN_FAILED || code === ErrorCode.CHANNEL_LEAVE_FAILED || code === ErrorCode.PUBLISH_FAILED) return 'rtc';
-    if (code === ErrorCode.MESSAGE_SEND_FAILED || code === ErrorCode.MESSAGE_SERVICE_UNAVAILABLE) return 'websocket';
+    if (
+      code === ErrorCode.CAMERA_IN_USE ||
+      code === ErrorCode.MIC_IN_USE ||
+      code === ErrorCode.MEDIA_DEVICE_NOT_FOUND
+    )
+      return 'media_device';
+    if (
+      code === ErrorCode.CHANNEL_JOIN_FAILED ||
+      code === ErrorCode.CHANNEL_LEAVE_FAILED ||
+      code === ErrorCode.PUBLISH_FAILED
+    )
+      return 'rtc';
+    if (code === ErrorCode.MESSAGE_SEND_FAILED || code === ErrorCode.MESSAGE_SERVICE_UNAVAILABLE)
+      return 'websocket';
     return 'connection';
   }
 
@@ -123,21 +143,21 @@ class ToastManager {
    */
   error(message: string, code?: ErrorCode): void {
     if (this.shouldDedupe(message)) return;
-    
+
     this.clearActiveToasts();
-    
+
     // Track error in analytics
     this.logErrorToAnalytics(message, code);
-    
+
     const toastId = toast.error(message, {
       duration: TOAST_CONFIG.ERROR_DURATION,
     });
-    
+
     if (typeof toastId === 'string' || typeof toastId === 'number') {
       this.activeToastIds.add(String(toastId));
     }
     this.trackToast(message);
-    
+
     setTimeout(() => {
       if (typeof toastId === 'string' || typeof toastId === 'number') {
         this.activeToastIds.delete(String(toastId));
@@ -150,13 +170,13 @@ class ToastManager {
    */
   success(message: string): void {
     if (this.shouldDedupe(message)) return;
-    
+
     this.clearActiveToasts();
-    
+
     toast.success(message, {
       duration: TOAST_CONFIG.SUCCESS_DURATION,
     });
-    
+
     this.trackToast(message);
   }
 
@@ -165,13 +185,13 @@ class ToastManager {
    */
   info(message: string): void {
     if (this.shouldDedupe(message)) return;
-    
+
     this.clearActiveToasts();
-    
+
     toast.info(message, {
       duration: TOAST_CONFIG.INFO_DURATION,
     });
-    
+
     this.trackToast(message);
   }
 
@@ -180,13 +200,13 @@ class ToastManager {
    */
   warning(message: string): void {
     if (this.shouldDedupe(message)) return;
-    
+
     this.clearActiveToasts();
-    
+
     toast.warning(message, {
       duration: TOAST_CONFIG.WARNING_DURATION,
     });
-    
+
     this.trackToast(message);
   }
 
@@ -205,10 +225,10 @@ const toastManager = new ToastManager();
 
 /**
  * Show an error toast notification
- * 
+ *
  * @param message - The error message to display
  * @param code - Optional error code for analytics tracking
- * 
+ *
  * @example
  * ```tsx
  * showError('Failed to connect', ErrorCode.CONNECTION_LOST);
@@ -220,9 +240,9 @@ export function showError(message: string, code?: ErrorCode): void {
 
 /**
  * Show a success toast notification
- * 
+ *
  * @param message - The success message to display
- * 
+ *
  * @example
  * ```tsx
  * showSuccess('Connected successfully!');
@@ -234,9 +254,9 @@ export function showSuccess(message: string): void {
 
 /**
  * Show an info toast notification
- * 
+ *
  * @param message - The info message to display
- * 
+ *
  * @example
  * ```tsx
  * showInfo('Your partner left the chat');
@@ -248,9 +268,9 @@ export function showInfo(message: string): void {
 
 /**
  * Show a warning toast notification
- * 
+ *
  * @param message - The warning message to display
- * 
+ *
  * @example
  * ```tsx
  * showWarning('Connection quality is poor');
@@ -270,10 +290,10 @@ export function resetToastManager(): void {
 
 /**
  * Parse media-related errors into user-friendly messages
- * 
+ *
  * @param error - The error to parse (can be Error, string, or unknown)
  * @returns Object with user-friendly message and error code
- * 
+ *
  * @example
  * ```tsx
  * try {
@@ -286,45 +306,51 @@ export function resetToastManager(): void {
  */
 export function parseMediaError(error: unknown): { message: string; code: ErrorCode } {
   const errorStr = String(error).toLowerCase();
-  
+
   if (errorStr.includes('permission_denied')) {
     if (errorStr.includes('camera')) {
       return {
-        message: 'Camera access denied. Please allow camera permissions in your browser settings and refresh.',
+        message:
+          'Camera access denied. Please allow camera permissions in your browser settings and refresh.',
         code: ErrorCode.CAMERA_PERMISSION_DENIED,
       };
     }
     if (errorStr.includes('microphone')) {
       return {
-        message: 'Microphone access denied. Please allow microphone permissions in your browser settings and refresh.',
+        message:
+          'Microphone access denied. Please allow microphone permissions in your browser settings and refresh.',
         code: ErrorCode.MIC_PERMISSION_DENIED,
       };
     }
     return {
-      message: 'Camera or microphone access denied. Please allow permissions in your browser settings and refresh.',
+      message:
+        'Camera or microphone access denied. Please allow permissions in your browser settings and refresh.',
       code: ErrorCode.CAMERA_PERMISSION_DENIED,
     };
   }
-  
+
   if (errorStr.includes('device_in_use')) {
     if (errorStr.includes('camera')) {
       return {
-        message: 'Camera is being used by another application. Please close other apps and try again.',
+        message:
+          'Camera is being used by another application. Please close other apps and try again.',
         code: ErrorCode.CAMERA_IN_USE,
       };
     }
     if (errorStr.includes('microphone')) {
       return {
-        message: 'Microphone is being used by another application. Please close other apps and try again.',
+        message:
+          'Microphone is being used by another application. Please close other apps and try again.',
         code: ErrorCode.MIC_IN_USE,
       };
     }
     return {
-      message: 'Camera or microphone is being used by another application. Please close other apps and try again.',
+      message:
+        'Camera or microphone is being used by another application. Please close other apps and try again.',
       code: ErrorCode.CAMERA_IN_USE,
     };
   }
-  
+
   if (errorStr.includes('device_not_found')) {
     if (errorStr.includes('camera')) {
       return {
@@ -343,7 +369,7 @@ export function parseMediaError(error: unknown): { message: string; code: ErrorC
       code: ErrorCode.MEDIA_DEVICE_NOT_FOUND,
     };
   }
-  
+
   if (errorStr.includes('permission') || errorStr.includes('notallowed')) {
     if (errorStr.includes('video') || errorStr.includes('camera')) {
       return {
@@ -352,12 +378,18 @@ export function parseMediaError(error: unknown): { message: string; code: ErrorC
       };
     }
     return {
-      message: 'Microphone access denied. Please allow microphone permissions in your browser settings.',
+      message:
+        'Microphone access denied. Please allow microphone permissions in your browser settings.',
       code: ErrorCode.MIC_PERMISSION_DENIED,
     };
   }
-  
-  if (errorStr.includes('notfound') || errorStr.includes('no device') || errorStr.includes('no camera') || errorStr.includes('no microphone')) {
+
+  if (
+    errorStr.includes('notfound') ||
+    errorStr.includes('no device') ||
+    errorStr.includes('no camera') ||
+    errorStr.includes('no microphone')
+  ) {
     if (errorStr.includes('camera')) {
       return {
         message: 'No camera found. Please connect a camera and try again.',
@@ -375,33 +407,36 @@ export function parseMediaError(error: unknown): { message: string; code: ErrorC
       code: ErrorCode.MEDIA_DEVICE_NOT_FOUND,
     };
   }
-  
+
   if (errorStr.includes('in use') || errorStr.includes('notreadable')) {
     return {
-      message: 'Camera or microphone is being used by another application. Please close other apps and try again.',
+      message:
+        'Camera or microphone is being used by another application. Please close other apps and try again.',
       code: ErrorCode.CAMERA_IN_USE,
     };
   }
-  
+
   if (errorStr.includes('timeout')) {
     return {
-      message: 'Device access timed out. This may be due to slow device or permission prompt delay. Please try again.',
+      message:
+        'Device access timed out. This may be due to slow device or permission prompt delay. Please try again.',
       code: ErrorCode.CONNECTION_TIMEOUT,
     };
   }
-  
+
   return {
-    message: 'Failed to access camera or microphone. Please check your device settings and try again.',
+    message:
+      'Failed to access camera or microphone. Please check your device settings and try again.',
     code: ErrorCode.MEDIA_DEVICE_NOT_FOUND,
   };
 }
 
 /**
  * Parse connection-related errors into user-friendly messages
- * 
+ *
  * @param error - The error to parse (can be Error, string, or unknown)
  * @returns Object with user-friendly message and error code
- * 
+ *
  * @example
  * ```tsx
  * try {
@@ -414,35 +449,35 @@ export function parseMediaError(error: unknown): { message: string; code: ErrorC
  */
 export function parseConnectionError(error: unknown): { message: string; code: ErrorCode } {
   const errorStr = String(error).toLowerCase();
-  
+
   if (errorStr.includes('timeout') || errorStr.includes('timed out')) {
     return {
       message: 'Connection timed out. Please check your internet connection and try again.',
       code: ErrorCode.CONNECTION_TIMEOUT,
     };
   }
-  
+
   if (errorStr.includes('token') || errorStr.includes('invalid token')) {
     return {
       message: 'Session expired. Please try starting a new chat.',
       code: ErrorCode.AUTH_FAILED,
     };
   }
-  
+
   if (errorStr.includes('backend') || errorStr.includes('unavailable')) {
     return {
       message: 'Service temporarily unavailable. Please try again in a moment.',
       code: ErrorCode.BACKEND_UNAVAILABLE,
     };
   }
-  
+
   if (errorStr.includes('network') || errorStr.includes('offline')) {
     return {
       message: 'No internet connection. Please check your network and try again.',
       code: ErrorCode.CONNECTION_LOST,
     };
   }
-  
+
   return {
     message: 'Connection failed. Please check your internet and try again.',
     code: ErrorCode.CONNECTION_LOST,

@@ -1,7 +1,7 @@
 /**
  * Error Tracker
  * Tracks error events for debugging and monitoring
- * 
+ *
  * Covers:
  * - Camera permission errors
  * - Microphone permission errors

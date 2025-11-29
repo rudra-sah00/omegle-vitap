@@ -18,7 +18,7 @@ export const AnalyticsEvents = {
   NAVIGATE_TO_CHAT: 'navigate_to_chat',
   NAVIGATE_TO_GUIDELINES: 'navigate_to_guidelines',
   NAVIGATE_TO_FAQ: 'navigate_to_faq',
-  
+
   // Match Flow
   MATCH_START: 'match_start',
   MATCH_STOP: 'match_stop',
@@ -30,7 +30,7 @@ export const AnalyticsEvents = {
   SEARCH_TIMEOUT: 'search_timeout',
   SEARCH_CANCELLED: 'search_cancelled',
   AVERAGE_WAIT_TIME: 'average_wait_time',
-  
+
   // Media Controls
   CAMERA_TOGGLE: 'camera_toggle',
   MICROPHONE_TOGGLE: 'microphone_toggle',
@@ -40,7 +40,7 @@ export const AnalyticsEvents = {
   DEVICE_PERMISSION_PROMPT: 'device_permission_prompt',
   SCREEN_SHARE_START: 'screen_share_start',
   SCREEN_SHARE_STOP: 'screen_share_stop',
-  
+
   // Chat & Messaging
   MESSAGE_SENT: 'message_sent',
   MESSAGE_RECEIVED: 'message_received',
@@ -48,7 +48,7 @@ export const AnalyticsEvents = {
   CHAT_OPENED: 'chat_opened',
   CHAT_CLOSED: 'chat_closed',
   TYPING_INDICATOR: 'typing_indicator',
-  
+
   // Connection & RTC
   WEBSOCKET_CONNECT: 'websocket_connect',
   WEBSOCKET_DISCONNECT: 'websocket_disconnect',
@@ -59,13 +59,13 @@ export const AnalyticsEvents = {
   RTC_RECONNECT: 'rtc_reconnect',
   REMOTE_VIDEO_READY: 'remote_video_ready',
   FIRST_VIDEO_FRAME: 'first_video_frame',
-  
+
   // Quality & Performance
   VIDEO_QUALITY_CHANGE: 'video_quality_change',
   NETWORK_QUALITY: 'network_quality',
   CONNECTION_QUALITY_DROP: 'connection_quality_drop',
   AUDIO_QUALITY: 'audio_quality',
-  
+
   // Errors
   ERROR_CAMERA_PERMISSION: 'error_camera_permission',
   ERROR_MICROPHONE_PERMISSION: 'error_microphone_permission',
@@ -73,7 +73,7 @@ export const AnalyticsEvents = {
   ERROR_RTC: 'error_rtc',
   ERROR_WEBSOCKET: 'error_websocket',
   ERROR_MEDIA_DEVICE: 'error_media_device',
-  
+
   // User Behavior
   IDLE_TIME: 'idle_time',
   TAB_VISIBILITY_CHANGE: 'tab_visibility_change',
@@ -81,12 +81,12 @@ export const AnalyticsEvents = {
   BUTTON_CLICK: 'button_click',
   LINK_CLICK: 'link_click',
   FORM_SUBMIT: 'form_submit',
-  
+
   // Engagement & Retention
   USER_ENGAGEMENT: 'user_engagement',
   RETURNING_USER: 'returning_user',
   SESSION_COUNT: 'session_count',
-  
+
   // Funnel Events
   FUNNEL_WELCOME_VIEW: 'funnel_welcome_view',
   FUNNEL_NAME_ENTERED: 'funnel_name_entered',
@@ -97,12 +97,12 @@ export const AnalyticsEvents = {
   FUNNEL_MATCH_CONNECTED: 'funnel_match_connected',
   FUNNEL_FIRST_MESSAGE_SENT: 'funnel_first_message_sent',
   FUNNEL_SESSION_COMPLETED: 'funnel_session_completed',
-  
+
   // Match Quality
   MATCH_QUALITY_SCORE: 'match_quality_score',
   MATCH_DURATION_BUCKET: 'match_duration_bucket',
   MESSAGES_PER_SESSION: 'messages_per_session',
-  
+
   // User Preferences
   GENDER_PREFERENCE_SET: 'gender_preference_set',
   USER_GENDER_SET: 'user_gender_set',
@@ -122,12 +122,12 @@ export type MatchQuality = 'poor' | 'fair' | 'good' | 'excellent';
 export type NetworkQuality = 'excellent' | 'good' | 'poor' | 'bad';
 
 /** Error types for error tracking */
-export type ErrorType = 
-  | 'camera_permission' 
-  | 'microphone_permission' 
-  | 'connection' 
-  | 'rtc' 
-  | 'websocket' 
+export type ErrorType =
+  | 'camera_permission'
+  | 'microphone_permission'
+  | 'connection'
+  | 'rtc'
+  | 'websocket'
   | 'media_device';
 
 /** Match end reasons */

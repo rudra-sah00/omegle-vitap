@@ -9,12 +9,12 @@ export const LIVEKIT_CONFIG = {
     TRACK_CREATION: 20000,
     PUBLISH: 10000,
   },
-  
+
   RETRY: {
     MAX_CONNECT_ATTEMPTS: 2,
     BACKOFF_DELAYS: [2000, 4000],
   },
-  
+
   VIDEO: {
     resolution: {
       width: 1280,
@@ -28,7 +28,7 @@ export const LIVEKIT_CONFIG = {
       unknown: { width: 1280, height: 720, frameRate: 30, maxBitrate: 1200000 },
     },
   },
-  
+
   AUDIO: {
     echoCancellation: true,
     noiseSuppression: true,
@@ -80,7 +80,8 @@ export function isSafariBrowser(): boolean {
 export function isSlowNetwork(): boolean {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
   try {
-    const networkInfo = (navigator as unknown as { connection?: { effectiveType?: string } }).connection;
+    const networkInfo = (navigator as unknown as { connection?: { effectiveType?: string } })
+      .connection;
     if (networkInfo) {
       const slowTypes = ['slow-2g', '2g'];
       return slowTypes.includes(networkInfo.effectiveType || '');

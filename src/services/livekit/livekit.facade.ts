@@ -1,23 +1,29 @@
 /**
  * LiveKit Service Facade
- * 
+ *
  * Main entry point for LiveKit functionality. This facade provides a unified API
  * that delegates to specialized manager modules:
- * 
+ *
  * - RoomManager: Room lifecycle and events
  * - TrackManager: Local track management (camera, mic)
  * - ScreenShareManager: Screen sharing
  * - VideoRenderer: DOM attachment utilities
- * 
+ *
  * This facade maintains backward compatibility with the original monolithic
  * LiveKitService API while providing better code organization.
  */
 
-import type { Room, LocalVideoTrack, LocalAudioTrack, RemoteParticipant, ConnectionQuality } from 'livekit-client';
+import type {
+  Room,
+  LocalVideoTrack,
+  LocalAudioTrack,
+  RemoteParticipant,
+  ConnectionQuality,
+} from 'livekit-client';
 import type { LiveKitConfig, DeviceIds, NetworkQualityLevel } from './types';
-import { 
-  TrackManager, 
-  ScreenShareManager, 
+import {
+  TrackManager,
+  ScreenShareManager,
   RoomManager,
   attachLocalVideo,
   attachRemoteVideo,
@@ -29,17 +35,17 @@ import {
 
 /**
  * LiveKitService Class
- * 
+ *
  * Unified interface for all LiveKit functionality.
  * Instantiate once per session and reuse across components.
  */
 export class LiveKitService {
   // Shared state across all managers
   private state: LiveKitState;
-  
+
   // Callbacks for room events
   private callbacks: LiveKitCallbacks = {};
-  
+
   // Manager instances
   private roomManager: RoomManager;
   private trackManager: TrackManager;
@@ -63,7 +69,7 @@ export class LiveKitService {
       currentMicId: undefined,
       currentNetworkQuality: 'unknown',
     };
-    
+
     // Initialize managers
     this.trackManager = new TrackManager(this.state);
     this.screenShareManager = new ScreenShareManager(this.state);
@@ -86,7 +92,11 @@ export class LiveKitService {
   // ROOM LIFECYCLE
   // ============================================
 
-  async join(config: LiveKitConfig, cameraOn: boolean = true, micOn: boolean = true): Promise<void> {
+  async join(
+    config: LiveKitConfig,
+    cameraOn: boolean = true,
+    micOn: boolean = true
+  ): Promise<void> {
     await this.roomManager.join(config, cameraOn, micOn);
   }
 
@@ -195,11 +205,15 @@ export class LiveKitService {
   // CALLBACK SETTERS
   // ============================================
 
-  setOnUserPublished(callback: (participant: RemoteParticipant, mediaType: 'audio' | 'video') => void): void {
+  setOnUserPublished(
+    callback: (participant: RemoteParticipant, mediaType: 'audio' | 'video') => void
+  ): void {
     this.callbacks.onTrackSubscribed = callback;
   }
 
-  setOnUserUnpublished(callback: (participant: RemoteParticipant, mediaType: 'audio' | 'video') => void): void {
+  setOnUserUnpublished(
+    callback: (participant: RemoteParticipant, mediaType: 'audio' | 'video') => void
+  ): void {
     this.callbacks.onTrackUnsubscribed = callback;
   }
 
@@ -211,11 +225,15 @@ export class LiveKitService {
     this.callbacks.onParticipantDisconnected = callback;
   }
 
-  setOnConnectionQualityChanged(callback: (quality: ConnectionQuality, participant: RemoteParticipant | null) => void): void {
+  setOnConnectionQualityChanged(
+    callback: (quality: ConnectionQuality, participant: RemoteParticipant | null) => void
+  ): void {
     this.callbacks.onConnectionQualityChanged = callback;
   }
 
-  setOnScreenShareSubscribed(callback: (participant: RemoteParticipant, isSharing: boolean) => void): void {
+  setOnScreenShareSubscribed(
+    callback: (participant: RemoteParticipant, isSharing: boolean) => void
+  ): void {
     this.callbacks.onScreenShareSubscribed = callback;
   }
 

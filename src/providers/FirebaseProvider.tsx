@@ -16,7 +16,7 @@ interface FirebaseProviderProps {
 
 export function FirebaseProvider({ children }: FirebaseProviderProps) {
   const pathname = usePathname();
-  
+
   useAnalytics();
 
   useEffect(() => {

@@ -3,9 +3,9 @@
  * Re-exports all state machines
  */
 
-export { 
-  matchmakingMachine, 
-  type MatchmakingContext, 
+export {
+  matchmakingMachine,
+  type MatchmakingContext,
   type MatchmakingEvent,
   type MatchmakingState,
 } from './matchmaking.machine';

@@ -14,7 +14,7 @@ import type { LiveKitState } from './types';
 
 /**
  * ScreenShareManager Class
- * 
+ *
  * Manages screen sharing:
  * - Start/stop screen share
  * - Publish screen share tracks
@@ -69,7 +69,7 @@ export class ScreenShareManager {
 
   /**
    * Start sharing screen
-   * 
+   *
    * Uses browser's screen capture API to get screen/window/tab.
    * Includes audio capture if user grants permission.
    * Reduces camera quality to prioritize screen share bandwidth.
@@ -92,7 +92,7 @@ export class ScreenShareManager {
         contentHint: 'detail',
       } as ScreenShareCaptureOptions);
 
-      const videoTrack = screenTracks.find(t => t.kind === Track.Kind.Video) as LocalVideoTrack;
+      const videoTrack = screenTracks.find((t) => t.kind === Track.Kind.Video) as LocalVideoTrack;
       if (!videoTrack) {
         throw new Error('Failed to get screen share video track');
       }
@@ -112,7 +112,7 @@ export class ScreenShareManager {
       });
 
       // Publish audio track if available
-      const audioTrack = screenTracks.find(t => t.kind === Track.Kind.Audio);
+      const audioTrack = screenTracks.find((t) => t.kind === Track.Kind.Audio);
       if (audioTrack) {
         await this.state.room.localParticipant.publishTrack(audioTrack, {
           source: Track.Source.ScreenShareAudio,

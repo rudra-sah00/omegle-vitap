@@ -25,7 +25,7 @@ const firebaseConfig = {
  */
 function validateFirebaseConfig(): boolean {
   const requiredKeys = ['apiKey', 'authDomain', 'projectId', 'appId'] as const;
-  return requiredKeys.every(key => {
+  return requiredKeys.every((key) => {
     const value = firebaseConfig[key];
     return value && value.trim().length > 0;
   });
@@ -33,7 +33,6 @@ function validateFirebaseConfig(): boolean {
 
 let app: FirebaseApp | null = null;
 let analytics: Analytics | null = null;
-let initializationWarningShown = false;
 
 /**
  * Initialize Firebase (singleton pattern)
@@ -46,7 +45,6 @@ export function initializeFirebase(): { app: FirebaseApp | null; analytics: Anal
 
   // Validate configuration
   if (!validateFirebaseConfig()) {
-    initializationWarningShown = true;
     return { app: null, analytics: null };
   }
 

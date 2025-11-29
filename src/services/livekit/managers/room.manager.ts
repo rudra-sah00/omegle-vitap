@@ -20,7 +20,7 @@ import { ScreenShareManager } from './screen-share.manager';
 
 /**
  * RoomManager Class
- * 
+ *
  * Manages room lifecycle:
  * - Room creation and configuration
  * - Event listener setup
@@ -62,7 +62,7 @@ export class RoomManager {
         },
       },
     });
-    
+
     this.setupEventListeners();
   }
 
@@ -82,46 +82,59 @@ export class RoomManager {
     });
 
     // Track events
-    this.state.room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack, publication, participant: RemoteParticipant) => {
-      const isScreenShare = publication.source === Track.Source.ScreenShare;
-      const mediaType = track.kind === Track.Kind.Video ? 'video' : 'audio';
-      
-      // Auto-attach audio tracks
-      if (track.kind === Track.Kind.Audio) {
-        track.attach();
-      }
-      
-      if (isScreenShare && track.kind === Track.Kind.Video) {
-        this.callbacks.onScreenShareSubscribed?.(participant, true);
-      } else {
-        this.callbacks.onTrackSubscribed?.(participant, mediaType);
-      }
-    });
+    this.state.room.on(
+      RoomEvent.TrackSubscribed,
+      (track: RemoteTrack, publication, participant: RemoteParticipant) => {
+        const isScreenShare = publication.source === Track.Source.ScreenShare;
+        const mediaType = track.kind === Track.Kind.Video ? 'video' : 'audio';
 
-    this.state.room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack, publication, participant: RemoteParticipant) => {
-      const isScreenShare = publication.source === Track.Source.ScreenShare;
-      const mediaType = track.kind === Track.Kind.Video ? 'video' : 'audio';
-      track.detach();
-      
-      if (isScreenShare && track.kind === Track.Kind.Video) {
-        this.callbacks.onScreenShareSubscribed?.(participant, false);
-      } else {
-        this.callbacks.onTrackUnsubscribed?.(participant, mediaType);
+        // Auto-attach audio tracks
+        if (track.kind === Track.Kind.Audio) {
+          track.attach();
+        }
+
+        if (isScreenShare && track.kind === Track.Kind.Video) {
+          this.callbacks.onScreenShareSubscribed?.(participant, true);
+        } else {
+          this.callbacks.onTrackSubscribed?.(participant, mediaType);
+        }
       }
-    });
+    );
+
+    this.state.room.on(
+      RoomEvent.TrackUnsubscribed,
+      (track: RemoteTrack, publication, participant: RemoteParticipant) => {
+        const isScreenShare = publication.source === Track.Source.ScreenShare;
+        const mediaType = track.kind === Track.Kind.Video ? 'video' : 'audio';
+        track.detach();
+
+        if (isScreenShare && track.kind === Track.Kind.Video) {
+          this.callbacks.onScreenShareSubscribed?.(participant, false);
+        } else {
+          this.callbacks.onTrackUnsubscribed?.(participant, mediaType);
+        }
+      }
+    );
 
     // Quality events
-    this.state.room.on(RoomEvent.ConnectionQualityChanged, (quality: ConnectionQuality, participant) => {
-      const networkQuality = RoomManager.convertQuality(quality);
-      const isLocal = !participant || participant.identity === this.state.room?.localParticipant?.identity;
-      
-      if (isLocal && networkQuality !== this.state.currentNetworkQuality) {
-        this.state.currentNetworkQuality = networkQuality;
-        this.adaptQualityToNetwork();
+    this.state.room.on(
+      RoomEvent.ConnectionQualityChanged,
+      (quality: ConnectionQuality, participant) => {
+        const networkQuality = RoomManager.convertQuality(quality);
+        const isLocal =
+          !participant || participant.identity === this.state.room?.localParticipant?.identity;
+
+        if (isLocal && networkQuality !== this.state.currentNetworkQuality) {
+          this.state.currentNetworkQuality = networkQuality;
+          this.adaptQualityToNetwork();
+        }
+
+        this.callbacks.onConnectionQualityChanged?.(
+          quality,
+          participant as RemoteParticipant | null
+        );
       }
-      
-      this.callbacks.onConnectionQualityChanged?.(quality, participant as RemoteParticipant | null);
-    });
+    );
 
     // Disconnect event
     this.state.room.on(RoomEvent.Disconnected, () => {
@@ -136,7 +149,9 @@ export class RoomManager {
     if (!this.state.room?.localParticipant) return;
 
     try {
-      const videoPublication = this.state.room.localParticipant.getTrackPublication(Track.Source.Camera);
+      const videoPublication = this.state.room.localParticipant.getTrackPublication(
+        Track.Source.Camera
+      );
       if (videoPublication?.track) {
         await this.state.room.localParticipant.setTrackSubscriptionPermissions(true);
       }
@@ -148,7 +163,11 @@ export class RoomManager {
   /**
    * Join a LiveKit room
    */
-  async join(config: LiveKitConfig, cameraOn: boolean = true, micOn: boolean = true): Promise<void> {
+  async join(
+    config: LiveKitConfig,
+    cameraOn: boolean = true,
+    micOn: boolean = true
+  ): Promise<void> {
     if (!this.state.room) {
       throw new Error('LiveKit room not initialized');
     }
@@ -175,7 +194,11 @@ export class RoomManager {
     } catch (error) {
       this.state.isJoined = false;
       if (this.state.room) {
-        try { await this.state.room.disconnect(); } catch { /* ignore */ }
+        try {
+          await this.state.room.disconnect();
+        } catch {
+          /* ignore */
+        }
       }
       throw error;
     }
@@ -186,7 +209,7 @@ export class RoomManager {
    */
   async leave(): Promise<void> {
     if (!this.state.isJoined || this.state.isLeaving) return;
-    
+
     this.state.isLeaving = true;
 
     try {
@@ -203,7 +226,7 @@ export class RoomManager {
       this.state.isJoined = false;
       this.state.isPreviewMode = false;
       this.state.isLeaving = false;
-      
+
       // Create fresh room for next session
       this.state.room = new Room({
         adaptiveStream: true,

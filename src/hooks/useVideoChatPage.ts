@@ -16,7 +16,7 @@ import type { MatchDataMatched } from '@/types/matchmaking';
 export function useVideoChatPage() {
   const { name, gender } = useUser();
   const router = useRouter();
-  
+
   // Derive checkingStatus from name - no need for separate state
   const checkingStatus = !name;
 
@@ -103,10 +103,7 @@ export function useVideoChatPage() {
     };
 
     const handleOffline = () => {
-      showError(
-        'Lost internet connection. Please check your network.',
-        ErrorCode.CONNECTION_LOST
-      );
+      showError('Lost internet connection. Please check your network.', ErrorCode.CONNECTION_LOST);
       if (isInSession) {
         endSession();
       }
@@ -172,10 +169,7 @@ export function useVideoChatPage() {
       }
 
       if (!navigator.onLine) {
-        showError(
-          'No internet connection. Please check your network.',
-          ErrorCode.CONNECTION_LOST
-        );
+        showError('No internet connection. Please check your network.', ErrorCode.CONNECTION_LOST);
         return;
       }
 
@@ -209,10 +203,7 @@ export function useVideoChatPage() {
   const handleNext = useCallback(async () => {
     try {
       if (!navigator.onLine) {
-        showError(
-          'No internet connection. Please check your network.',
-          ErrorCode.CONNECTION_LOST
-        );
+        showError('No internet connection. Please check your network.', ErrorCode.CONNECTION_LOST);
         return;
       }
       analytics.trackMatchEnded('user_skip');

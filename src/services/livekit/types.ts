@@ -16,7 +16,10 @@ export interface LiveKitCallbacks {
   onParticipantDisconnected?: (participant: RemoteParticipant) => void;
   onTrackSubscribed?: (participant: RemoteParticipant, trackType: 'audio' | 'video') => void;
   onTrackUnsubscribed?: (participant: RemoteParticipant, trackType: 'audio' | 'video') => void;
-  onConnectionQualityChanged?: (quality: ConnectionQuality, participant: RemoteParticipant | null) => void;
+  onConnectionQualityChanged?: (
+    quality: ConnectionQuality,
+    participant: RemoteParticipant | null
+  ) => void;
   onScreenShareSubscribed?: (participant: RemoteParticipant, isSharing: boolean) => void;
 }
 

@@ -1,10 +1,10 @@
 /**
  * Media State Context and Provider
  * Manages camera and microphone state across the application
- * 
+ *
  * @description Provides global media state management for camera and microphone
  * settings. Uses memoization to prevent unnecessary re-renders.
- * 
+ *
  * @example
  * ```tsx
  * // In a component
@@ -38,16 +38,15 @@ export function MediaStateProvider({ children }: MediaStateProviderProps) {
   const [isMicOn, setMicOn] = useState(false);
 
   // Memoize context value to prevent unnecessary re-renders
-  const contextValue = useMemo(() => ({
-    isCameraOn,
-    isMicOn,
-    setCameraOn,
-    setMicOn,
-  }), [isCameraOn, isMicOn]);
-
-  return (
-    <MediaStateContext.Provider value={contextValue}>
-      {children}
-    </MediaStateContext.Provider>
+  const contextValue = useMemo(
+    () => ({
+      isCameraOn,
+      isMicOn,
+      setCameraOn,
+      setMicOn,
+    }),
+    [isCameraOn, isMicOn]
   );
+
+  return <MediaStateContext.Provider value={contextValue}>{children}</MediaStateContext.Provider>;
 }

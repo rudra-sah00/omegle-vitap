@@ -1,18 +1,18 @@
 /**
  * Media State Utilities
  * Session storage for media device preferences
- * 
+ *
  * @description Provides utilities for persisting camera and microphone
  * state in session storage. This allows users' media preferences to
  * persist across page navigations within the same session.
- * 
+ *
  * @example
  * ```tsx
  * import { persistCameraState, getPersistedCameraState } from '@/lib/media';
- * 
+ *
  * // Save state
  * persistCameraState(true);
- * 
+ *
  * // Retrieve state
  * const isCameraOn = getPersistedCameraState();
  * ```
@@ -31,9 +31,9 @@ const DEFAULT_MIC_STATE = false;
 
 /**
  * Get persisted camera state from session storage
- * 
+ *
  * @returns The persisted camera state, or default (false) if not set
- * 
+ *
  * @example
  * ```tsx
  * const isCameraOn = getPersistedCameraState();
@@ -44,7 +44,7 @@ const DEFAULT_MIC_STATE = false;
  */
 export function getPersistedCameraState(): boolean {
   if (typeof window === 'undefined') return DEFAULT_CAMERA_STATE;
-  
+
   try {
     const stored = sessionStorage.getItem(STORAGE_KEYS.CAMERA_STATE);
     return stored !== null ? stored === 'true' : DEFAULT_CAMERA_STATE;
@@ -55,9 +55,9 @@ export function getPersistedCameraState(): boolean {
 
 /**
  * Get persisted microphone state from session storage
- * 
+ *
  * @returns The persisted microphone state, or default (false) if not set
- * 
+ *
  * @example
  * ```tsx
  * const isMicOn = getPersistedMicState();
@@ -68,7 +68,7 @@ export function getPersistedCameraState(): boolean {
  */
 export function getPersistedMicState(): boolean {
   if (typeof window === 'undefined') return DEFAULT_MIC_STATE;
-  
+
   try {
     const stored = sessionStorage.getItem(STORAGE_KEYS.MIC_STATE);
     return stored !== null ? stored === 'true' : DEFAULT_MIC_STATE;
@@ -79,9 +79,9 @@ export function getPersistedMicState(): boolean {
 
 /**
  * Persist camera state to session storage
- * 
+ *
  * @param isOn - Whether the camera is on
- * 
+ *
  * @example
  * ```tsx
  * const handleToggleCamera = () => {
@@ -93,7 +93,7 @@ export function getPersistedMicState(): boolean {
  */
 export function persistCameraState(isOn: boolean): void {
   if (typeof window === 'undefined') return;
-  
+
   try {
     sessionStorage.setItem(STORAGE_KEYS.CAMERA_STATE, String(isOn));
     sessionStorage.setItem(STORAGE_KEYS.LAST_UPDATED, new Date().toISOString());
@@ -104,9 +104,9 @@ export function persistCameraState(isOn: boolean): void {
 
 /**
  * Persist microphone state to session storage
- * 
+ *
  * @param isOn - Whether the microphone is on
- * 
+ *
  * @example
  * ```tsx
  * const handleToggleMic = () => {
@@ -118,7 +118,7 @@ export function persistCameraState(isOn: boolean): void {
  */
 export function persistMicState(isOn: boolean): void {
   if (typeof window === 'undefined') return;
-  
+
   try {
     sessionStorage.setItem(STORAGE_KEYS.MIC_STATE, String(isOn));
     sessionStorage.setItem(STORAGE_KEYS.LAST_UPDATED, new Date().toISOString());
@@ -129,9 +129,9 @@ export function persistMicState(isOn: boolean): void {
 
 /**
  * Get both persisted media states at once
- * 
+ *
  * @returns Object containing camera and mic states
- * 
+ *
  * @example
  * ```tsx
  * const { camera, mic } = getPersistedMediaStates();
@@ -148,7 +148,7 @@ export function getPersistedMediaStates(): { camera: boolean; mic: boolean } {
 /**
  * Clear all persisted media states from session storage
  * Useful when user logs out or wants to reset preferences
- * 
+ *
  * @example
  * ```tsx
  * const handleReset = () => {
@@ -160,7 +160,7 @@ export function getPersistedMediaStates(): { camera: boolean; mic: boolean } {
  */
 export function clearPersistedMediaStates(): void {
   if (typeof window === 'undefined') return;
-  
+
   try {
     sessionStorage.removeItem(STORAGE_KEYS.CAMERA_STATE);
     sessionStorage.removeItem(STORAGE_KEYS.MIC_STATE);

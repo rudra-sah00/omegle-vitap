@@ -1,7 +1,7 @@
 /**
  * useMatchmaking Hook
  * Manages WebSocket connection and matchmaking flow
- * 
+ *
  * @description Provides complete matchmaking functionality including:
  * - WebSocket connection management with automatic reconnection
  * - Join/leave/cancel queue operations
@@ -9,14 +9,14 @@
  * - Error handling with user-friendly messages
  * - Search timeout handling with analytics
  * - Partner left detection and cleanup
- * 
+ *
  * The hook manages the entire matchmaking lifecycle:
  * 1. User connects to WebSocket server
  * 2. User joins queue with their profile data
  * 3. Server matches two compatible users
  * 4. Users receive match data including room ID and tokens
  * 5. Users can leave room or disconnect
- * 
+ *
  * @example
  * ```tsx
  * function MatchmakingComponent() {
@@ -32,11 +32,15 @@
  *     onMatched: (match) => console.log('Matched with:', match.partnerName),
  *     onPartnerLeft: () => console.log('Partner left'),
  *   });
- *   
+ *
  *   if (isWaiting) return <SearchingUI onCancel={cancelSearch} />;\n *   if (isMatched) return <ChatUI match={matchData} onLeave={leaveRoom} />;\n *   \n *   return (\n *     <button onClick={() => join({ uid: 1, name: 'User', gender: 'male' })}>\n *       Find Partner\n *     </button>\n *   );\n * }\n * ```\n */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { getSocketIOService, destroySocketIOService, type SocketIOService } from '@/services/socket';
+import {
+  getSocketIOService,
+  destroySocketIOService,
+  type SocketIOService,
+} from '@/services/socket';
 import { showError, ErrorCode } from '@/lib/toast';
 import { analytics } from '@/services/firebase';
 import { SEARCH_TIMEOUT, ERROR_DEDUPE_WINDOW, LEAVE_DEBOUNCE_DELAY } from '@/constants';
@@ -49,7 +53,7 @@ import type {
 
 /**
  * Configuration options for the useMatchmaking hook
- * 
+ *
  * @property autoConnect - Whether to connect immediately on mount (default: false)
  * @property userData - Pre-filled user data for auto-joining
  * @property onAuthenticated - Callback when user is authenticated and in queue
@@ -68,7 +72,7 @@ interface UseMatchmakingOptions {
 
 /**
  * Return type for the useMatchmaking hook
- * 
+ *
  * @property connectionState - Current connection state
  * @property matchData - Match data when matched (null otherwise)
  * @property error - Current error message (null if no error)
@@ -125,94 +129,100 @@ export function useMatchmaking(options: UseMatchmakingOptions = {}): UseMatchmak
     return wsRef.current;
   }, []);
 
-  const handleMessage = useCallback((message: ServerMessage) => {
-    switch (message.type) {
-      case 'match':
-        if (message.data.status === 'waiting') {
-          setIsAuthenticated(true);
-          setConnectionState('waiting');
-          setError(null);
-          onAuthenticated?.();
-        } else if (message.data.status === 'matched') {
-          if (searchTimeoutRef.current) {
-            clearTimeout(searchTimeoutRef.current);
-            searchTimeoutRef.current = null;
+  const handleMessage = useCallback(
+    (message: ServerMessage) => {
+      switch (message.type) {
+        case 'match':
+          if (message.data.status === 'waiting') {
+            setIsAuthenticated(true);
+            setConnectionState('waiting');
+            setError(null);
+            onAuthenticated?.();
+          } else if (message.data.status === 'matched') {
+            if (searchTimeoutRef.current) {
+              clearTimeout(searchTimeoutRef.current);
+              searchTimeoutRef.current = null;
+            }
+
+            analytics.trackMatchFound();
+
+            setConnectionState('matched');
+            setMatchData(message.data);
+            setError(null);
+            isJoiningRef.current = false;
+            onMatched?.(message.data);
           }
-          
-          analytics.trackMatchFound();
-          
-          setConnectionState('matched');
-          setMatchData(message.data);
-          setError(null);
-          isJoiningRef.current = false;
-          onMatched?.(message.data);
-        }
-        break;
-
-      case 'reconnected':
-        setConnectionState('connected');
-        setMatchData(null);
-        setError(null);
-        break;
-
-      case 'session_expired':
-        setConnectionState('connected');
-        setMatchData(null);
-        setError('Session expired. Please join again.');
-        break;
-
-      case 'partner_left':
-        setConnectionState('connected');
-        setMatchData(null);
-        setError(null);
-        onPartnerLeft?.();
-        break;
-
-      case 'kicked':
-        showError(message.data.message || 'You have been removed from the chat', ErrorCode.AUTH_FAILED);
-        onPartnerLeft?.();
-        break;
-
-      case 'room_closed':
-        setConnectionState('connected');
-        setMatchData(null);
-        setError(null);
-        showError(message.data.message || 'Chat room was closed', ErrorCode.CONNECTION_LOST);
-        onPartnerLeft?.();
-        break;
-
-      case 'error':
-        const errorMsg = message.data.message.toLowerCase();
-        if (errorMsg.includes('unknown message type') || errorMsg.includes('typing')) {
           break;
-        }
-        
-        if (errorMsg.includes('not in active chat') || errorMsg.includes('not in a room')) {
+
+        case 'reconnected':
+          setConnectionState('connected');
+          setMatchData(null);
+          setError(null);
+          break;
+
+        case 'session_expired':
+          setConnectionState('connected');
+          setMatchData(null);
+          setError('Session expired. Please join again.');
+          break;
+
+        case 'partner_left':
           setConnectionState('connected');
           setMatchData(null);
           setError(null);
           onPartnerLeft?.();
           break;
-        }
-        
-        setConnectionState('error');
-        setError(message.data.message);
-        isJoiningRef.current = false;
-        onError?.(message.data.message);
-        showError(message.data.message, ErrorCode.CONNECTION_LOST);
-        break;
 
-      case 'pong':
-        break;
+        case 'kicked':
+          showError(
+            message.data.message || 'You have been removed from the chat',
+            ErrorCode.AUTH_FAILED
+          );
+          onPartnerLeft?.();
+          break;
 
-      case 'message':
-      case 'signal':
-        break;
+        case 'room_closed':
+          setConnectionState('connected');
+          setMatchData(null);
+          setError(null);
+          showError(message.data.message || 'Chat room was closed', ErrorCode.CONNECTION_LOST);
+          onPartnerLeft?.();
+          break;
 
-      default:
-        break;
-    }
-  }, [onAuthenticated, onMatched, onPartnerLeft, onError]);
+        case 'error':
+          const errorMsg = message.data.message.toLowerCase();
+          if (errorMsg.includes('unknown message type') || errorMsg.includes('typing')) {
+            break;
+          }
+
+          if (errorMsg.includes('not in active chat') || errorMsg.includes('not in a room')) {
+            setConnectionState('connected');
+            setMatchData(null);
+            setError(null);
+            onPartnerLeft?.();
+            break;
+          }
+
+          setConnectionState('error');
+          setError(message.data.message);
+          isJoiningRef.current = false;
+          onError?.(message.data.message);
+          showError(message.data.message, ErrorCode.CONNECTION_LOST);
+          break;
+
+        case 'pong':
+          break;
+
+        case 'message':
+        case 'signal':
+          break;
+
+        default:
+          break;
+      }
+    },
+    [onAuthenticated, onMatched, onPartnerLeft, onError]
+  );
 
   const handleOpen = useCallback(() => {
     setConnectionState('connected');
@@ -221,18 +231,18 @@ export function useMatchmaking(options: UseMatchmakingOptions = {}): UseMatchmak
 
   const handleClose = useCallback(() => {
     const wasInActiveState = connectionState === 'waiting' || connectionState === 'matched';
-    
+
     setConnectionState('disconnected');
     setMatchData(null);
 
     if (wasInActiveState) {
       const errorMsg = 'Connection lost. Please try again.';
       const errorCode = ErrorCode.CONNECTION_LOST;
-      
+
       const now = Date.now();
       const timeSinceLastError = now - lastErrorTimeRef.current;
       const isDifferentError = errorMsg !== lastErrorMessageRef.current;
-      
+
       if (isDifferentError || timeSinceLastError > ERROR_DEDUPE_WINDOW) {
         setError(errorMsg);
         showError(errorMsg, errorCode);
@@ -242,105 +252,115 @@ export function useMatchmaking(options: UseMatchmakingOptions = {}): UseMatchmak
     }
   }, [connectionState]);
 
-  const handleError = useCallback((error: Event | Error) => {
-    setConnectionState('error');
-    
-    let errorMessage = 'Connection error. Please check your network.';
-    let errorCode = ErrorCode.CONNECTION_LOST;
-    
-    if (error instanceof Error) {
-      if (error.message.includes('Backend server') || error.message.includes('not responding') || error.message.includes('unavailable')) {
-        errorMessage = error.message;
-        errorCode = ErrorCode.BACKEND_UNAVAILABLE;
-      } else if (error.message.includes('Authentication')) {
-        errorMessage = error.message;
-        errorCode = ErrorCode.AUTH_FAILED;
-      } else if (error.message.includes('timeout')) {
-        errorMessage = 'Connection timeout. Please check your internet.';
-        errorCode = ErrorCode.CONNECTION_TIMEOUT;
-      } else if (error.message.includes('Cannot connect')) {
-        errorMessage = error.message;
-        errorCode = ErrorCode.BACKEND_UNAVAILABLE;
+  const handleError = useCallback(
+    (error: Event | Error) => {
+      setConnectionState('error');
+
+      let errorMessage = 'Connection error. Please check your network.';
+      let errorCode = ErrorCode.CONNECTION_LOST;
+
+      if (error instanceof Error) {
+        if (
+          error.message.includes('Backend server') ||
+          error.message.includes('not responding') ||
+          error.message.includes('unavailable')
+        ) {
+          errorMessage = error.message;
+          errorCode = ErrorCode.BACKEND_UNAVAILABLE;
+        } else if (error.message.includes('Authentication')) {
+          errorMessage = error.message;
+          errorCode = ErrorCode.AUTH_FAILED;
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Connection timeout. Please check your internet.';
+          errorCode = ErrorCode.CONNECTION_TIMEOUT;
+        } else if (error.message.includes('Cannot connect')) {
+          errorMessage = error.message;
+          errorCode = ErrorCode.BACKEND_UNAVAILABLE;
+        }
       }
-    }
-    
-    const now = Date.now();
-    const timeSinceLastError = now - lastErrorTimeRef.current;
-    const isDifferentError = errorMessage !== lastErrorMessageRef.current;
-    
-    if (isDifferentError || timeSinceLastError > ERROR_DEDUPE_WINDOW) {
-      setError(errorMessage);
-      showError(errorMessage, errorCode);
-      lastErrorTimeRef.current = now;
-      lastErrorMessageRef.current = errorMessage;
-      onError?.(errorMessage);
-    }
-  }, [onError]);
 
-  const join = useCallback((userData: UserData) => {
-    const ws = getWs();
+      const now = Date.now();
+      const timeSinceLastError = now - lastErrorTimeRef.current;
+      const isDifferentError = errorMessage !== lastErrorMessageRef.current;
 
-    if (!ws.isConnected()) {
-      pendingJoinRef.current = userData;
-      setConnectionState('connecting');
-      setError(null);
-      ws.connect();
-      return;
-    }
+      if (isDifferentError || timeSinceLastError > ERROR_DEDUPE_WINDOW) {
+        setError(errorMessage);
+        showError(errorMessage, errorCode);
+        lastErrorTimeRef.current = now;
+        lastErrorMessageRef.current = errorMessage;
+        onError?.(errorMessage);
+      }
+    },
+    [onError]
+  );
 
-    pendingJoinRef.current = null;
+  const join = useCallback(
+    (userData: UserData) => {
+      const ws = getWs();
 
-    if (isJoiningRef.current) {
-      isJoiningRef.current = false;
-    }
+      if (!ws.isConnected()) {
+        pendingJoinRef.current = userData;
+        setConnectionState('connecting');
+        setError(null);
+        ws.connect();
+        return;
+      }
 
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-      searchTimeoutRef.current = null;
-    }
+      pendingJoinRef.current = null;
 
-    setConnectionState('waiting');
-    setError(null);
+      if (isJoiningRef.current) {
+        isJoiningRef.current = false;
+      }
 
-    const success = ws.send({
-      type: 'join',
-      data: userData,
-    });
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
 
-    if (success) {
-      isJoiningRef.current = true;
       setConnectionState('waiting');
       setError(null);
 
-      const searchStartTime = Date.now();
-      searchTimeoutRef.current = setTimeout(() => {
-        if (isJoiningRef.current) {
-          const waitTime = Date.now() - searchStartTime;
-          analytics.trackSearchTimeout(waitTime);
-          
-          const currentWs = wsRef.current;
-          if (currentWs) {
-            currentWs.send({
-              type: 'cancel',
-              data: {},
-            });
-          }
+      const success = ws.send({
+        type: 'join',
+        data: userData,
+      });
 
-          setConnectionState('connected');
-          setMatchData(null);
-          isJoiningRef.current = false;
-          
-          const timeoutMsg = 'No match found. Please try again.';
-          setError(timeoutMsg);
-          showError(timeoutMsg, ErrorCode.CONNECTION_TIMEOUT);
-        }
-        searchTimeoutRef.current = null;
-      }, SEARCH_TIMEOUT);
-    } else {
-      setError('Failed to join queue');
-      setConnectionState('error');
-    }
-  }, [getWs]);
+      if (success) {
+        isJoiningRef.current = true;
+        setConnectionState('waiting');
+        setError(null);
+
+        const searchStartTime = Date.now();
+        searchTimeoutRef.current = setTimeout(() => {
+          if (isJoiningRef.current) {
+            const waitTime = Date.now() - searchStartTime;
+            analytics.trackSearchTimeout(waitTime);
+
+            const currentWs = wsRef.current;
+            if (currentWs) {
+              currentWs.send({
+                type: 'cancel',
+                data: {},
+              });
+            }
+
+            setConnectionState('connected');
+            setMatchData(null);
+            isJoiningRef.current = false;
+
+            const timeoutMsg = 'No match found. Please try again.';
+            setError(timeoutMsg);
+            showError(timeoutMsg, ErrorCode.CONNECTION_TIMEOUT);
+          }
+          searchTimeoutRef.current = null;
+        }, SEARCH_TIMEOUT);
+      } else {
+        setError('Failed to join queue');
+        setConnectionState('error');
+      }
+    },
+    [getWs]
+  );
 
   const leaveRoom = useCallback(() => {
     if (isLeavingRef.current) {
@@ -354,7 +374,7 @@ export function useMatchmaking(options: UseMatchmakingOptions = {}): UseMatchmak
     }
 
     isLeavingRef.current = true;
-    
+
     const success = ws.send({
       type: 'leave',
       data: {},
@@ -421,7 +441,7 @@ export function useMatchmaking(options: UseMatchmakingOptions = {}): UseMatchmak
 
   // Track if we should auto-join when connected
   const shouldAutoJoinRef = useRef(false);
-  
+
   // Set flag when we need to auto-join
   useEffect(() => {
     shouldAutoJoinRef.current = connectionState === 'connected' && !isAuthenticated && !!userData;
@@ -467,7 +487,10 @@ export function useMatchmaking(options: UseMatchmakingOptions = {}): UseMatchmak
     connectionState,
     matchData,
     error,
-    isConnected: connectionState === 'connected' || connectionState === 'waiting' || connectionState === 'matched',
+    isConnected:
+      connectionState === 'connected' ||
+      connectionState === 'waiting' ||
+      connectionState === 'matched',
     isAuthenticated,
     isWaiting: connectionState === 'waiting',
     isMatched: connectionState === 'matched',
@@ -480,11 +503,11 @@ export function useMatchmaking(options: UseMatchmakingOptions = {}): UseMatchmak
 
 /**
  * Hook to cleanup WebSocket connection on app unmount
- * 
+ *
  * @description Ensures the Socket.IO service is properly destroyed
  * when the component tree unmounts. This prevents memory leaks
  * and ensures clean reconnection on subsequent mounts.
- * 
+ *
  * @example
  * ```tsx
  * // In your App component or main layout

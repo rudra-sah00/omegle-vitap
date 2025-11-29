@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useVideoChat } from '@/hooks';
 import { REDIRECT_DELAY } from '@/constants';
-import { 
+import {
   ChatWindow,
   MobileChat,
   VideoDisplay,
@@ -43,8 +43,6 @@ function OmeglePageContent() {
     isRemoteMicOn,
     isScreenSharing,
     isRemoteScreenSharing,
-    localNetworkQuality,
-    remoteNetworkQuality,
     messages,
     isPartnerTyping,
     startSearch,
@@ -95,7 +93,10 @@ function OmeglePageContent() {
   // Browser compatibility check
   useEffect(() => {
     if (!isBrowserSupported()) {
-      showError('Your browser does not support video/audio. Please use Chrome, Firefox, or Safari 11+.', ErrorCode.MEDIA_DEVICE_NOT_FOUND);
+      showError(
+        'Your browser does not support video/audio. Please use Chrome, Firefox, or Safari 11+.',
+        ErrorCode.MEDIA_DEVICE_NOT_FOUND
+      );
       setTimeout(() => router.push('/welcome'), REDIRECT_DELAY);
     }
   }, [router]);
@@ -163,9 +164,12 @@ function OmeglePageContent() {
     await findNext();
   }, [findNext]);
 
-  const handleTyping = useCallback((isTyping: boolean) => {
-    if (isInSession) sendTypingIndicator(isTyping);
-  }, [isInSession, sendTypingIndicator]);
+  const handleTyping = useCallback(
+    (isTyping: boolean) => {
+      if (isInSession) sendTypingIndicator(isTyping);
+    },
+    [isInSession, sendTypingIndicator]
+  );
 
   if (!name || checkingStatus) {
     return <LoadingState state="loading" />;
@@ -185,10 +189,10 @@ function OmeglePageContent() {
     <div className="h-screen flex bg-page-bg">
       {/* Match Confetti Overlay */}
       <MatchConfetti isActive={showMatchConfetti} />
-      
+
       {/* Screen Share Indicator */}
       <ScreenShareIndicator isSharing={isScreenSharing} onStop={toggleScreenShare} />
-      
+
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col lg:flex-row">
         {/* Video Areas - Fill screen on mobile, 55% on desktop */}
@@ -197,16 +201,15 @@ function OmeglePageContent() {
           <div className="flex-1 relative">
             <VideoDisplay
               id="remote-video"
-              label={matchData?.partnerName || "Stranger"}
+              label={matchData?.partnerName || 'Stranger'}
               isConnected={isMatched}
               isSearching={isSearching}
               showConnectionIndicator={true}
               isCameraOn={isRemoteCameraOn}
               isMicOn={isRemoteMicOn}
               partnerGender={partnerGender}
-              networkQuality={remoteNetworkQuality}
             />
-            
+
             {/* Remote Screen Share Overlay */}
             {isRemoteScreenSharing && (
               <RemoteScreenShareOverlay
@@ -246,7 +249,6 @@ function OmeglePageContent() {
                 isMicOn={isMicOn}
                 isSearching={false}
                 showConnectionIndicator={false}
-                networkQuality={localNetworkQuality}
               >
                 {/* Control Buttons */}
                 <RoomControls
@@ -273,8 +275,8 @@ function OmeglePageContent() {
         </div>
 
         {/* Right Side - Desktop Chat Window */}
-        <ChatWindow 
-          isConnected={isMatched} 
+        <ChatWindow
+          isConnected={isMatched}
           isStrangerTyping={isPartnerTyping ?? false}
           onSendMessage={sendMessage}
           onTyping={handleTyping}
@@ -284,8 +286,8 @@ function OmeglePageContent() {
         />
 
         {/* Mobile Chat */}
-        <MobileChat 
-          isConnected={isMatched} 
+        <MobileChat
+          isConnected={isMatched}
           isStrangerTyping={isPartnerTyping ?? false}
           onSendMessage={sendMessage}
           onTyping={handleTyping}

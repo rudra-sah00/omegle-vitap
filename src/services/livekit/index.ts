@@ -6,7 +6,14 @@
 export { LiveKitService } from './livekit.facade';
 
 // Configuration
-export { LIVEKIT_CONFIG, getVideoSettingsForNetwork, getAudioSettingsForNetwork, isMobileDevice, isSafariBrowser, isSlowNetwork } from './config';
+export {
+  LIVEKIT_CONFIG,
+  getVideoSettingsForNetwork,
+  getAudioSettingsForNetwork,
+  isMobileDevice,
+  isSafariBrowser,
+  isSlowNetwork,
+} from './config';
 export type { NetworkQuality } from './config';
 
 // Types

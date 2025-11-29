@@ -41,11 +41,11 @@ const getQualityConfig = (quality: NetworkQuality) => {
   }
 };
 
-const NetworkQualityIndicatorComponent = ({ 
-  quality, 
+const NetworkQualityIndicatorComponent = ({
+  quality,
   label,
   showLabel = false,
-  className = '' 
+  className = '',
 }: NetworkQualityIndicatorProps) => {
   const config = getQualityConfig(quality);
   const displayLabel = label || config.label;
@@ -65,13 +65,10 @@ const NetworkQualityIndicatorComponent = ({
           />
         ))}
       </div>
-      
+
       {/* Label */}
       {showLabel && (
-        <span 
-          className="text-xs font-medium"
-          style={{ color: config.color }}
-        >
+        <span className="text-xs font-medium" style={{ color: config.color }}>
           {displayLabel}
         </span>
       )}

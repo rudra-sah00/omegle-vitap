@@ -1,7 +1,7 @@
 /**
  * Match Tracker
  * Tracks match lifecycle and quality metrics
- * 
+ *
  * Covers:
  * - Match start/found/ended events
  * - Session duration tracking
@@ -11,7 +11,13 @@
  */
 
 import { logEvent } from 'firebase/analytics';
-import { BaseTracker, AnalyticsEvents, type DurationBucket, type MatchQuality, type MatchEndReason } from './types';
+import {
+  BaseTracker,
+  AnalyticsEvents,
+  type DurationBucket,
+  type MatchQuality,
+  type MatchEndReason,
+} from './types';
 import { funnelTracker } from './funnel.tracker';
 
 export class MatchTracker extends BaseTracker {
@@ -66,11 +72,11 @@ export class MatchTracker extends BaseTracker {
   private calculateMatchQuality(durationMs: number, messageCount: number): MatchQuality {
     const durationMinutes = durationMs / 60000;
     const messagesPerMinute = durationMinutes > 0 ? messageCount / durationMinutes : 0;
-    
+
     let score = 0;
     score += Math.min(durationMinutes * 5, 50);
     score += Math.min(messagesPerMinute * 10, 50);
-    
+
     if (score >= 80) return 'excellent';
     if (score >= 50) return 'good';
     if (score >= 25) return 'fair';
@@ -92,7 +98,7 @@ export class MatchTracker extends BaseTracker {
         timestamp: this.getTimestamp(),
       });
     });
-    
+
     // Also trigger funnel event
     funnelTracker.trackSearchStarted();
   }
@@ -106,7 +112,7 @@ export class MatchTracker extends BaseTracker {
         timestamp: this.getTimestamp(),
       });
     });
-    
+
     // Also trigger funnel event
     funnelTracker.trackMatchConnected();
   }
@@ -140,7 +146,7 @@ export class MatchTracker extends BaseTracker {
         });
         this.sessionStartTime = null;
       }
-      
+
       this.matchStartTime = null;
       this.messageCount = 0;
     });
@@ -168,7 +174,8 @@ export class MatchTracker extends BaseTracker {
       logEvent(this.analytics!, AnalyticsEvents.MESSAGES_PER_SESSION, {
         count: messageCount,
         duration_ms: durationMs,
-        messages_per_minute: durationMs > 0 ? (messageCount / (durationMs / 60000)).toFixed(2) : '0',
+        messages_per_minute:
+          durationMs > 0 ? (messageCount / (durationMs / 60000)).toFixed(2) : '0',
         timestamp: this.getTimestamp(),
       });
     });

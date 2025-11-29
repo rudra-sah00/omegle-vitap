@@ -46,9 +46,7 @@ export const LocalScreenShareView: FC<LocalScreenShareViewProps> = ({
   onLeave,
 }) => {
   return (
-    <div
-      className="h-full w-full relative overflow-hidden rounded-lg bg-video-blue-bg"
-    >
+    <div className="h-full w-full relative overflow-hidden rounded-lg bg-video-blue-bg">
       {/* Animated Dotted Glow Background */}
       <DottedGlowBackground
         className="absolute inset-0 w-full h-full"

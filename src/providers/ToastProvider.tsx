@@ -15,12 +15,7 @@ interface ToastProviderProps {
 export function ToastProvider({ children }: ToastProviderProps) {
   return (
     <>
-      <Toaster
-        position="top-center"
-        duration={4000}
-        closeButton={false}
-        richColors={false}
-      />
+      <Toaster position="top-center" duration={4000} closeButton={false} richColors={false} />
       {children}
     </>
   );

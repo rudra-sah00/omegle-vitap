@@ -86,12 +86,15 @@ export const ChatInput = ({ isConnected, onSend, onTyping }: ChatInputProps) => 
     }
   };
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  }, [handleSend]);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    },
+    [handleSend]
+  );
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -102,17 +105,20 @@ export const ChatInput = ({ isConnected, onSend, onTyping }: ChatInputProps) => 
     };
   }, []);
 
-  const handleEmojiClick = useCallback((emojiData: { emoji: string }) => {
-    setMessage(prev => prev + emojiData.emoji);
-    setShowEmojiPicker(false);
-    onTyping?.(true);
+  const handleEmojiClick = useCallback(
+    (emojiData: { emoji: string }) => {
+      setMessage((prev) => prev + emojiData.emoji);
+      setShowEmojiPicker(false);
+      onTyping?.(true);
 
-    // Track emoji usage
-    analytics.trackEmojiUsed();
+      // Track emoji usage
+      analytics.trackEmojiUsed();
 
-    // Focus input after emoji selection
-    setTimeout(() => inputRef.current?.focus(), 0);
-  }, [onTyping]);
+      // Focus input after emoji selection
+      setTimeout(() => inputRef.current?.focus(), 0);
+    },
+    [onTyping]
+  );
 
   // Close emoji picker when clicking outside
   useEffect(() => {
@@ -167,7 +173,7 @@ export const ChatInput = ({ isConnected, onSend, onTyping }: ChatInputProps) => 
           value={message}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder={isConnected ? "Type your message..." : "Connect to start chatting"}
+          placeholder={isConnected ? 'Type your message...' : 'Connect to start chatting'}
           disabled={!isConnected}
           className="flex-1 px-4 py-3 text-sm rounded-xl border-2 border-slate-200 focus:outline-none focus:border-blue-400 transition-colors disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
           maxLength={500}
@@ -177,21 +183,43 @@ export const ChatInput = ({ isConnected, onSend, onTyping }: ChatInputProps) => 
         <button
           onClick={handleSend}
           disabled={!canSend}
-          className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${canSend
-            ? 'bg-blue-500 hover:bg-blue-600 active:scale-95'
-            : 'bg-slate-300 cursor-not-allowed'
-            }`}
-          title={canSend ? "Send message (Enter)" : "Type a message to send"}
+          className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+            canSend
+              ? 'bg-blue-500 hover:bg-blue-600 active:scale-95'
+              : 'bg-slate-300 cursor-not-allowed'
+          }`}
+          title={canSend ? 'Send message (Enter)' : 'Type a message to send'}
           type="button"
         >
           {isSending ? (
             <svg className="w-5 h-5 text-white animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
             </svg>
           ) : (
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            <svg
+              className="w-6 h-6 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M14 5l7 7m0 0l-7 7m7-7H3"
+              />
             </svg>
           )}
         </button>

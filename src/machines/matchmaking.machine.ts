@@ -1,9 +1,9 @@
 /**
  * Matchmaking State Machine
- * 
+ *
  * Manages the complete matchmaking lifecycle using XState for predictable
  * state transitions and clear state visualization.
- * 
+ *
  * State Flow:
  * ┌────────────────────────────────────────────────────────────────────┐
  * │                                                                    │
@@ -17,7 +17,7 @@
  * │  From matched: partner_left/leave_room → connected                 │
  * │  From any: disconnect → disconnected                               │
  * └────────────────────────────────────────────────────────────────────┘
- * 
+ *
  * Events:
  * - CONNECT: Initiate connection to server
  * - CONNECTED: Socket connection established
@@ -80,53 +80,53 @@ export const matchmakingMachine = setup({
     context: {} as MatchmakingContext,
     events: {} as MatchmakingEvent,
   },
-  
+
   actions: {
     /** Clear match data on disconnect/leave */
     clearMatchData: assign({
       matchData: null,
     }),
-    
+
     /** Clear error state */
     clearError: assign({
       error: null,
     }),
-    
+
     /** Set error message */
     setError: assign({
       error: (_, params: { error: string }) => params.error,
     }),
-    
+
     /** Store match data from server */
     setMatchData: assign({
       matchData: (_, params: { matchData: MatchDataMatched }) => params.matchData,
     }),
-    
+
     /** Store user data for joining */
     setUserData: assign({
       userData: (_, params: { userData: UserData }) => params.userData,
     }),
-    
+
     /** Record search start time */
     startSearchTimer: assign({
       searchStartTime: () => Date.now(),
     }),
-    
+
     /** Clear search timer */
     clearSearchTimer: assign({
       searchStartTime: null,
     }),
-    
+
     /** Increment reconnection attempts */
     incrementReconnectAttempts: assign({
       reconnectAttempts: ({ context }) => context.reconnectAttempts + 1,
     }),
-    
+
     /** Reset reconnection attempts */
     resetReconnectAttempts: assign({
       reconnectAttempts: 0,
     }),
-    
+
     /** Full context reset on disconnect */
     resetContext: assign({
       matchData: null,
@@ -136,14 +136,14 @@ export const matchmakingMachine = setup({
       reconnectAttempts: 0,
     }),
   },
-  
+
   guards: {
     /** Check if we should show connection lost error */
     wasInActiveState: ({ context }) => {
       // Show error if user was waiting or matched
       return context.searchStartTime !== null || context.matchData !== null;
     },
-    
+
     /** Check if max reconnection attempts reached */
     maxReconnectAttemptsReached: ({ context }) => {
       return context.reconnectAttempts >= 3;
@@ -151,7 +151,7 @@ export const matchmakingMachine = setup({
   },
 }).createMachine({
   id: 'matchmaking',
-  
+
   context: {
     matchData: null,
     error: null,
@@ -159,9 +159,9 @@ export const matchmakingMachine = setup({
     searchStartTime: null,
     reconnectAttempts: 0,
   },
-  
+
   initial: 'disconnected',
-  
+
   states: {
     /**
      * DISCONNECTED
@@ -177,7 +177,7 @@ export const matchmakingMachine = setup({
         },
       },
     },
-    
+
     /**
      * CONNECTING
      * Attempting to connect to WebSocket server
@@ -203,7 +203,7 @@ export const matchmakingMachine = setup({
         },
       },
     },
-    
+
     /**
      * CONNECTED
      * Connected to server, ready to join queue
@@ -239,7 +239,7 @@ export const matchmakingMachine = setup({
         },
       },
     },
-    
+
     /**
      * WAITING
      * In matchmaking queue, waiting for match
@@ -295,7 +295,7 @@ export const matchmakingMachine = setup({
         },
       },
     },
-    
+
     /**
      * MATCHED
      * Successfully matched with partner
@@ -334,7 +334,7 @@ export const matchmakingMachine = setup({
         },
       },
     },
-    
+
     /**
      * ERROR
      * Error state - recoverable by retrying
@@ -362,10 +362,10 @@ export const matchmakingMachine = setup({
 // TYPE EXPORTS
 // ============================================
 
-export type MatchmakingState = 
-  | 'disconnected' 
-  | 'connecting' 
-  | 'connected' 
-  | 'waiting' 
-  | 'matched' 
+export type MatchmakingState =
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'waiting'
+  | 'matched'
   | 'error';

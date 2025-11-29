@@ -22,7 +22,9 @@ export function useAnalytics() {
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.performance) {
-      const navigationTiming = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+      const navigationTiming = performance.getEntriesByType(
+        'navigation'
+      )[0] as PerformanceNavigationTiming;
       if (navigationTiming) {
         const loadTime = navigationTiming.loadEventEnd - navigationTiming.fetchStart;
         analytics.trackPageLoadTime(loadTime);
@@ -36,7 +38,7 @@ export function useAnalytics() {
     const handleVisibilityChange = () => {
       const isVisible = !document.hidden;
       analytics.trackTabVisibility(isVisible);
-      
+
       if (!isVisible) {
         const timeOnPage = Math.floor((Date.now() - pageStartTimeRef.current) / 1000);
         analytics.trackTimeOnPage(pathname || 'unknown', timeOnPage);
@@ -48,7 +50,7 @@ export function useAnalytics() {
     const handleBeforeUnload = () => {
       const timeOnPage = Math.floor((Date.now() - pageStartTimeRef.current) / 1000);
       analytics.trackTimeOnPage(pathname || 'unknown', timeOnPage);
-      
+
       if (engagementActionsRef.current.length > 0) {
         const score = Math.min(100, engagementActionsRef.current.length * 10);
         analytics.trackEngagement(score, engagementActionsRef.current);
@@ -59,7 +61,7 @@ export function useAnalytics() {
       if (idleTimeoutRef.current) {
         clearTimeout(idleTimeoutRef.current);
       }
-      
+
       idleTimeoutRef.current = setTimeout(() => {
         analytics.trackCustomEvent('user_idle', {
           page: pathname,
@@ -70,26 +72,26 @@ export function useAnalytics() {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('beforeunload', handleBeforeUnload);
-    
+
     const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart'];
-    activityEvents.forEach(event => {
+    activityEvents.forEach((event) => {
       document.addEventListener(event, resetIdleTimer);
     });
-    
+
     resetIdleTimer();
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      
-      activityEvents.forEach(event => {
+
+      activityEvents.forEach((event) => {
         document.removeEventListener(event, resetIdleTimer);
       });
-      
+
       if (idleTimeoutRef.current) {
         clearTimeout(idleTimeoutRef.current);
       }
-      
+
       const timeOnPage = Math.floor((Date.now() - pageStartTimeRef.current) / 1000);
       analytics.trackTimeOnPage(pathname || 'unknown', timeOnPage);
     };

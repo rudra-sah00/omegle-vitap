@@ -1,18 +1,18 @@
 /**
  * useVideoChat Hook
  * Manages the complete video chat session including matchmaking, RTC, and messaging
- * 
+ *
  * @description This is the main orchestration hook that combines:
  * - `useMatchmaking` - WebSocket connection and partner matching
  * - `useLiveKit` - WebRTC video/audio streaming via LiveKit
  * - `useChat` - Text messaging and typing indicators
- * 
+ *
  * The hook provides a unified API for the entire video chat experience:
  * 1. **Search Phase**: User starts search → joins matchmaking queue
  * 2. **Match Phase**: Server finds partner → establishes WebRTC connection
  * 3. **Session Phase**: Video/audio streaming + text chat with partner
  * 4. **End Phase**: User leaves or partner disconnects → cleanup
- * 
+ *
  * Key features:
  * - Automatic retry logic for RTC connection failures
  * - Camera/microphone toggle and device switching
@@ -20,7 +20,7 @@
  * - Network quality indicators for both users
  * - "Find Next" to quickly match with new partner
  * - Proper cleanup on unmount to prevent memory leaks
- * 
+ *
  * @example
  * ```tsx
  * function VideoChatPage() {
@@ -41,7 +41,7 @@
  *     localVideoElementId: 'local-video',
  *     remoteVideoElementId: 'remote-video',
  *   });
- *   
+ *
  *   return (\n *     <div>\n *       <video id=\"local-video\" />\n *       <video id=\"remote-video\" />\n *       <MediaControls \n *         onToggleCamera={toggleCamera}\n *         onToggleMic={toggleMicrophone}\n *       />\n *       <ChatPanel \n *         messages={messages}\n *         onSend={sendMessage}\n *       />\n *       {isInSession ? (\n *         <button onClick={findNext}>Next</button>\n *       ) : (\n *         <button onClick={() => startSearch({ name: 'User', gender: 'male' })}>\n *           Start\n *         </button>\n *       )}\n *     </div>\n *   );\n * }\n * ```\n */
 
 import { useCallback, useRef, useState, useEffect } from 'react';
@@ -56,7 +56,7 @@ import type { MatchDataMatched } from '@/types/matchmaking';
 
 /**
  * Configuration options for the useVideoChat hook
- * 
+ *
  * @property localVideoElementId - DOM element ID for local video feed
  * @property remoteVideoElementId - DOM element ID for remote video feed
  */
@@ -67,17 +67,17 @@ interface UseVideoChatOptions {
 
 /**
  * Main hook for managing complete video chat sessions
- * 
+ *
  * @param options - Configuration options including video element IDs
  * @returns Complete video chat state and control functions
- * 
+ *
  * @see {@link useMatchmaking} for matchmaking functionality
  * @see {@link useLiveKit} for WebRTC functionality
  * @see {@link useChat} for messaging functionality
  */
 export function useVideoChat(options: UseVideoChatOptions) {
   const { localVideoElementId, remoteVideoElementId } = options;
-  
+
   const { uid: contextUID } = useUser();
 
   const currentUidRef = useRef<string>(contextUID.toString());
@@ -117,73 +117,105 @@ export function useVideoChat(options: UseVideoChatOptions) {
     },
   });
 
-  const handleMatched = useCallback(async (matchData: MatchDataMatched) => {
-    if (isLeavingRef.current || isInSession || isRTCInitialized) {
-      return;
-    }
-    
-    setIsSearching(false);
-    currentMatchRef.current = matchData;
-    
-    // Set session active immediately so text chat works via Socket.IO
-    // This allows chat even if video/LiveKit fails
-    setIsInSession(true);
+  const handleMatched = useCallback(
+    async (matchData: MatchDataMatched) => {
+      if (isLeavingRef.current || isInSession || isRTCInitialized) {
+        return;
+      }
 
-    const maxRetries = 2;
-    let lastError: unknown = null;
+      setIsSearching(false);
+      currentMatchRef.current = matchData;
 
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        const uid = currentUidRef.current;
-        
-        await initializeRTC(matchData, uid, localVideoElementId, remoteVideoElementId);
-        return; // RTC initialized successfully
-      } catch (error) {
-        lastError = error;
-        
-        if (isLeavingRef.current) {
-          break;
-        }
+      // Set session active immediately so text chat works via Socket.IO
+      // This allows chat even if video/LiveKit fails
+      setIsInSession(true);
 
-        if (attempt < maxRetries - 1) {
-          await new Promise(resolve => setTimeout(resolve, RETRY_BASE_DELAY * (attempt + 1)));
+      const maxRetries = 2;
+      let lastError: unknown = null;
+
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          const uid = currentUidRef.current;
+
+          await initializeRTC(matchData, uid, localVideoElementId, remoteVideoElementId);
+          return; // RTC initialized successfully
+        } catch (error) {
+          lastError = error;
+
+          if (isLeavingRef.current) {
+            break;
+          }
+
+          if (attempt < maxRetries - 1) {
+            await new Promise((resolve) => setTimeout(resolve, RETRY_BASE_DELAY * (attempt + 1)));
+          }
         }
       }
-    }
 
-    // RTC failed but text chat should still work
-    const errorMsg = lastError instanceof Error ? lastError.message : 'Unknown error';
-    const errorLower = errorMsg.toLowerCase();
-    
-    // Only show error and end session for critical failures
-    if (errorMsg.includes('PERMISSION_DENIED') || errorLower.includes('permission') || errorLower.includes('denied')) {
-      showError('Camera/microphone permission denied. Text chat is still available.', ErrorCode.CAMERA_PERMISSION_DENIED);
-      // Don't end session - text chat can still work
-    } else if (errorMsg.includes('DEVICE_NOT_FOUND') || errorLower.includes('not found')) {
-      showError('Camera or microphone not found. Text chat is still available.', ErrorCode.MEDIA_DEVICE_NOT_FOUND);
-      // Don't end session - text chat can still work
-    } else if (errorMsg.includes('DEVICE_IN_USE') || errorLower.includes('in use') || errorLower.includes('being used')) {
-      showError('Camera or microphone is being used by another app. Text chat is still available.', ErrorCode.CAMERA_IN_USE);
-      // Don't end session - text chat can still work
-    } else if (errorLower.includes('timeout') || errorLower.includes('timed out')) {
-      showError('Video connection timeout. Text chat is still available.', ErrorCode.CONNECTION_TIMEOUT);
-      // Don't end session - text chat can still work
-    } else if (errorLower.includes('token') || errorLower.includes('invalid')) {
-      showError('Session token expired. Please try again.', ErrorCode.AUTH_FAILED);
-      await endSessionRef.current?.();
-    } else if (errorLower.includes('network') || errorLower.includes('offline')) {
-      showError('No internet connection. Please check your network and try again.', ErrorCode.CONNECTION_LOST);
-      await endSessionRef.current?.();
-    } else {
-      // For other errors, keep text chat working
-      showError('Video unavailable. Text chat is still available.', ErrorCode.CHANNEL_JOIN_FAILED);
-      // Don't end session - text chat can still work
-    }
-  }, [isInSession, isRTCInitialized, initializeRTC, localVideoElementId, remoteVideoElementId]);
+      // RTC failed but text chat should still work
+      const errorMsg = lastError instanceof Error ? lastError.message : 'Unknown error';
+      const errorLower = errorMsg.toLowerCase();
+
+      // Only show error and end session for critical failures
+      if (
+        errorMsg.includes('PERMISSION_DENIED') ||
+        errorLower.includes('permission') ||
+        errorLower.includes('denied')
+      ) {
+        showError(
+          'Camera/microphone permission denied. Text chat is still available.',
+          ErrorCode.CAMERA_PERMISSION_DENIED
+        );
+        // Don't end session - text chat can still work
+      } else if (errorMsg.includes('DEVICE_NOT_FOUND') || errorLower.includes('not found')) {
+        showError(
+          'Camera or microphone not found. Text chat is still available.',
+          ErrorCode.MEDIA_DEVICE_NOT_FOUND
+        );
+        // Don't end session - text chat can still work
+      } else if (
+        errorMsg.includes('DEVICE_IN_USE') ||
+        errorLower.includes('in use') ||
+        errorLower.includes('being used')
+      ) {
+        showError(
+          'Camera or microphone is being used by another app. Text chat is still available.',
+          ErrorCode.CAMERA_IN_USE
+        );
+        // Don't end session - text chat can still work
+      } else if (errorLower.includes('timeout') || errorLower.includes('timed out')) {
+        showError(
+          'Video connection timeout. Text chat is still available.',
+          ErrorCode.CONNECTION_TIMEOUT
+        );
+        // Don't end session - text chat can still work
+      } else if (errorLower.includes('token') || errorLower.includes('invalid')) {
+        showError('Session token expired. Please try again.', ErrorCode.AUTH_FAILED);
+        await endSessionRef.current?.();
+      } else if (errorLower.includes('network') || errorLower.includes('offline')) {
+        showError(
+          'No internet connection. Please check your network and try again.',
+          ErrorCode.CONNECTION_LOST
+        );
+        await endSessionRef.current?.();
+      } else {
+        // For other errors, keep text chat working
+        showError(
+          'Video unavailable. Text chat is still available.',
+          ErrorCode.CHANNEL_JOIN_FAILED
+        );
+        // Don't end session - text chat can still work
+      }
+    },
+    [isInSession, isRTCInitialized, initializeRTC, localVideoElementId, remoteVideoElementId]
+  );
 
   const handleMatchmakingError = useCallback((error: string) => {
     if (error.toLowerCase().includes('backend') || error.toLowerCase().includes('unavailable')) {
-      showError('Service temporarily unavailable. Please try again.', ErrorCode.BACKEND_UNAVAILABLE);
+      showError(
+        'Service temporarily unavailable. Please try again.',
+        ErrorCode.BACKEND_UNAVAILABLE
+      );
     } else {
       showError('Connection error. Please check your internet.', ErrorCode.CONNECTION_LOST);
     }
@@ -206,49 +238,42 @@ export function useVideoChat(options: UseVideoChatOptions) {
     onError: handleMatchmakingError,
   });
 
-  const {
-    messages,
-    isPartnerTyping,
-    sendMessage,
-    sendTypingIndicator,
-    clearMessages,
-  } = useChat({
+  const { messages, isPartnerTyping, sendMessage, sendTypingIndicator, clearMessages } = useChat({
     ws: getSocketIOService(),
     isInSession,
     onMessageReceived: () => {},
     onTypingIndicator: () => {},
   });
 
-  const beginSearch = useCallback(async (userData: {
-    name: string;
-    gender: string;
-    targetGender?: string;
-  }) => {
-    if (!userData.name || userData.name.trim().length === 0) {
-      showError('Please enter your name', ErrorCode.AUTH_FAILED);
-      return;
-    }
+  const beginSearch = useCallback(
+    async (userData: { name: string; gender: string; targetGender?: string }) => {
+      if (!userData.name || userData.name.trim().length === 0) {
+        showError('Please enter your name', ErrorCode.AUTH_FAILED);
+        return;
+      }
 
-    if (!userData.gender) {
-      showError('Please select your gender', ErrorCode.AUTH_FAILED);
-      return;
-    }
+      if (!userData.gender) {
+        showError('Please select your gender', ErrorCode.AUTH_FAILED);
+        return;
+      }
 
-    const uid = parseInt(currentUidRef.current, 10);
+      const uid = parseInt(currentUidRef.current, 10);
 
-    const authData = {
-      uid,
-      name: userData.name.trim(),
-      gender: userData.gender.toLowerCase() as 'male' | 'female' | 'other',
-    };
+      const authData = {
+        uid,
+        name: userData.name.trim(),
+        gender: userData.gender.toLowerCase() as 'male' | 'female' | 'other',
+      };
 
-    userDataRef.current = {
-      name: authData.name,
-      gender: authData.gender,
-    };
+      userDataRef.current = {
+        name: authData.name,
+        gender: authData.gender,
+      };
 
-    join(authData);
-  }, [join]);
+      join(authData);
+    },
+    [join]
+  );
 
   const stopSearch = useCallback(async () => {
     setIsSearching(false);
@@ -259,21 +284,21 @@ export function useVideoChat(options: UseVideoChatOptions) {
     if (isLeavingRef.current) {
       return;
     }
-    
+
     isLeavingRef.current = true;
-    
+
     setIsInSession(false);
     setIsSearching(false);
     currentMatchRef.current = null;
 
     clearMessages();
 
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     await leaveRTC();
 
     await leaveRoom();
-    
+
     isLeavingRef.current = false;
   }, [leaveRTC, leaveRoom, clearMessages]);
 
@@ -285,15 +310,16 @@ export function useVideoChat(options: UseVideoChatOptions) {
     if (isLeavingRef.current || isFindingNextRef.current) {
       return;
     }
-    
+
     if (!isRTCInitialized && currentMatchRef.current && !isInSession) {
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
-    
-    const partnerName = currentMatchRef.current && 'partnerName' in currentMatchRef.current 
-      ? currentMatchRef.current.partnerName 
-      : 'Your partner';
-    
+
+    const partnerName =
+      currentMatchRef.current && 'partnerName' in currentMatchRef.current
+        ? currentMatchRef.current.partnerName
+        : 'Your partner';
+
     showInfo(`${partnerName} left`);
     await endSessionFinal();
   }, [endSessionFinal, isInSession, isRTCInitialized]);
@@ -306,25 +332,25 @@ export function useVideoChat(options: UseVideoChatOptions) {
     if (isLeavingRef.current || isFindingNextRef.current) {
       return;
     }
-    
+
     isLeavingRef.current = true;
     isFindingNextRef.current = true;
-    
+
     try {
       setIsInSession(false);
       currentMatchRef.current = null;
 
       clearMessages();
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       await leaveRoom();
-      
-      await new Promise(resolve => setTimeout(resolve, 300));
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
       await leaveRTC();
-      
-      await new Promise(resolve => setTimeout(resolve, 200));
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       const uid = parseInt(currentUidRef.current, 10);
 
@@ -334,19 +360,28 @@ export function useVideoChat(options: UseVideoChatOptions) {
           name: userDataRef.current.name,
           gender: userDataRef.current.gender,
         };
-        
+
         join(authData);
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       const errorLower = errorMsg.toLowerCase();
-      
+
       if (errorLower.includes('permission') || errorLower.includes('denied')) {
-        showError('Camera/microphone permission denied. Please allow access in your browser settings.', ErrorCode.CAMERA_PERMISSION_DENIED);
+        showError(
+          'Camera/microphone permission denied. Please allow access in your browser settings.',
+          ErrorCode.CAMERA_PERMISSION_DENIED
+        );
       } else if (errorLower.includes('device') || errorLower.includes('not found')) {
-        showError('Camera or microphone not found. Please check your devices.', ErrorCode.MEDIA_DEVICE_NOT_FOUND);
+        showError(
+          'Camera or microphone not found. Please check your devices.',
+          ErrorCode.MEDIA_DEVICE_NOT_FOUND
+        );
       } else if (errorLower.includes('timeout')) {
-        showError('Connection timeout. Please check your network and try again.', ErrorCode.CONNECTION_TIMEOUT);
+        showError(
+          'Connection timeout. Please check your network and try again.',
+          ErrorCode.CONNECTION_TIMEOUT
+        );
       } else {
         showInfo('Retrying search...');
         if (userDataRef.current) {
@@ -371,7 +406,7 @@ export function useVideoChat(options: UseVideoChatOptions) {
   const clearMessagesRef = useRef(clearMessages);
   const leaveRTCRef = useRef(leaveRTC);
   const leaveRoomRef = useRef(leaveRoom);
-  
+
   // Keep refs up to date
   useEffect(() => {
     clearMessagesRef.current = clearMessages;
@@ -392,7 +427,7 @@ export function useVideoChat(options: UseVideoChatOptions) {
           // Cleanup errors on unmount are expected - component is being destroyed
         }
       };
-      
+
       cleanup();
     };
   }, []); // Empty deps is intentional - cleanup should only run on unmount

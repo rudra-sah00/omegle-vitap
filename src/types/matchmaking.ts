@@ -8,7 +8,18 @@
 export type MessageType = 'join' | 'leave' | 'cancel' | 'message' | 'typing' | 'signal' | 'ping';
 
 // Server Message Types
-export type ServerMessageType = 'match' | 'reconnected' | 'session_expired' | 'leave' | 'cancel' | 'partner_left' | 'error' | 'message' | 'typing' | 'signal' | 'pong';
+export type ServerMessageType =
+  | 'match'
+  | 'reconnected'
+  | 'session_expired'
+  | 'leave'
+  | 'cancel'
+  | 'partner_left'
+  | 'error'
+  | 'message'
+  | 'typing'
+  | 'signal'
+  | 'pong';
 
 // Status Types
 export type MatchStatus = 'idle' | 'searching' | 'active';
@@ -170,10 +181,10 @@ export interface TypingIndicatorMessage {
   };
 }
 
-export type ClientMessage = 
-  | JoinMessage 
-  | LeaveMessage 
-  | CancelMessage 
+export type ClientMessage =
+  | JoinMessage
+  | LeaveMessage
+  | CancelMessage
   | ChatMessage
   | TypingIndicatorMessage
   | SignalMessage
@@ -251,7 +262,7 @@ export interface RoomClosedMessage {
   };
 }
 
-export type ServerMessage = 
+export type ServerMessage =
   | MatchMessage
   | ReconnectedMessage
   | SessionExpiredMessage
@@ -267,7 +278,7 @@ export type ServerMessage =
   | RoomClosedMessage;
 
 // WebSocket Connection States
-export type ConnectionState = 
+export type ConnectionState =
   | 'disconnected'
   | 'connecting'
   | 'connected'

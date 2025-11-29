@@ -10,7 +10,10 @@ export { useMediaState } from './useMediaState';
 // Feature hooks
 export { useVideoChat } from './useVideoChat';
 export { useMatchmaking, useWebSocketCleanup } from './useMatchmaking';
-export { useMatchmakingMachine, useWebSocketCleanup as useWebSocketCleanupMachine } from './useMatchmakingMachine';
+export {
+  useMatchmakingMachine,
+  useWebSocketCleanup as useWebSocketCleanupMachine,
+} from './useMatchmakingMachine';
 export { useLiveKit } from './useLiveKit';
 export { useChat, type MessageData } from './useChat';
 export { useAnalytics } from './useAnalytics';

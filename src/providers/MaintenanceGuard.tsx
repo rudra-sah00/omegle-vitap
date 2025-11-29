@@ -20,20 +20,20 @@ export function MaintenanceGuard({ children }: MaintenanceGuardProps) {
   const router = useRouter();
 
   useEffect(() => {
-    const isAllowedPath = ALLOWED_PATHS.some(path => pathname?.startsWith(path));
+    const isAllowedPath = ALLOWED_PATHS.some((path) => pathname?.startsWith(path));
 
     if (MAINTENANCE_MODE && !isAllowedPath) {
       router.replace('/maintenance');
       return;
     }
-    
+
     if (!MAINTENANCE_MODE && pathname === '/maintenance') {
       router.replace('/welcome');
       return;
     }
   }, [pathname, router]);
 
-  if (MAINTENANCE_MODE && !ALLOWED_PATHS.some(path => pathname?.startsWith(path))) {
+  if (MAINTENANCE_MODE && !ALLOWED_PATHS.some((path) => pathname?.startsWith(path))) {
     return null;
   }
 

@@ -1,7 +1,7 @@
 /**
  * Connection Tracker
  * Tracks WebSocket and RTC connection events
- * 
+ *
  * Covers:
  * - WebSocket connect/disconnect/reconnect
  * - RTC join/leave
@@ -76,10 +76,9 @@ export class ConnectionTracker extends BaseTracker {
   /** Track reconnection attempt and result */
   trackReconnection(type: ReconnectionType, attemptNumber: number, success: boolean): void {
     this.safeTrack(() => {
-      const eventName = type === 'websocket' 
-        ? AnalyticsEvents.WEBSOCKET_RECONNECT 
-        : AnalyticsEvents.RTC_RECONNECT;
-      
+      const eventName =
+        type === 'websocket' ? AnalyticsEvents.WEBSOCKET_RECONNECT : AnalyticsEvents.RTC_RECONNECT;
+
       logEvent(this.analytics!, eventName, {
         attempt_number: attemptNumber,
         success,
