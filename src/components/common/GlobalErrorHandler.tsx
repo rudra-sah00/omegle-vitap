@@ -22,6 +22,7 @@ interface ErrorReport {
  * Send error to tracking service
  * Can be integrated with Sentry, LogRocket, etc.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function reportError(_report: ErrorReport): void {
   // TODO: Integrate with Sentry or similar service
   // Example:

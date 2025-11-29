@@ -261,6 +261,7 @@ export const RemoteScreenShareOverlay: FC<RemoteScreenShareOverlayProps> = ({
   );
 
   const handleResizeMove = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     (clientX: number, _clientY: number) => {
       if (!isResizing || !resizeStartRef.current) return;
 
