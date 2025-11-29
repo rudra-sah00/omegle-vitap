@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Button } from '@heroui/button';
 import { JoinButton } from './JoinButton';
@@ -90,16 +91,30 @@ export const WelcomeForm = () => {
 
   return (
     <div className="relative">
-      <div className="bg-white/15 backdrop-blur-2xl rounded-[2rem] pt-4 px-8 pb-8 sm:pt-6 sm:px-10 sm:pb-10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] border border-white/30 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-purple-500/10 pointer-events-none"></div>
+      <div className="absolute inset-0 rounded-[2.3rem] bg-gradient-to-br from-white/50 via-cyan-200/40 to-transparent blur-2xl opacity-50 pointer-events-none"></div>
+      <div className="relative bg-white/15 backdrop-blur-2xl rounded-[2rem] pt-6 px-8 pb-8 sm:pt-6 sm:px-10 sm:pb-10 shadow-[0_12px_30px_rgba(15,23,42,0.18)] border border-white/30 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-white/15 via-transparent to-purple-500/15 pointer-events-none"></div>
         <div className="relative z-10 space-y-4">
-          <div className="text-center space-y-1 pt-4">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-2xl tracking-tight">
-              Welcome Back
-            </h1>
-            <p className="text-white/90 text-xs sm:text-sm font-medium">
-              Connect with strangers, make new friends
+          <div className="flex flex-col items-center gap-2 pt-1">
+            <Image
+              src="/Omegle.png"
+              alt="Omegle VITAP logo"
+              width={120}
+              height={40}
+              className="h-8 w-auto object-contain drop-shadow-lg"
+              priority
+            />
+            <p className="text-[0.65rem] uppercase tracking-[0.4em] text-white/90">
+              Built for Students, by Students
             </p>
+            <div className="text-center space-y-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-2xl tracking-tight">
+                Welcome Back
+              </h1>
+              <p className="text-white/90 text-xs sm:text-sm font-medium">
+                Connect with strangers, make new friends
+              </p>
+            </div>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-bold text-white ml-1 uppercase tracking-wider flex items-center gap-2">
@@ -119,9 +134,9 @@ export const WelcomeForm = () => {
                 placeholder="Enter your name (letters only)"
                 value={name}
                 onChange={handleNameChange}
-                className={`w-full px-5 sm:px-6 py-4 sm:py-4 rounded-2xl bg-white/95 backdrop-blur-sm border-2 ${nameError ? 'border-red-400 focus:ring-red-300/50 focus:border-red-400' : 'border-white/40 focus:ring-white/50 focus:border-white'} focus:outline-none focus:ring-4 text-gray-900 text-sm sm:text-base placeholder:text-gray-500 transition-all shadow-xl font-medium hover:bg-white group-hover:shadow-2xl`}
+                className={`w-full px-5 sm:px-6 py-4 sm:py-4 rounded-2xl bg-white/10 backdrop-blur-sm border ${nameError ? 'border-red-300/80 focus:ring-red-200/40' : 'border-white/30 focus:ring-white/40'} focus:outline-none focus:ring-4 text-white text-sm sm:text-base placeholder:text-white/70 transition-all shadow-xl font-medium`}
               />
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-400/20 to-pink-400/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+              <div className="absolute inset-[2px] rounded-2xl bg-gradient-to-r from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
             </div>
             {nameError && <p className="text-red-200 text-xs ml-1 font-medium">{nameError}</p>}
           </div>
@@ -216,18 +231,17 @@ export const WelcomeForm = () => {
 
           {/* University Partners */}
           <div className="mt-6 pt-4 border-t border-white/20">
-            <div className="flex items-center justify-center gap-3">
-              <div className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
-                <span className="font-bold text-white text-base tracking-tight">VIT-AP</span>
-              </div>
-              <span className="text-xl font-bold text-white/60">✕</span>
-              <div className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
-                <span className="font-bold text-white text-base tracking-tight">SRM-AP</span>
-              </div>
-              <span className="text-xl font-bold text-white/60">✕</span>
-              <div className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
-                <span className="font-bold text-white text-base tracking-tight">NID-AP</span>
-              </div>
+            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+              {['VIT-AP', 'SRM-AP', 'NID-AP'].map((campus) => (
+                <div
+                  key={campus}
+                  className="flex-1 min-w-[90px] px-4 py-2.5 bg-white/15 backdrop-blur-xl rounded-2xl border border-white/30 shadow-lg text-center"
+                >
+                  <span className="font-semibold text-white tracking-[0.15em] text-xs sm:text-sm uppercase">
+                    {campus}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
