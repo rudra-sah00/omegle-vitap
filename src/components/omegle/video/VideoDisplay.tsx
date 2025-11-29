@@ -1,5 +1,5 @@
 import { ReactNode, memo, useMemo } from 'react';
-import { DottedGlowBackground } from '@/components/ui/dotted-glow-background';
+import { FlickeringGrid } from '@/components/ui/flickering-grid';
 
 interface VideoDisplayProps {
   id: string;
@@ -19,8 +19,7 @@ interface VideoDisplayProps {
  */
 interface VideoTheme {
   bgClass: string;
-  glowColor: string;
-  dotColor: string;
+  gridColor: string;
   iconBgClass: string;
   iconColorClass: string;
   textColorClass: string;
@@ -35,8 +34,7 @@ const getTheme = (gender?: 'male' | 'female' | 'other', isConnected?: boolean): 
   if (isConnected && gender === 'female') {
     return {
       bgClass: 'bg-video-pink-bg',
-      glowColor: 'rgba(236, 72, 153, 0.8)',
-      dotColor: 'rgba(236, 72, 153, 0.5)',
+      gridColor: 'rgb(236, 72, 153)',
       iconBgClass: 'bg-video-pink-icon-bg',
       iconColorClass: 'text-video-pink-text',
       textColorClass: 'text-video-pink-text',
@@ -46,8 +44,7 @@ const getTheme = (gender?: 'male' | 'female' | 'other', isConnected?: boolean): 
   // Default blue theme for male/other or when not connected
   return {
     bgClass: 'bg-video-blue-bg',
-    glowColor: 'rgba(0, 132, 209, 0.8)',
-    dotColor: 'rgba(0, 132, 209, 0.5)',
+    gridColor: 'rgb(0, 132, 209)',
     iconBgClass: 'bg-video-blue-icon-bg',
     iconColorClass: 'text-video-blue-text',
     textColorClass: 'text-video-blue-text',
@@ -78,17 +75,14 @@ const VideoDisplayComponent = ({
       role="region"
       aria-label={id === 'local-video' ? 'Your video feed' : 'Partner video feed'}
     >
-      {/* Dotted Glow Background - always visible */}
-      <DottedGlowBackground
+      {/* Flickering Grid Background - always visible */}
+      <FlickeringGrid
         className="absolute inset-0 w-full h-full"
-        gap={20}
-        radius={1.5}
-        color={theme.dotColor}
-        glowColor={theme.glowColor}
-        opacity={0.8}
-        speedMin={0.3}
-        speedMax={0.8}
-        speedScale={1}
+        squareSize={4}
+        gridGap={6}
+        color={theme.gridColor}
+        maxOpacity={0.4}
+        flickerChance={0.3}
       />
 
       {/* Video Element */}

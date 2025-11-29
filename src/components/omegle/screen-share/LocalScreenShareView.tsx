@@ -1,7 +1,7 @@
 'use client';
 
 import type { FC } from 'react';
-import { DottedGlowBackground } from '@/components/ui/dotted-glow-background';
+import { FlickeringGrid } from '@/components/ui/flickering-grid';
 import { RoomControls } from '../controls/RoomControls';
 
 interface LocalScreenShareViewProps {
@@ -47,17 +47,14 @@ export const LocalScreenShareView: FC<LocalScreenShareViewProps> = ({
 }) => {
   return (
     <div className="h-full w-full relative overflow-hidden rounded-lg bg-video-blue-bg">
-      {/* Animated Dotted Glow Background */}
-      <DottedGlowBackground
+      {/* Flickering Grid Background */}
+      <FlickeringGrid
         className="absolute inset-0 w-full h-full"
-        gap={20}
-        radius={1.5}
-        color="rgba(0, 132, 209, 0.5)"
-        glowColor="rgba(0, 132, 209, 0.8)"
-        opacity={0.8}
-        speedMin={0.3}
-        speedMax={0.8}
-        speedScale={1}
+        squareSize={4}
+        gridGap={6}
+        color="rgb(0, 132, 209)"
+        maxOpacity={0.4}
+        flickerChance={0.3}
       />
 
       {/* Screen share info centered - pointer-events-none to allow clicks on buttons */}

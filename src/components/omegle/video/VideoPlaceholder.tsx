@@ -1,6 +1,6 @@
 'use client';
 
-import { DottedGlowBackground } from '@/components/ui/dotted-glow-background';
+import { FlickeringGrid } from '@/components/ui/flickering-grid';
 
 interface VideoPlaceholderProps {
   label: string;
@@ -23,16 +23,13 @@ export const VideoPlaceholder = ({
 }: VideoPlaceholderProps) => {
   return (
     <div className="flex-1 relative overflow-hidden rounded-lg bg-video-blue-bg min-h-[300px]">
-      <DottedGlowBackground
+      <FlickeringGrid
         className="absolute inset-0"
-        gap={15}
-        radius={2}
-        color="rgba(0, 132, 209, 0.4)"
-        glowColor="rgba(0, 132, 209, 0.9)"
-        opacity={0.7}
-        speedMin={0.5}
-        speedMax={1.2}
-        backgroundOpacity={0.05}
+        squareSize={4}
+        gridGap={6}
+        color="rgb(0, 132, 209)"
+        maxOpacity={0.4}
+        flickerChance={0.3}
       />
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <div className="w-20 h-20 rounded-full flex items-center justify-center mb-3 bg-video-blue-icon-bg">
