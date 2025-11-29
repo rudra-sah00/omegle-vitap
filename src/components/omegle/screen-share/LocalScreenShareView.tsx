@@ -12,16 +12,19 @@ interface LocalScreenShareViewProps {
   isScreenSharing: boolean;
   currentCameraId?: string;
   currentMicId?: string;
+  isMobile?: boolean;
+  unreadChatCount?: number;
   userGender?: 'male' | 'female' | 'other';
   onStart: () => void;
   onStop: () => void;
   onNext: () => void;
   onToggleCamera: () => void;
   onToggleMicrophone: () => void;
-  onToggleScreenShare: () => void;
+  onToggleScreenShare?: () => void;
   onSwitchCamera: (deviceId: string) => void;
   onSwitchMicrophone: (deviceId: string) => void;
   onLeave: () => void;
+  onToggleMobileChat?: () => void;
 }
 
 /**
@@ -36,6 +39,8 @@ export const LocalScreenShareView: FC<LocalScreenShareViewProps> = ({
   isScreenSharing,
   currentCameraId,
   currentMicId,
+  isMobile = false,
+  unreadChatCount = 0,
   userGender,
   onStart,
   onStop,
@@ -46,6 +51,7 @@ export const LocalScreenShareView: FC<LocalScreenShareViewProps> = ({
   onSwitchCamera,
   onSwitchMicrophone,
   onLeave,
+  onToggleMobileChat,
 }) => {
   // Apply gender-based theming - case-insensitive comparison
   const isPink = userGender?.toLowerCase() === 'female';
@@ -106,6 +112,8 @@ export const LocalScreenShareView: FC<LocalScreenShareViewProps> = ({
         isScreenSharing={isScreenSharing}
         currentCameraId={currentCameraId}
         currentMicId={currentMicId}
+        isMobile={isMobile}
+        unreadChatCount={unreadChatCount}
         onStart={onStart}
         onStop={onStop}
         onNext={onNext}
@@ -115,6 +123,7 @@ export const LocalScreenShareView: FC<LocalScreenShareViewProps> = ({
         onSwitchCamera={onSwitchCamera}
         onSwitchMicrophone={onSwitchMicrophone}
         onLeave={onLeave}
+        onToggleMobileChat={onToggleMobileChat}
       />
     </div>
   );

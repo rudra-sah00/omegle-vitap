@@ -13,6 +13,7 @@ import {
   NextButton,
   LeaveButton,
   ScreenShareButton,
+  ChatButton,
 } from './ActionButtons';
 
 interface RoomControlsProps {
@@ -23,6 +24,8 @@ interface RoomControlsProps {
   isScreenSharing?: boolean;
   currentCameraId?: string;
   currentMicId?: string;
+  isMobile?: boolean;
+  unreadChatCount?: number;
   onStart: () => void;
   onStop: () => void;
   onNext: () => void;
@@ -32,6 +35,7 @@ interface RoomControlsProps {
   onSwitchCamera?: (deviceId: string) => void;
   onSwitchMicrophone?: (deviceId: string) => void;
   onLeave: () => void;
+  onToggleMobileChat?: () => void;
 }
 
 /**
@@ -46,6 +50,8 @@ export const RoomControls = memo(
     isScreenSharing = false,
     currentCameraId,
     currentMicId,
+    isMobile = false,
+    unreadChatCount = 0,
     onStart,
     onStop,
     onNext,
@@ -55,6 +61,7 @@ export const RoomControls = memo(
     onSwitchCamera,
     onSwitchMicrophone,
     onLeave,
+    onToggleMobileChat,
   }: RoomControlsProps) => {
     const [showCameraMenu, setShowCameraMenu] = useState(false);
     const [showMicMenu, setShowMicMenu] = useState(false);
@@ -101,8 +108,13 @@ export const RoomControls = memo(
           onSwitchDevice={onSwitchMicrophone}
         />
 
-        {/* Screen Share - only when matched */}
-        {isMatched && onToggleScreenShare && (
+        {/* Chat Button - only for mobile when matched */}
+        {isMobile && isMatched && onToggleMobileChat && (
+          <ChatButton onClick={onToggleMobileChat} unreadCount={unreadChatCount} />
+        )}
+
+        {/* Screen Share - only when matched and NOT on mobile */}
+        {!isMobile && isMatched && onToggleScreenShare && (
           <ScreenShareButton onClick={onToggleScreenShare} isSharing={isScreenSharing} />
         )}
 

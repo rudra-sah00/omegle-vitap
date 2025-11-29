@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useVideoChat } from '@/hooks';
 import { REDIRECT_DELAY } from '@/constants';
@@ -20,6 +20,7 @@ import {
 import { showError, showWarning, ErrorCode } from '@/lib';
 import { isBrowserSupported } from '@/lib/browser-polyfill';
 import { analytics } from '@/services/firebase';
+import { isMobileDevice } from '@/services/livekit';
 import type { MatchDataMatched } from '@/types/matchmaking';
 
 /**
@@ -30,6 +31,10 @@ function OmeglePageContent() {
   const router = useRouter();
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [showMatchConfetti, setShowMatchConfetti] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const lastMessageCountRef = useRef(0);
 
   const {
     connectionState,
@@ -76,6 +81,11 @@ function OmeglePageContent() {
     () => connectionState === 'waiting' && !isMatched,
     [connectionState, isMatched]
   );
+
+  // Detect mobile device
+  useEffect(() => {
+    setIsMobile(isMobileDevice());
+  }, []);
 
   // Show confetti when matched
   useEffect(() => {
@@ -171,6 +181,28 @@ function OmeglePageContent() {
     [isInSession, sendTypingIndicator]
   );
 
+  const handleMobileChatToggle = useCallback(() => {
+    setIsMobileChatOpen((prev) => !prev);
+    // Reset unread count when opening chat
+    if (!isMobileChatOpen) {
+      setUnreadChatCount(0);
+    }
+  }, [isMobileChatOpen]);
+
+  // Track unread messages for mobile
+  useEffect(() => {
+    if (!isMobile || !isMatched) return;
+
+    const strangerMessages = messages.filter((msg) => msg.senderId !== 'local');
+    const newMessageCount = strangerMessages.length;
+
+    if (newMessageCount > lastMessageCountRef.current && !isMobileChatOpen) {
+      setUnreadChatCount((prev) => prev + (newMessageCount - lastMessageCountRef.current));
+    }
+
+    lastMessageCountRef.current = newMessageCount;
+  }, [messages, isMobileChatOpen, isMobile, isMatched]);
+
   if (!name || checkingStatus) {
     return <LoadingState state="loading" />;
   }
@@ -230,16 +262,19 @@ function OmeglePageContent() {
                 isScreenSharing={isScreenSharing}
                 currentCameraId={devices.cameraId}
                 currentMicId={devices.micId}
+                isMobile={isMobile}
                 userGender={gender.toLowerCase() as 'male' | 'female' | 'other'}
                 onStart={handleStart}
                 onStop={handleStop}
                 onNext={handleNext}
                 onToggleCamera={toggleCamera}
                 onToggleMicrophone={toggleMicrophone}
-                onToggleScreenShare={toggleScreenShare}
+                onToggleScreenShare={isMobile ? undefined : toggleScreenShare}
                 onSwitchCamera={switchCamera}
                 onSwitchMicrophone={switchMicrophone}
                 onLeave={endSession}
+                onToggleMobileChat={isMobile ? handleMobileChatToggle : undefined}
+                unreadChatCount={unreadChatCount}
               />
             ) : (
               <VideoDisplay
@@ -261,15 +296,18 @@ function OmeglePageContent() {
                   isScreenSharing={isScreenSharing}
                   currentCameraId={devices.cameraId}
                   currentMicId={devices.micId}
+                  isMobile={isMobile}
                   onStart={handleStart}
                   onStop={handleStop}
                   onNext={handleNext}
                   onToggleCamera={toggleCamera}
                   onToggleMicrophone={toggleMicrophone}
-                  onToggleScreenShare={toggleScreenShare}
+                  onToggleScreenShare={isMobile ? undefined : toggleScreenShare}
                   onSwitchCamera={switchCamera}
                   onSwitchMicrophone={switchMicrophone}
                   onLeave={endSession}
+                  onToggleMobileChat={isMobile ? handleMobileChatToggle : undefined}
+                  unreadChatCount={unreadChatCount}
                 />
               </VideoDisplay>
             )}
@@ -296,6 +334,8 @@ function OmeglePageContent() {
           connectionState={connectionState}
           messages={messages}
           partnerName={matchData?.partnerName}
+          isOpen={isMobileChatOpen}
+          onClose={() => setIsMobileChatOpen(false)}
         />
       </div>
     </div>
