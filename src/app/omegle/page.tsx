@@ -230,7 +230,7 @@ function OmeglePageContent() {
                 isScreenSharing={isScreenSharing}
                 currentCameraId={devices.cameraId}
                 currentMicId={devices.micId}
-                userGender={gender}
+                userGender={gender.toLowerCase() as 'male' | 'female' | 'other'}
                 onStart={handleStart}
                 onStop={handleStop}
                 onNext={handleNext}
@@ -250,7 +250,7 @@ function OmeglePageContent() {
                 isMicOn={isMicOn}
                 isSearching={false}
                 showConnectionIndicator={false}
-                userGender={gender}
+                userGender={gender.toLowerCase() as 'male' | 'female' | 'other'}
               >
                 {/* Control Buttons */}
                 <RoomControls
