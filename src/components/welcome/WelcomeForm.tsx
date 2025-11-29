@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Button } from '@heroui/button';
 import { JoinButton } from './JoinButton';
 import { useUser } from '@/hooks';
-import { ONLINE_STATUS_CHECK_INTERVAL, BACKEND_CHECK_TIMEOUT } from '@/constants';
+import { ONLINE_STATUS_CHECK_INTERVAL } from '@/constants';
 
 export const WelcomeForm = () => {
   const { name, setName, gender, setGender } = useUser();
