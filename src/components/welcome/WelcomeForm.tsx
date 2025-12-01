@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Button } from '@heroui/button';
 import { JoinButton } from './JoinButton';
@@ -90,30 +89,16 @@ export const WelcomeForm = () => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
       <div className="absolute inset-0 rounded-[2.3rem] bg-gradient-to-br from-white/50 via-cyan-200/40 to-transparent blur-2xl opacity-50 pointer-events-none"></div>
-      <div className="relative bg-white/15 backdrop-blur-2xl rounded-[2rem] pt-6 px-8 pb-8 sm:pt-6 sm:px-10 sm:pb-10 shadow-[0_12px_30px_rgba(15,23,42,0.18)] border border-white/30 overflow-hidden">
+      <div className="relative bg-white/15 backdrop-blur-2xl rounded-[2rem] pt-8 px-8 pb-8 sm:pt-10 sm:px-10 sm:pb-10 shadow-[0_12px_30px_rgba(15,23,42,0.18)] border border-white/30 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-white/15 via-transparent to-purple-500/15 pointer-events-none"></div>
-        <div className="relative z-10 space-y-4">
-          <div className="flex flex-col items-center gap-2 pt-1">
-            <Image
-              src="/Omegle.png"
-              alt="Omegle VITAP logo"
-              width={120}
-              height={40}
-              className="h-8 w-auto object-contain drop-shadow-lg"
-              priority
-            />
-            <p className="text-[0.65rem] uppercase tracking-[0.4em] text-white/90">
-              Built for Students, by Students
-            </p>
-            <div className="text-center space-y-1">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-2xl tracking-tight">
+        <div className="relative z-10 space-y-6">
+          <div className="flex flex-col items-center gap-3 pt-1">
+            <div className="text-center space-y-2">
+              <h1 className="text-3xl sm:text-4xl font-bold text-white drop-shadow-2xl tracking-tight">
                 Welcome Back
               </h1>
-              <p className="text-white/90 text-xs sm:text-sm font-medium">
-                Connect with strangers, make new friends
-              </p>
             </div>
           </div>
           <div className="space-y-2">
@@ -228,22 +213,6 @@ export const WelcomeForm = () => {
               Guidelines
             </Link>
           </p>
-
-          {/* University Partners */}
-          <div className="mt-6 pt-4 border-t border-white/20">
-            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-              {['VIT-AP', 'SRM-AP', 'NID-AP'].map((campus) => (
-                <div
-                  key={campus}
-                  className="flex-1 min-w-[90px] px-4 py-2.5 bg-white/15 backdrop-blur-xl rounded-2xl border border-white/30 shadow-lg text-center"
-                >
-                  <span className="font-semibold text-white tracking-[0.15em] text-xs sm:text-sm uppercase">
-                    {campus}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>
