@@ -53,7 +53,6 @@ export class LiveKitService {
       room: null,
       localVideoTrack: null,
       localAudioTrack: null,
-      localScreenTrack: null,
       isJoined: false,
       isLeaving: false,
       isPreviewMode: false,

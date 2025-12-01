@@ -16,7 +16,6 @@ import { LIVEKIT_CONFIG } from '../config';
 import type { LiveKitConfig, NetworkQualityLevel } from '../types';
 import type { LiveKitState, LiveKitCallbacks } from './types';
 import { TrackManager } from './track.manager';
-import { ScreenShareManager } from './screen-share.manager';
 
 /**
  * RoomManager Class
@@ -29,14 +28,12 @@ import { ScreenShareManager } from './screen-share.manager';
  */
 export class RoomManager {
   private trackManager: TrackManager;
-  private screenShareManager: ScreenShareManager;
 
   constructor(
     private state: LiveKitState,
     private callbacks: LiveKitCallbacks
   ) {
     this.trackManager = new TrackManager(state);
-    this.screenShareManager = new ScreenShareManager(state);
     this.initializeRoom();
   }
 
@@ -85,7 +82,6 @@ export class RoomManager {
     this.state.room.on(
       RoomEvent.TrackSubscribed,
       (track: RemoteTrack, publication, participant: RemoteParticipant) => {
-        const isScreenShare = publication.source === Track.Source.ScreenShare;
         const mediaType = track.kind === Track.Kind.Video ? 'video' : 'audio';
 
         // Auto-attach audio tracks
@@ -93,26 +89,17 @@ export class RoomManager {
           track.attach();
         }
 
-        if (isScreenShare && track.kind === Track.Kind.Video) {
-          this.callbacks.onScreenShareSubscribed?.(participant, true);
-        } else {
-          this.callbacks.onTrackSubscribed?.(participant, mediaType);
-        }
+        this.callbacks.onTrackSubscribed?.(participant, mediaType);
       }
     );
 
     this.state.room.on(
       RoomEvent.TrackUnsubscribed,
       (track: RemoteTrack, publication, participant: RemoteParticipant) => {
-        const isScreenShare = publication.source === Track.Source.ScreenShare;
         const mediaType = track.kind === Track.Kind.Video ? 'video' : 'audio';
         track.detach();
 
-        if (isScreenShare && track.kind === Track.Kind.Video) {
-          this.callbacks.onScreenShareSubscribed?.(participant, false);
-        } else {
-          this.callbacks.onTrackUnsubscribed?.(participant, mediaType);
-        }
+        this.callbacks.onTrackUnsubscribed?.(participant, mediaType);
       }
     );
 
@@ -215,7 +202,6 @@ export class RoomManager {
     try {
       // Stop all tracks
       this.trackManager.stopAllTracks();
-      this.screenShareManager.cleanup();
 
       // Disconnect from room
       if (this.state.room) {

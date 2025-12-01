@@ -125,34 +125,16 @@ export function useLiveKit(options: UseLiveKitOptions = {}) {
             if (mediaType === 'video') {
               setIsRemoteCameraOn(true);
 
-              // Determine which element to attach to based on screen share state
-              // If remote is screen sharing, attach camera to PiP element
+              // Attach remote video to designated element
               const attachVideo = () => {
-                const targetElementId = isRemoteScreenSharingRef.current
-                  ? DOM_IDS.REMOTE_VIDEO_PIP
-                  : remoteVideoElementId;
-
-                const remoteElement = document.getElementById(targetElementId);
+                const remoteElement = document.getElementById(remoteVideoElementId);
                 if (remoteElement) {
-                  if (isRemoteScreenSharingRef.current) {
-                    rtcServiceRef.current?.playRemoteCameraToPip(
-                      participant,
-                      DOM_IDS.REMOTE_VIDEO_PIP
-                    );
-                  } else {
-                    rtcServiceRef.current?.playRemoteVideo(participant, remoteVideoElementId);
-                  }
+                  rtcServiceRef.current?.playRemoteVideo(participant, remoteVideoElementId);
                   onRemoteVideoReady?.(participant.identity);
                 }
               };
 
-              // When screen sharing is active, the PiP element only renders after
-              // isRemoteCameraOn state updates. Wait for React to re-render.
-              if (isRemoteScreenSharingRef.current) {
-                setTimeout(attachVideo, 150);
-              } else {
-                attachVideo();
-              }
+              attachVideo();
             } else if (mediaType === 'audio') {
               setIsRemoteMicOn(true);
             }

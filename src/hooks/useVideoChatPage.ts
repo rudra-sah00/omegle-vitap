@@ -33,7 +33,6 @@ export function useVideoChatPage() {
     isInSession,
     isCameraOn,
     isMicOn,
-    isScreenSharing,
     startSearch,
     stopSearch,
     endSession,
@@ -72,7 +71,7 @@ export function useVideoChatPage() {
     }, 150);
 
     return () => clearTimeout(timer);
-  }, [isScreenSharing, isCameraOn, reattachLocalVideo]);
+  }, [isCameraOn, reattachLocalVideo]);
 
   // Check browser compatibility - only run once on mount
   useEffect(() => {
