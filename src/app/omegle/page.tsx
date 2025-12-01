@@ -13,9 +13,6 @@ import {
   OmegleErrorBoundary,
   MatchConfetti,
   RoomControls,
-  ScreenShareIndicator,
-  RemoteScreenShareOverlay,
-  LocalScreenShareView,
 } from '@/components/omegle';
 import { showError, showWarning, ErrorCode } from '@/lib';
 import { isBrowserSupported } from '@/lib/browser-polyfill';
@@ -46,8 +43,6 @@ function OmeglePageContent() {
     isMicOn,
     isRemoteCameraOn,
     isRemoteMicOn,
-    isScreenSharing,
-    isRemoteScreenSharing,
     messages,
     isPartnerTyping,
     startSearch,
@@ -56,7 +51,6 @@ function OmeglePageContent() {
     findNext,
     toggleCamera,
     toggleMicrophone,
-    toggleScreenShare,
     switchCamera,
     switchMicrophone,
     getCurrentDevices,
@@ -92,13 +86,13 @@ function OmeglePageContent() {
     setShowMatchConfetti(isMatched);
   }, [isMatched]);
 
-  // Re-attach local video when screen sharing mode changes
+  // Re-attach local video when camera mode changes
   useEffect(() => {
     const timer = setTimeout(() => {
       if (isCameraOn) reattachLocalVideo('local-video');
     }, 150);
     return () => clearTimeout(timer);
-  }, [isScreenSharing, isCameraOn, reattachLocalVideo]);
+  }, [isCameraOn, reattachLocalVideo]);
 
   // Browser compatibility check
   useEffect(() => {
@@ -222,9 +216,6 @@ function OmeglePageContent() {
       {/* Match Confetti Overlay */}
       <MatchConfetti isActive={showMatchConfetti} />
 
-      {/* Screen Share Indicator */}
-      <ScreenShareIndicator isSharing={isScreenSharing} onStop={toggleScreenShare} />
-
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Video Areas - Fill screen on mobile, 55% on desktop */}
@@ -241,76 +232,41 @@ function OmeglePageContent() {
               isMicOn={isRemoteMicOn}
               partnerGender={partnerGender}
             />
-
-            {/* Remote Screen Share Overlay */}
-            {isRemoteScreenSharing && (
-              <RemoteScreenShareOverlay
-                partnerName={matchData?.partnerName}
-                isRemoteCameraOn={isRemoteCameraOn}
-              />
-            )}
           </div>
 
           {/* Your Video - Takes available height minus controls on mobile */}
           <div className="flex-1 relative min-h-0">
-            {isScreenSharing ? (
-              <LocalScreenShareView
-                isCameraOn={isCameraOn}
-                isMicOn={isMicOn}
+            <VideoDisplay
+              id="local-video"
+              label="Your camera"
+              isConnected={isMatched}
+              isCameraOn={isCameraOn}
+              isMicOn={isMicOn}
+              isSearching={false}
+              showConnectionIndicator={false}
+              userGender={gender.toLowerCase() as 'male' | 'female' | 'other'}
+            >
+              {/* Control Buttons */}
+              <RoomControls
                 isMatched={isMatched}
                 isSearching={isSearching}
-                isScreenSharing={isScreenSharing}
+                isCameraOn={isCameraOn}
+                isMicOn={isMicOn}
                 currentCameraId={devices.cameraId}
                 currentMicId={devices.micId}
                 isMobile={isMobile}
-                userGender={gender.toLowerCase() as 'male' | 'female' | 'other'}
                 onStart={handleStart}
                 onStop={handleStop}
                 onNext={handleNext}
                 onToggleCamera={toggleCamera}
                 onToggleMicrophone={toggleMicrophone}
-                onToggleScreenShare={isMobile ? undefined : toggleScreenShare}
                 onSwitchCamera={switchCamera}
                 onSwitchMicrophone={switchMicrophone}
                 onLeave={endSession}
                 onToggleMobileChat={isMobile ? handleMobileChatToggle : undefined}
                 unreadChatCount={unreadChatCount}
               />
-            ) : (
-              <VideoDisplay
-                id="local-video"
-                label="Your camera"
-                isConnected={isMatched}
-                isCameraOn={isCameraOn}
-                isMicOn={isMicOn}
-                isSearching={false}
-                showConnectionIndicator={false}
-                userGender={gender.toLowerCase() as 'male' | 'female' | 'other'}
-              >
-                {/* Control Buttons */}
-                <RoomControls
-                  isMatched={isMatched}
-                  isSearching={isSearching}
-                  isCameraOn={isCameraOn}
-                  isMicOn={isMicOn}
-                  isScreenSharing={isScreenSharing}
-                  currentCameraId={devices.cameraId}
-                  currentMicId={devices.micId}
-                  isMobile={isMobile}
-                  onStart={handleStart}
-                  onStop={handleStop}
-                  onNext={handleNext}
-                  onToggleCamera={toggleCamera}
-                  onToggleMicrophone={toggleMicrophone}
-                  onToggleScreenShare={isMobile ? undefined : toggleScreenShare}
-                  onSwitchCamera={switchCamera}
-                  onSwitchMicrophone={switchMicrophone}
-                  onLeave={endSession}
-                  onToggleMobileChat={isMobile ? handleMobileChatToggle : undefined}
-                  unreadChatCount={unreadChatCount}
-                />
-              </VideoDisplay>
-            )}
+            </VideoDisplay>
           </div>
         </div>
 

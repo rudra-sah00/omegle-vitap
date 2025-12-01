@@ -6,7 +6,7 @@
  *
  * - FunnelTracker: User journey through conversion funnel
  * - MatchTracker: Match lifecycle and quality metrics
- * - MediaTracker: Camera, mic, screen share, and messaging
+ * - MediaTracker: Camera, mic, and messaging
  * - ConnectionTracker: WebSocket and RTC events
  * - PerformanceTracker: Page load, video frames, network quality
  * - ErrorTracker: All error events
@@ -164,14 +164,6 @@ class AnalyticsFacade {
 
   trackDeviceListOpened(deviceType: DeviceType): void {
     mediaTracker.trackDeviceListOpened(deviceType);
-  }
-
-  trackScreenShareStart(): void {
-    mediaTracker.trackScreenShareStart();
-  }
-
-  trackScreenShareStop(durationMs?: number): void {
-    mediaTracker.trackScreenShareStop(durationMs);
   }
 
   trackMessageSent(messageLength: number, hasEmoji: boolean): void {

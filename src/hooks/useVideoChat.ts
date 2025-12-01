@@ -16,7 +16,6 @@
  * Key features:
  * - Automatic retry logic for RTC connection failures
  * - Camera/microphone toggle and device switching
- * - Screen sharing support
  * - Network quality indicators for both users
  * - "Find Next" to quickly match with new partner
  * - Proper cleanup on unmount to prevent memory leaks
@@ -97,14 +96,11 @@ export function useVideoChat(options: UseVideoChatOptions) {
     isRTCInitialized,
     isRemoteCameraOn,
     isRemoteMicOn,
-    isScreenSharing,
-    isRemoteScreenSharing,
     localNetworkQuality,
     remoteNetworkQuality,
     initializeRTC,
     toggleCamera,
     toggleMicrophone,
-    toggleScreenShare,
     switchCamera,
     switchMicrophone,
     getCurrentDevices,
@@ -444,8 +440,6 @@ export function useVideoChat(options: UseVideoChatOptions) {
     isRTCInitialized,
     isRemoteCameraOn,
     isRemoteMicOn,
-    isScreenSharing,
-    isRemoteScreenSharing,
     localNetworkQuality,
     remoteNetworkQuality,
     messages,
@@ -456,7 +450,6 @@ export function useVideoChat(options: UseVideoChatOptions) {
     findNext,
     toggleCamera,
     toggleMicrophone,
-    toggleScreenShare,
     switchCamera,
     switchMicrophone,
     getCurrentDevices,

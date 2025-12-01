@@ -6,7 +6,6 @@
  * - Camera toggle events
  * - Microphone toggle events
  * - Device switching
- * - Screen sharing
  * - Device list interactions
  * - Chat window state
  * - Messaging events
@@ -70,30 +69,6 @@ export class MediaTracker extends BaseTracker {
     this.safeTrack(() => {
       logEvent(this.analytics!, AnalyticsEvents.DEVICE_LIST_OPENED, {
         device_type: deviceType,
-        timestamp: this.getTimestamp(),
-      });
-    });
-  }
-
-  // ============================================
-  // SCREEN SHARING
-  // ============================================
-
-  /** Track screen share start */
-  trackScreenShareStart(): void {
-    this.safeTrack(() => {
-      logEvent(this.analytics!, AnalyticsEvents.SCREEN_SHARE_START, {
-        timestamp: this.getTimestamp(),
-      });
-    });
-  }
-
-  /** Track screen share stop with optional duration */
-  trackScreenShareStop(durationMs?: number): void {
-    this.safeTrack(() => {
-      logEvent(this.analytics!, AnalyticsEvents.SCREEN_SHARE_STOP, {
-        duration_ms: durationMs,
-        duration_seconds: durationMs ? Math.floor(durationMs / 1000) : undefined,
         timestamp: this.getTimestamp(),
       });
     });

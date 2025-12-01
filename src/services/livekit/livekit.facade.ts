@@ -6,7 +6,6 @@
  *
  * - RoomManager: Room lifecycle and events
  * - TrackManager: Local track management (camera, mic)
- * - ScreenShareManager: Screen sharing
  * - VideoRenderer: DOM attachment utilities
  *
  * This facade maintains backward compatibility with the original monolithic
@@ -23,11 +22,9 @@ import type {
 import type { LiveKitConfig, DeviceIds, NetworkQualityLevel } from './types';
 import {
   TrackManager,
-  ScreenShareManager,
   RoomManager,
   attachLocalVideo,
   attachRemoteVideo,
-  attachRemoteScreenShare,
   attachRemoteCameraToPip,
   type LiveKitState,
   type LiveKitCallbacks,
@@ -49,7 +46,6 @@ export class LiveKitService {
   // Manager instances
   private roomManager: RoomManager;
   private trackManager: TrackManager;
-  private screenShareManager: ScreenShareManager;
 
   constructor() {
     // Initialize shared state
@@ -61,10 +57,8 @@ export class LiveKitService {
       isJoined: false,
       isLeaving: false,
       isPreviewMode: false,
-      isScreenSharing: false,
       isTogglingCamera: false,
       isTogglingMic: false,
-      isTogglingScreenShare: false,
       currentCameraId: undefined,
       currentMicId: undefined,
       currentNetworkQuality: 'unknown',
@@ -72,7 +66,6 @@ export class LiveKitService {
 
     // Initialize managers
     this.trackManager = new TrackManager(this.state);
-    this.screenShareManager = new ScreenShareManager(this.state);
     this.roomManager = new RoomManager(this.state, this.callbacks);
   }
 
@@ -151,10 +144,6 @@ export class LiveKitService {
     attachRemoteVideo(participant, elementId);
   }
 
-  playRemoteScreenShare(participant: RemoteParticipant, elementId: string): void {
-    attachRemoteScreenShare(participant, elementId);
-  }
-
   playRemoteCameraToPip(participant: RemoteParticipant, elementId: string): void {
     attachRemoteCameraToPip(participant, elementId);
   }
@@ -163,26 +152,6 @@ export class LiveKitService {
     if (this.state.localVideoTrack) {
       this.playLocalVideo(elementId);
     }
-  }
-
-  // ============================================
-  // SCREEN SHARE
-  // ============================================
-
-  async startScreenShare(): Promise<void> {
-    await this.screenShareManager.start();
-  }
-
-  async stopScreenShare(): Promise<void> {
-    await this.screenShareManager.stop();
-  }
-
-  async toggleScreenShare(): Promise<boolean> {
-    return this.screenShareManager.toggle();
-  }
-
-  isScreenSharingActive(): boolean {
-    return this.screenShareManager.isActive();
   }
 
   // ============================================
@@ -229,12 +198,6 @@ export class LiveKitService {
     callback: (quality: ConnectionQuality, participant: RemoteParticipant | null) => void
   ): void {
     this.callbacks.onConnectionQualityChanged = callback;
-  }
-
-  setOnScreenShareSubscribed(
-    callback: (participant: RemoteParticipant, isSharing: boolean) => void
-  ): void {
-    this.callbacks.onScreenShareSubscribed = callback;
   }
 
   // ============================================

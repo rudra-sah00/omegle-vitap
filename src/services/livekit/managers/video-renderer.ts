@@ -82,26 +82,8 @@ export function attachRemoteVideo(participant: RemoteParticipant, elementId: str
 }
 
 /**
- * Attach remote participant's screen share
- * Uses 'contain' to preserve aspect ratio
- */
-export function attachRemoteScreenShare(participant: RemoteParticipant, elementId: string): void {
-  const screenTrack = participant
-    .getTrackPublications()
-    .find(
-      (pub) =>
-        pub.source === TrackConstants.Source.ScreenShare &&
-        pub.track?.kind === TrackConstants.Kind.Video
-    )?.track;
-
-  if (screenTrack) {
-    attachTrackToElement(screenTrack, elementId, { objectFit: 'contain' });
-  }
-}
-
-/**
  * Attach remote participant's camera to PiP element
- * Used during screen share to show camera in small window
+ * Used to show camera in small window
  */
 export function attachRemoteCameraToPip(participant: RemoteParticipant, elementId: string): void {
   const cameraTrack = participant

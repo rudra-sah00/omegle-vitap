@@ -65,17 +65,12 @@ export function useLiveKit(options: UseLiveKitOptions = {}) {
   const [isRTCInitialized, setIsRTCInitialized] = useState(false);
   const [isRemoteCameraOn, setIsRemoteCameraOn] = useState(false);
   const [isRemoteMicOn, setIsRemoteMicOn] = useState(false);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [isRemoteScreenSharing, setIsRemoteScreenSharing] = useState(false);
   const hasPreviewRef = useRef(false);
   const [currentCameraId, setCurrentCameraId] = useState<string | undefined>(undefined);
   const [currentMicId, setCurrentMicId] = useState<string | undefined>(undefined);
 
   const [localNetworkQuality, setLocalNetworkQuality] = useState<NetworkQualityLevel>('unknown');
   const [remoteNetworkQuality, setRemoteNetworkQuality] = useState<NetworkQualityLevel>('unknown');
-
-  // Track remote screen share state for proper video element targeting
-  const isRemoteScreenSharingRef = useRef(false);
 
   const initializeRTC = useCallback(
     async (
@@ -205,40 +200,6 @@ export function useLiveKit(options: UseLiveKitOptions = {}) {
               setLocalNetworkQuality(qualityLevel);
             } else {
               setRemoteNetworkQuality(qualityLevel);
-            }
-          }
-        );
-
-        rtcServiceRef.current.setOnScreenShareSubscribed(
-          (participant: RemoteParticipant, isSharing: boolean) => {
-            setIsRemoteScreenSharing(isSharing);
-            isRemoteScreenSharingRef.current = isSharing;
-
-            if (isSharing) {
-              setTimeout(() => {
-                const screenElement = document.getElementById(DOM_IDS.REMOTE_SCREEN_SHARE);
-                if (screenElement) {
-                  rtcServiceRef.current?.playRemoteScreenShare(
-                    participant,
-                    DOM_IDS.REMOTE_SCREEN_SHARE
-                  );
-                }
-                const pipElement = document.getElementById(DOM_IDS.REMOTE_VIDEO_PIP);
-                if (pipElement) {
-                  rtcServiceRef.current?.playRemoteCameraToPip(
-                    participant,
-                    DOM_IDS.REMOTE_VIDEO_PIP
-                  );
-                }
-              }, 100);
-            } else {
-              // Screen share stopped - reattach camera to main remote video element
-              setTimeout(() => {
-                const remoteElement = document.getElementById(remoteVideoElementId);
-                if (remoteElement) {
-                  rtcServiceRef.current?.playRemoteVideo(participant, remoteVideoElementId);
-                }
-              }, 100);
             }
           }
         );
@@ -445,12 +406,9 @@ export function useLiveKit(options: UseLiveKitOptions = {}) {
     try {
       await rtcServiceRef.current.leave();
       hasPreviewRef.current = false;
-      isRemoteScreenSharingRef.current = false;
       setIsRTCInitialized(false);
       setIsRemoteCameraOn(false);
       setIsRemoteMicOn(false);
-      setIsScreenSharing(false);
-      setIsRemoteScreenSharing(false);
       setLocalNetworkQuality('unknown');
       setRemoteNetworkQuality('unknown');
 
@@ -511,41 +469,6 @@ export function useLiveKit(options: UseLiveKitOptions = {}) {
     }
   }, []);
 
-  const isTogglingScreenShareRef = useRef(false);
-
-  const toggleScreenShare = useCallback(async () => {
-    if (isTogglingScreenShareRef.current) {
-      return;
-    }
-
-    if (!isRTCInitialized || !rtcServiceRef.current) {
-      showWarning('You must be in a call to share your screen.');
-      return;
-    }
-
-    isTogglingScreenShareRef.current = true;
-
-    try {
-      const newState = await rtcServiceRef.current.toggleScreenShare();
-      setIsScreenSharing(newState);
-      if (newState) {
-        showSuccess('Screen sharing started');
-      } else {
-        showSuccess('Screen sharing stopped');
-      }
-    } catch (error) {
-      const errorStr = String(error);
-      if (errorStr.includes('Permission denied') || errorStr.includes('NotAllowedError')) {
-        showWarning('Screen sharing was cancelled or permission was denied.');
-      } else {
-        showError('Failed to share screen. Please try again.', ErrorCode.CAMERA_PERMISSION_DENIED);
-      }
-      setIsScreenSharing(false);
-    } finally {
-      isTogglingScreenShareRef.current = false;
-    }
-  }, [isRTCInitialized]);
-
   const getCurrentDevices = useCallback(() => {
     return { cameraId: currentCameraId, micId: currentMicId };
   }, [currentCameraId, currentMicId]);
@@ -602,14 +525,11 @@ export function useLiveKit(options: UseLiveKitOptions = {}) {
     isRTCInitialized,
     isRemoteCameraOn,
     isRemoteMicOn,
-    isScreenSharing,
-    isRemoteScreenSharing,
     localNetworkQuality,
     remoteNetworkQuality,
     initializeRTC,
     toggleCamera,
     toggleMicrophone,
-    toggleScreenShare,
     switchCamera,
     switchMicrophone,
     getCurrentDevices,

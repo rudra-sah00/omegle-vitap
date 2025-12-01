@@ -38,8 +38,6 @@ export const AnalyticsEvents = {
   MICROPHONE_SWITCH: 'microphone_switch',
   DEVICE_LIST_OPENED: 'device_list_opened',
   DEVICE_PERMISSION_PROMPT: 'device_permission_prompt',
-  SCREEN_SHARE_START: 'screen_share_start',
-  SCREEN_SHARE_STOP: 'screen_share_stop',
 
   // Chat & Messaging
   MESSAGE_SENT: 'message_sent',

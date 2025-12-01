@@ -1,21 +1,13 @@
 /**
  * Action Buttons
- * Room action controls: Start, Stop, Next, Leave, Screen Share
+ * Room action controls: Start, Stop, Next, Leave
  */
 
 'use client';
 
 import { memo } from 'react';
 import { Button } from '@heroui/button';
-import {
-  PlayIcon,
-  StopIcon,
-  NextIcon,
-  LeaveIcon,
-  ScreenShareIcon,
-  ScreenShareOffIcon,
-  CloseIcon,
-} from './Icons';
+import { PlayIcon, StopIcon, NextIcon, LeaveIcon } from './Icons';
 
 interface ActionButtonProps {
   onClick: () => void;
@@ -96,49 +88,6 @@ export const LeaveButton = memo(({ onClick, disabled }: ActionButtonProps) => (
   </Button>
 ));
 LeaveButton.displayName = 'LeaveButton';
-
-interface ScreenShareButtonProps extends ActionButtonProps {
-  isSharing: boolean;
-}
-
-/**
- * Screen share toggle button
- * Styled to match camera/mic toggle buttons
- * - Green when sharing (active state)
- * - Slate when not sharing (inactive state)
- */
-export const ScreenShareButton = memo(
-  ({ onClick, isSharing, disabled }: ScreenShareButtonProps) => (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`w-11 h-11 lg:w-12 lg:h-12 rounded-full flex items-center justify-center text-white transition-colors ${
-        isSharing ? 'bg-red-500 hover:bg-red-600' : 'bg-slate-600 hover:bg-slate-700'
-      }`}
-      title={isSharing ? 'Stop sharing screen' : 'Share screen'}
-      aria-label={isSharing ? 'Stop sharing your screen' : 'Share your screen'}
-      aria-pressed={isSharing}
-    >
-      {isSharing ? <ScreenShareOffIcon /> : <ScreenShareIcon />}
-    </button>
-  )
-);
-ScreenShareButton.displayName = 'ScreenShareButton';
-
-/**
- * Stop screen share inline button (for indicator)
- */
-export const StopShareButton = memo(({ onClick }: ActionButtonProps) => (
-  <button
-    onClick={onClick}
-    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium transition-colors flex items-center gap-1"
-    aria-label="Stop sharing screen"
-  >
-    <CloseIcon />
-    Stop
-  </button>
-));
-StopShareButton.displayName = 'StopShareButton';
 
 interface ChatButtonProps extends ActionButtonProps {
   unreadCount?: number;

@@ -7,21 +7,13 @@
 
 import { useRef, useState, memo } from 'react';
 import { MediaControlWithSelector } from './MediaButtons';
-import {
-  StartButton,
-  StopButton,
-  NextButton,
-  LeaveButton,
-  ScreenShareButton,
-  ChatButton,
-} from './ActionButtons';
+import { StartButton, StopButton, NextButton, LeaveButton, ChatButton } from './ActionButtons';
 
 interface RoomControlsProps {
   isMatched: boolean;
   isSearching: boolean;
   isCameraOn: boolean;
   isMicOn: boolean;
-  isScreenSharing?: boolean;
   currentCameraId?: string;
   currentMicId?: string;
   isMobile?: boolean;
@@ -31,7 +23,6 @@ interface RoomControlsProps {
   onNext: () => void;
   onToggleCamera: () => void;
   onToggleMicrophone: () => void;
-  onToggleScreenShare?: () => void;
   onSwitchCamera?: (deviceId: string) => void;
   onSwitchMicrophone?: (deviceId: string) => void;
   onLeave: () => void;
@@ -47,7 +38,6 @@ export const RoomControls = memo(
     isSearching,
     isCameraOn,
     isMicOn,
-    isScreenSharing = false,
     currentCameraId,
     currentMicId,
     isMobile = false,
@@ -57,7 +47,6 @@ export const RoomControls = memo(
     onNext,
     onToggleCamera,
     onToggleMicrophone,
-    onToggleScreenShare,
     onSwitchCamera,
     onSwitchMicrophone,
     onLeave,
@@ -111,11 +100,6 @@ export const RoomControls = memo(
         {/* Chat Button - only for mobile when matched */}
         {isMobile && isMatched && onToggleMobileChat && (
           <ChatButton onClick={onToggleMobileChat} unreadCount={unreadChatCount} />
-        )}
-
-        {/* Screen Share - only when matched and NOT on mobile */}
-        {!isMobile && isMatched && onToggleScreenShare && (
-          <ScreenShareButton onClick={onToggleScreenShare} isSharing={isScreenSharing} />
         )}
 
         {/* Action Buttons */}

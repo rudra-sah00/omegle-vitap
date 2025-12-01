@@ -20,7 +20,6 @@ export interface LiveKitCallbacks {
     quality: ConnectionQuality,
     participant: RemoteParticipant | null
   ) => void;
-  onScreenShareSubscribed?: (participant: RemoteParticipant, isSharing: boolean) => void;
 }
 
 export interface DeviceIds {

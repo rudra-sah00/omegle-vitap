@@ -20,5 +20,5 @@ export type { NetworkQuality } from './config';
 export type { LiveKitConfig, LiveKitCallbacks, DeviceIds, NetworkQualityLevel } from './types';
 
 // Managers (for advanced usage)
-export { TrackManager, ScreenShareManager, RoomManager } from './managers';
+export { TrackManager, RoomManager } from './managers';
 export * from './managers/video-renderer';

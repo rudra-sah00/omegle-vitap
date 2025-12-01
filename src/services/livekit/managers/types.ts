@@ -27,9 +27,6 @@ export interface LiveKitState {
   /** Local microphone audio track */
   localAudioTrack: LocalAudioTrack | null;
 
-  /** Local screen share video track */
-  localScreenTrack: LocalVideoTrack | null;
-
   /** Whether we've successfully joined a room */
   isJoined: boolean;
 
@@ -39,17 +36,11 @@ export interface LiveKitState {
   /** Whether we're in preview mode */
   isPreviewMode: boolean;
 
-  /** Whether screen share is currently active */
-  isScreenSharing: boolean;
-
   /** Mutex for camera toggle operations */
   isTogglingCamera: boolean;
 
   /** Mutex for microphone toggle operations */
   isTogglingMic: boolean;
-
-  /** Mutex for screen share toggle operations */
-  isTogglingScreenShare: boolean;
 
   /** Currently selected camera device ID */
   currentCameraId?: string;
@@ -74,7 +65,6 @@ export interface LiveKitCallbacks {
     quality: ConnectionQuality,
     participant: RemoteParticipant | null
   ) => void;
-  onScreenShareSubscribed?: (participant: RemoteParticipant, isSharing: boolean) => void;
 }
 
 // ============================================

@@ -14,6 +14,3 @@ export * from './video';
 
 // Feedback (loading, errors, effects)
 export * from './feedback';
-
-// Screen sharing (local/remote views)
-export * from './screen-share';

@@ -10,15 +10,7 @@ export * from './Icons';
 export { MediaToggleButton, DeviceMenuTrigger, MediaControlWithSelector } from './MediaButtons';
 
 // Action Buttons
-export {
-  StartButton,
-  StopButton,
-  NextButton,
-  LeaveButton,
-  ScreenShareButton,
-  StopShareButton,
-} from './ActionButtons';
+export { StartButton, StopButton, NextButton, LeaveButton } from './ActionButtons';
 
 // Composite Controls
 export { RoomControls } from './RoomControls';
-export { ScreenShareIndicator } from './ScreenShareIndicator';
