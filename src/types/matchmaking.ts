@@ -112,6 +112,10 @@ export interface MessageData {
   from: number;
   text: string;
   timestamp: number;
+  fileUrl?: string;
+  fileName?: string;
+  mimeType?: string;
+  fileSize?: number;
 }
 
 // Signal Response (WebRTC signaling from partner)
@@ -162,6 +166,18 @@ export interface ChatMessage {
   };
 }
 
+export interface FileMessage {
+  type: 'file_message';
+  data: {
+    text: string;
+    fileUrl: string;
+    fileName: string;
+    mimeType: string;
+    fileSize: number;
+    filePath: string;
+  };
+}
+
 export interface SignalMessage {
   type: 'signal';
   data: {
@@ -186,6 +202,7 @@ export type ClientMessage =
   | LeaveMessage
   | CancelMessage
   | ChatMessage
+  | FileMessage
   | TypingIndicatorMessage
   | SignalMessage
   | PingMessage;

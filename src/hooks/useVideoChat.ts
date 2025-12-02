@@ -235,9 +235,18 @@ export function useVideoChat(options: UseVideoChatOptions) {
     onError: handleMatchmakingError,
   });
 
-  const { messages, isPartnerTyping, sendMessage, sendTypingIndicator, clearMessages } = useChat({
+  const {
+    messages,
+    isPartnerTyping,
+    sendMessage,
+    sendFileMessage,
+    sendTypingIndicator,
+    clearMessages,
+  } = useChat({
     ws: getSocketIOService(),
     isInSession,
+    roomId: matchData?.roomId,
+    uid: parseInt(currentUidRef.current, 10),
     onMessageReceived: () => {},
     onTypingIndicator: () => {},
     isChatOpen,
@@ -457,6 +466,7 @@ export function useVideoChat(options: UseVideoChatOptions) {
     getCurrentDevices,
     reattachLocalVideo,
     sendMessage,
+    sendFileMessage,
     sendTypingIndicator,
   };
 }

@@ -10,6 +10,7 @@ interface MobileChatProps {
   isConnected: boolean;
   isStrangerTyping?: boolean;
   onSendMessage?: (message: string) => void;
+  onFileUpload?: (file: File, caption?: string) => Promise<void>;
   onTyping?: (isTyping: boolean) => void;
   connectionState?: ConnectionState;
   messages?: MessageData[];
@@ -22,6 +23,7 @@ export const MobileChat = ({
   isConnected,
   isStrangerTyping = false,
   onSendMessage,
+  onFileUpload,
   onTyping,
   messages = [],
   partnerName,
@@ -89,7 +91,12 @@ export const MobileChat = ({
             />
           </div>
           <div className="flex-shrink-0">
-            <ChatInput isConnected={isConnected} onSend={onSendMessage} onTyping={onTyping} />
+            <ChatInput
+              isConnected={isConnected}
+              onSend={onSendMessage}
+              onFileUpload={onFileUpload}
+              onTyping={onTyping}
+            />
           </div>
         </div>
       </div>

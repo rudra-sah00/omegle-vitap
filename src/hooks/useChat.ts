@@ -45,6 +45,7 @@ import {
 } from '@/constants';
 import type { SocketIOService } from '@/services/socket';
 import { notificationSound } from '@/services/notification';
+import { FileUploadService } from '@/services/fileUpload';
 
 /**
  * Structure of a chat message
@@ -61,6 +62,10 @@ export interface MessageData {
   senderId: string;
   senderName: string;
   timestamp: number;
+  fileUrl?: string;
+  fileName?: string;
+  mimeType?: string;
+  fileSize?: number;
 }
 
 /**
@@ -74,6 +79,8 @@ export interface MessageData {
 interface UseChatOptions {
   ws: SocketIOService | null;
   isInSession: boolean;
+  roomId?: string; // Current room ID for file uploads
+  uid?: number; // Current user ID for file uploads
   onMessageReceived?: (message: MessageData) => void;
   onTypingIndicator?: (isTyping: boolean) => void;
   isChatOpen?: boolean; // For mobile: whether chat section is currently visible
@@ -89,7 +96,15 @@ interface UseChatOptions {
  * @see {@link UseChatOptions} for configuration options
  */
 export function useChat(options: UseChatOptions) {
-  const { ws, isInSession, onMessageReceived, onTypingIndicator, isChatOpen = true } = options;
+  const {
+    ws,
+    isInSession,
+    roomId,
+    uid,
+    onMessageReceived,
+    onTypingIndicator,
+    isChatOpen = true,
+  } = options;
 
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [isPartnerTypingInternal, setIsPartnerTypingInternal] = useState(false);
@@ -123,6 +138,10 @@ export function useChat(options: UseChatOptions) {
           senderId: msg.data.from.toString(),
           senderName: 'Stranger',
           timestamp: msg.data.timestamp,
+          fileUrl: msg.data.fileUrl,
+          fileName: msg.data.fileName,
+          mimeType: msg.data.mimeType,
+          fileSize: msg.data.fileSize,
         };
 
         setMessages((prev) => [...prev, messageData]);
@@ -154,7 +173,7 @@ export function useChat(options: UseChatOptions) {
         clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [ws, isInSession, onMessageReceived, onTypingIndicator]);
+  }, [ws, isInSession, onMessageReceived, onTypingIndicator, isChatOpen]);
 
   const sendMessage = useCallback(
     (text: string) => {
@@ -231,6 +250,55 @@ export function useChat(options: UseChatOptions) {
     [ws, isInSession]
   );
 
+  const sendFileMessage = useCallback(
+    async (file: File, caption?: string) => {
+      if (!ws || !isInSession || !roomId || !uid) {
+        throw new Error('Cannot send file: not in active session');
+      }
+
+      try {
+        // Upload file to backend
+        const uploadResponse = await FileUploadService.uploadFile(file, roomId, uid);
+
+        const messageId = `msg-${Date.now()}-${messageIdCounter.current++}`;
+
+        // Create optimistic message for UI
+        const timestamp = Date.now();
+        const messageData: MessageData = {
+          id: messageId,
+          text: caption || '',
+          senderId: 'self',
+          senderName: 'You',
+          timestamp,
+          fileUrl: uploadResponse.fileUrl,
+          fileName: uploadResponse.fileName,
+          mimeType: uploadResponse.mimeType,
+          fileSize: uploadResponse.fileSize,
+        };
+
+        // Add to UI immediately
+        setMessages((prev) => [...prev, messageData]);
+
+        // Send via WebSocket with file metadata
+        ws.send({
+          type: 'file_message',
+          data: {
+            text: caption || '',
+            fileUrl: uploadResponse.fileUrl,
+            fileName: uploadResponse.fileName,
+            mimeType: uploadResponse.mimeType,
+            fileSize: uploadResponse.fileSize,
+            filePath: uploadResponse.filePath, // For backend cleanup
+          },
+        });
+      } catch (error) {
+        console.error('File upload failed:', error);
+        throw error;
+      }
+    },
+    [ws, isInSession, roomId, uid]
+  );
+
   const clearMessages = useCallback(() => {
     setMessages([]);
     setIsPartnerTypingInternal(false);
@@ -251,6 +319,7 @@ export function useChat(options: UseChatOptions) {
     messages,
     isPartnerTyping,
     sendMessage,
+    sendFileMessage,
     sendTypingIndicator,
     clearMessages,
   };

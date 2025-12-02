@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { TypingIndicator } from './TypingIndicator';
+import { FileMessage } from './FileMessage';
 import { formatMessage } from '@/utils/messageFormatter';
 import { TextAnimate } from '@/components/ui/text-animate';
 import type { MessageData } from '@/hooks/useChat';
@@ -89,9 +90,10 @@ export const ChatMessages = ({
           {messages.map((message) => {
             const isYou = message.senderName === 'You';
             const isNewMessage = !animatedIds.has(message.id);
+            const isFileMessage = Boolean(message.fileUrl);
             // Check if message has URLs (links) - if so, skip animation
             const hasLinks = /https?:\/\/|www\./i.test(message.text);
-            const shouldAnimate = !isYou && isNewMessage && !hasLinks;
+            const shouldAnimate = !isYou && isNewMessage && !hasLinks && !isFileMessage;
 
             return (
               <div key={message.id} className="flex items-start gap-2 w-full">
@@ -103,7 +105,15 @@ export const ChatMessages = ({
                   {isYou ? 'You:' : `${partnerName || 'Stranger'}:`}
                 </span>
                 <div className="flex-1 text-sm text-slate-800 break-words break-all overflow-hidden whitespace-pre-wrap min-w-0">
-                  {shouldAnimate ? (
+                  {isFileMessage && message.fileUrl && message.fileName && message.mimeType ? (
+                    <FileMessage
+                      fileUrl={message.fileUrl}
+                      fileName={message.fileName}
+                      mimeType={message.mimeType}
+                      fileSize={message.fileSize}
+                      caption={message.text || undefined}
+                    />
+                  ) : shouldAnimate ? (
                     <TextAnimate
                       animation="slideLeft"
                       by="character"
