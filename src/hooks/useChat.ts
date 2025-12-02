@@ -108,9 +108,14 @@ export function useChat(options: UseChatOptions) {
 
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [isPartnerTypingInternal, setIsPartnerTypingInternal] = useState(false);
+  const [totalUploadedSize, setTotalUploadedSize] = useState(0);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingMessages = useRef<Set<string>>(new Set());
   const messageIdCounter = useRef<number>(0);
+
+  // File upload limits: max 10MB per file, max 50MB total per session
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
+  const MAX_TOTAL_SIZE = 50 * 1024 * 1024; // 50MB total per session
 
   // Derive actual typing state - only true if in session AND partner is typing
   const isPartnerTyping = isInSession && ws && isPartnerTypingInternal;
@@ -256,6 +261,19 @@ export function useChat(options: UseChatOptions) {
         throw new Error('Cannot send file: not in active session');
       }
 
+      // Validate file size - max 10MB per file
+      if (file.size > MAX_FILE_SIZE) {
+        throw new Error('File size exceeds 10MB limit');
+      }
+
+      // Validate total uploaded size - max 50MB per session
+      if (totalUploadedSize + file.size > MAX_TOTAL_SIZE) {
+        const remainingMB = ((MAX_TOTAL_SIZE - totalUploadedSize) / (1024 * 1024)).toFixed(1);
+        throw new Error(
+          `Upload limit reached. You can upload ${remainingMB}MB more in this session`
+        );
+      }
+
       try {
         // Upload file to backend
         const uploadResponse = await FileUploadService.uploadFile(file, roomId, uid);
@@ -279,6 +297,9 @@ export function useChat(options: UseChatOptions) {
         // Add to UI immediately
         setMessages((prev) => [...prev, messageData]);
 
+        // Update total uploaded size
+        setTotalUploadedSize((prev) => prev + file.size);
+
         // Send via WebSocket with file metadata
         ws.send({
           type: 'file_message',
@@ -296,12 +317,13 @@ export function useChat(options: UseChatOptions) {
         throw error;
       }
     },
-    [ws, isInSession, roomId, uid]
+    [ws, isInSession, roomId, uid, totalUploadedSize, MAX_FILE_SIZE, MAX_TOTAL_SIZE]
   );
 
   const clearMessages = useCallback(() => {
     setMessages([]);
     setIsPartnerTypingInternal(false);
+    setTotalUploadedSize(0);
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = null;
@@ -322,5 +344,7 @@ export function useChat(options: UseChatOptions) {
     sendFileMessage,
     sendTypingIndicator,
     clearMessages,
+    totalUploadedSize,
+    maxTotalSize: MAX_TOTAL_SIZE,
   };
 }

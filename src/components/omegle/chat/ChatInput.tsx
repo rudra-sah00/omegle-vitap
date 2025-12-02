@@ -22,6 +22,7 @@ export const ChatInput = ({ isConnected, onSend, onFileUpload, onTyping }: ChatI
   const [isSending, setIsSending] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | undefined>(undefined);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -35,6 +36,7 @@ export const ChatInput = ({ isConnected, onSend, onFileUpload, onTyping }: ChatI
 
       setIsSending(true);
       setUploadProgress(0);
+      setUploadError(null);
 
       try {
         // Simulate upload progress
@@ -62,6 +64,8 @@ export const ChatInput = ({ isConnected, onSend, onFileUpload, onTyping }: ChatI
         analytics.trackMessageSent(trimmedMessage.length, false);
       } catch (error) {
         console.error('File upload failed:', error);
+        const errorMessage = error instanceof Error ? error.message : 'File upload failed';
+        setUploadError(errorMessage);
         setUploadProgress(undefined);
       } finally {
         setIsSending(false);
@@ -291,6 +295,19 @@ export const ChatInput = ({ isConnected, onSend, onFileUpload, onTyping }: ChatI
           )}
         </button>
       </div>
+
+      {/* Upload Error */}
+      {uploadError && (
+        <div className="mt-2 bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-lg text-sm flex items-center justify-between">
+          <span>{uploadError}</span>
+          <button
+            onClick={() => setUploadError(null)}
+            className="text-red-400 hover:text-red-600 ml-2"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Character Counter */}
       {message.length > 0 && (

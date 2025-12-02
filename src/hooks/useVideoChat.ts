@@ -242,6 +242,8 @@ export function useVideoChat(options: UseVideoChatOptions) {
     sendFileMessage,
     sendTypingIndicator,
     clearMessages,
+    totalUploadedSize,
+    maxTotalSize,
   } = useChat({
     ws: getSocketIOService(),
     isInSession,
@@ -468,5 +470,7 @@ export function useVideoChat(options: UseVideoChatOptions) {
     sendMessage,
     sendFileMessage,
     sendTypingIndicator,
+    totalUploadedSize,
+    maxTotalSize,
   };
 }
