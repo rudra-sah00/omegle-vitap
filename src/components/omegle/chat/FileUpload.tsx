@@ -1,7 +1,8 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { Paperclip, X, FileImage, FileText, Video } from 'lucide-react';
+import { showError } from '@/lib';
 
 interface FileUploadProps {
   isConnected: boolean;
@@ -34,7 +35,6 @@ const ALLOWED_TYPES = {
 
 export const FileUpload = ({ isConnected, onFileSelect, disabled }: FileUploadProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const handleFileClick = () => {
     if (!isConnected || disabled) return;
@@ -45,17 +45,15 @@ export const FileUpload = ({ isConnected, onFileSelect, disabled }: FileUploadPr
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setError(null);
-
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      setError('File size must be less than 10MB');
+      showError('File size must be less than 10MB');
       return;
     }
 
     // Validate file type
     if (!ALLOWED_TYPES[file.type as keyof typeof ALLOWED_TYPES]) {
-      setError('Invalid file type. Only images, videos, audio, and documents are allowed.');
+      showError('Invalid file type. Only images, videos, audio, and documents are allowed.');
       return;
     }
 
@@ -86,15 +84,6 @@ export const FileUpload = ({ isConnected, onFileSelect, disabled }: FileUploadPr
         onChange={handleFileChange}
         className="hidden"
       />
-
-      {error && (
-        <div className="absolute bottom-full left-0 mb-2 bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
-          <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
     </>
   );
 };
