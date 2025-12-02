@@ -97,14 +97,13 @@ export const RoomControls = memo(
           onSwitchDevice={onSwitchMicrophone}
         />
 
-        {/* Chat Button - only for mobile when matched */}
-        {isMobile && isMatched && onToggleMobileChat && (
-          <ChatButton onClick={onToggleMobileChat} unreadCount={unreadChatCount} />
-        )}
-
         {/* Action Buttons */}
         {isMatched ? (
           <>
+            {/* Chat Button - for mobile when matched */}
+            {isMobile && onToggleMobileChat && (
+              <ChatButton onClick={onToggleMobileChat} unreadCount={unreadChatCount} />
+            )}
             <NextButton onClick={onNext} />
             <LeaveButton onClick={onLeave} />
           </>
