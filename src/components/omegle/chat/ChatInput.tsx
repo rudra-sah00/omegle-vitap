@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { analytics } from '@/services/firebase';
-import { EMOJI_PICKER_HIDE_DELAY } from '@/constants';
+import { EMOJI_PICKER_HIDE_DELAY, MAX_MESSAGE_LENGTH } from '@/constants';
 
 // Dynamically import emoji picker to avoid SSR issues
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
@@ -176,7 +176,7 @@ export const ChatInput = ({ isConnected, onSend, onTyping }: ChatInputProps) => 
           placeholder={isConnected ? 'Type your message...' : 'Connect to start chatting'}
           disabled={!isConnected}
           className="flex-1 px-4 py-3 text-sm rounded-xl border-2 border-slate-200 focus:outline-none focus:border-blue-400 transition-colors disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
-          maxLength={500}
+          maxLength={MAX_MESSAGE_LENGTH}
           autoComplete="off"
           spellCheck="true"
         />
@@ -224,6 +224,23 @@ export const ChatInput = ({ isConnected, onSend, onTyping }: ChatInputProps) => 
           )}
         </button>
       </div>
+
+      {/* Character Counter */}
+      {message.length > 0 && (
+        <div className="mt-2 text-right">
+          <span
+            className={`text-xs ${
+              message.length >= MAX_MESSAGE_LENGTH
+                ? 'text-red-500 font-semibold'
+                : message.length >= MAX_MESSAGE_LENGTH * 0.9
+                  ? 'text-orange-500'
+                  : 'text-slate-400'
+            }`}
+          >
+            {message.length} / {MAX_MESSAGE_LENGTH}
+          </span>
+        </div>
+      )}
     </div>
   );
 };

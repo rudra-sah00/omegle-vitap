@@ -60,6 +60,7 @@ function OmeglePageContent() {
   } = useVideoChat({
     localVideoElementId: 'local-video',
     remoteVideoElementId: 'remote-video',
+    isChatOpen: isMobile ? isMobileChatOpen : true, // On mobile, pass chat open state; on desktop, always true
   });
 
   const devices = getCurrentDevices();

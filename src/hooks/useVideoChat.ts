@@ -62,6 +62,7 @@ import type { MatchDataMatched } from '@/types/matchmaking';
 interface UseVideoChatOptions {
   localVideoElementId: string;
   remoteVideoElementId: string;
+  isChatOpen?: boolean; // For mobile: whether chat section is currently visible
 }
 
 /**
@@ -75,7 +76,7 @@ interface UseVideoChatOptions {
  * @see {@link useChat} for messaging functionality
  */
 export function useVideoChat(options: UseVideoChatOptions) {
-  const { localVideoElementId, remoteVideoElementId } = options;
+  const { localVideoElementId, remoteVideoElementId, isChatOpen = true } = options;
 
   const { uid: contextUID } = useUser();
 
@@ -239,6 +240,7 @@ export function useVideoChat(options: UseVideoChatOptions) {
     isInSession,
     onMessageReceived: () => {},
     onTypingIndicator: () => {},
+    isChatOpen,
   });
 
   const beginSearch = useCallback(

@@ -44,6 +44,7 @@ import {
   MESSAGE_PENDING_CLEAR_DELAY,
 } from '@/constants';
 import type { SocketIOService } from '@/services/socket';
+import { notificationSound } from '@/services/notification';
 
 /**
  * Structure of a chat message
@@ -75,6 +76,7 @@ interface UseChatOptions {
   isInSession: boolean;
   onMessageReceived?: (message: MessageData) => void;
   onTypingIndicator?: (isTyping: boolean) => void;
+  isChatOpen?: boolean; // For mobile: whether chat section is currently visible
 }
 
 /**
@@ -87,7 +89,7 @@ interface UseChatOptions {
  * @see {@link UseChatOptions} for configuration options
  */
 export function useChat(options: UseChatOptions) {
-  const { ws, isInSession, onMessageReceived, onTypingIndicator } = options;
+  const { ws, isInSession, onMessageReceived, onTypingIndicator, isChatOpen = true } = options;
 
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [isPartnerTypingInternal, setIsPartnerTypingInternal] = useState(false);
@@ -97,6 +99,11 @@ export function useChat(options: UseChatOptions) {
 
   // Derive actual typing state - only true if in session AND partner is typing
   const isPartnerTyping = isInSession && ws && isPartnerTypingInternal;
+
+  // Initialize notification sound on mount (after user interaction)
+  useEffect(() => {
+    notificationSound.initialize();
+  }, []);
 
   useEffect(() => {
     if (!ws || !isInSession) {
@@ -120,6 +127,11 @@ export function useChat(options: UseChatOptions) {
 
         setMessages((prev) => [...prev, messageData]);
         onMessageReceived?.(messageData);
+
+        // Play notification sound for incoming messages (not own messages)
+        if (msg.data.from.toString() !== 'self') {
+          notificationSound.play(isChatOpen);
+        }
       } else if (msg.type === 'typing') {
         const isTyping = msg.data.isTyping;
         setIsPartnerTypingInternal(isTyping);
