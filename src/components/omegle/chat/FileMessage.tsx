@@ -1,8 +1,9 @@
 'use client';
 
-import { FileImage, FileText, Video, Download, Music } from 'lucide-react';
+import { FileImage, FileText, Video, Download, Music, X } from 'lucide-react';
 import { FileUploadService } from '@/services/fileUpload';
 import Image from 'next/image';
+import { useState } from 'react';
 
 interface FileMessageProps {
   fileUrl: string;
@@ -19,6 +20,8 @@ export const FileMessage = ({
   fileSize,
   caption,
 }: FileMessageProps) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   const fileType = FileUploadService.getFileType(mimeType);
 
   const getIcon = () => {
@@ -34,36 +37,160 @@ export const FileMessage = ({
     }
   };
 
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+  };
+
+  const getImageDisplaySize = () => {
+    if (!imageDimensions.width || !imageDimensions.height) {
+      return { width: 300, height: 300 };
+    }
+
+    const maxWidth = 400;
+    const maxHeight = 300;
+    const aspectRatio = imageDimensions.width / imageDimensions.height;
+
+    let width = imageDimensions.width;
+    let height = imageDimensions.height;
+
+    if (width > maxWidth) {
+      width = maxWidth;
+      height = width / aspectRatio;
+    }
+
+    if (height > maxHeight) {
+      height = maxHeight;
+      width = height * aspectRatio;
+    }
+
+    return { width: Math.round(width), height: Math.round(height) };
+  };
+
   const renderFilePreview = () => {
     if (fileType === 'image') {
+      const displaySize = getImageDisplaySize();
+
       return (
-        <div className="relative rounded-lg overflow-hidden border border-slate-200 hover:border-blue-400 transition-colors max-w-xs">
-          <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+        <>
+          <div
+            className="relative rounded-lg overflow-hidden border border-slate-200 hover:border-blue-400 transition-colors cursor-pointer bg-slate-50"
+            style={{
+              width: displaySize.width || 'auto',
+              height: displaySize.height || 'auto',
+            }}
+            onClick={() => setIsModalOpen(true)}
+          >
             <Image
               src={fileUrl}
               alt={fileName}
-              width={300}
-              height={300}
-              className="max-h-64 object-contain w-auto h-auto"
+              width={displaySize.width}
+              height={displaySize.height}
+              className="object-cover"
               loading="lazy"
               unoptimized
+              onLoad={handleImageLoad}
             />
-          </a>
-        </div>
+          </div>
+
+          {/* Image Modal */}
+          {isModalOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+              onClick={() => setIsModalOpen(false)}
+            >
+              <button
+                className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10"
+                onClick={() => setIsModalOpen(false)}
+              >
+                <X className="w-8 h-8" />
+              </button>
+              <div
+                className="relative max-w-[90vw] max-h-[90vh]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Image
+                  src={fileUrl}
+                  alt={fileName}
+                  width={imageDimensions.width || 800}
+                  height={imageDimensions.height || 600}
+                  className="max-w-full max-h-[90vh] object-contain"
+                  unoptimized
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                  <p className="text-white text-sm truncate">{fileName}</p>
+                  {fileSize && (
+                    <p className="text-gray-300 text-xs">
+                      {FileUploadService.formatFileSize(fileSize)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       );
     }
 
     if (fileType === 'video') {
       return (
-        <video
-          src={fileUrl}
-          controls
-          className="max-w-xs max-h-64 rounded-lg border border-slate-200 bg-black"
-          preload="metadata"
-          playsInline
-        >
-          Your browser does not support the video tag.
-        </video>
+        <>
+          <div
+            className="relative rounded-lg overflow-hidden border border-slate-200 hover:border-blue-400 transition-colors cursor-pointer bg-black max-w-md"
+            onClick={() => setIsModalOpen(true)}
+          >
+            <video
+              src={fileUrl}
+              className="max-h-64 w-full object-contain"
+              preload="metadata"
+              playsInline
+            >
+              Your browser does not support the video tag.
+            </video>
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="bg-black/50 rounded-full p-3">
+                <Video className="w-8 h-8 text-white" />
+              </div>
+            </div>
+          </div>
+
+          {/* Video Modal */}
+          {isModalOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+              onClick={() => setIsModalOpen(false)}
+            >
+              <button
+                className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10"
+                onClick={() => setIsModalOpen(false)}
+              >
+                <X className="w-8 h-8" />
+              </button>
+              <div
+                className="relative max-w-[90vw] max-h-[90vh]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <video
+                  src={fileUrl}
+                  controls
+                  autoPlay
+                  className="max-w-full max-h-[90vh] rounded-lg"
+                  playsInline
+                >
+                  Your browser does not support the video tag.
+                </video>
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pointer-events-none">
+                  <p className="text-white text-sm truncate">{fileName}</p>
+                  {fileSize && (
+                    <p className="text-gray-300 text-xs">
+                      {FileUploadService.formatFileSize(fileSize)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       );
     }
 
