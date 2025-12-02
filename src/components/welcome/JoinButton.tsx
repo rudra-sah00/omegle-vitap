@@ -74,7 +74,7 @@ export const JoinButton: React.FC<JoinButtonProps> = ({
             Service Offline
           </span>
           <span className="text-xs font-normal opacity-90">
-            Active Hours: 9:00 PM ~ 2:00 AM IST
+            Active Hours: 11:00 PM ~ 3:00 AM IST
           </span>
         </div>
       </Button>

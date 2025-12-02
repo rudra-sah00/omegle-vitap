@@ -67,7 +67,7 @@ export const WelcomeForm = () => {
     if (!isOnline) {
       setServiceAvailable(false);
       setServiceMessage(
-        'Service is currently offline. Please try again during active hours (9 PM - 2 AM IST).'
+        'Service is currently offline. Please try again during active hours (11 PM - 3 AM IST).'
       );
       return;
     }
