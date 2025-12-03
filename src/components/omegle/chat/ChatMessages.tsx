@@ -96,39 +96,46 @@ export const ChatMessages = ({
             const shouldAnimate = !isYou && isNewMessage && !hasLinks && !isFileMessage;
 
             return (
-              <div key={message.id} className="flex items-start gap-2 w-full">
-                <span
-                  className={`text-sm font-semibold min-w-[70px] flex-shrink-0 ${
-                    isYou ? 'text-blue-600' : 'text-slate-600'
-                  }`}
-                >
-                  {isYou ? 'You:' : `${partnerName || 'Stranger'}:`}
-                </span>
-                <div className="flex-1 text-sm text-slate-800 break-words break-all overflow-hidden whitespace-pre-wrap min-w-0">
-                  {isFileMessage && message.fileUrl && message.fileName && message.mimeType ? (
-                    <FileMessage
-                      fileUrl={message.fileUrl}
-                      fileName={message.fileName}
-                      mimeType={message.mimeType}
-                      fileSize={message.fileSize}
-                      caption={message.text || undefined}
-                    />
-                  ) : shouldAnimate ? (
-                    <TextAnimate
-                      animation="slideLeft"
-                      by="character"
-                      duration={0.5}
-                      startOnView={false}
-                      once={true}
-                      className="inline"
-                      as="span"
+              <div key={message.id} className="w-full">
+                {/* For file messages, pass sender name to show overlaid on image */}
+                {isFileMessage && message.fileUrl && message.fileName && message.mimeType ? (
+                  <FileMessage
+                    fileUrl={message.fileUrl}
+                    fileName={message.fileName}
+                    mimeType={message.mimeType}
+                    fileSize={message.fileSize}
+                    caption={message.text || undefined}
+                    senderName={isYou ? 'You' : partnerName || 'Stranger'}
+                    isYou={isYou}
+                  />
+                ) : (
+                  <div className="flex items-start gap-2">
+                    <span
+                      className={`text-sm font-semibold min-w-[70px] flex-shrink-0 ${
+                        isYou ? 'text-blue-600' : 'text-slate-600'
+                      }`}
                     >
-                      {message.text}
-                    </TextAnimate>
-                  ) : (
-                    formatMessage(message.text)
-                  )}
-                </div>
+                      {isYou ? 'You:' : `${partnerName || 'Stranger'}:`}
+                    </span>
+                    <div className="flex-1 text-sm text-slate-800 break-words break-all overflow-hidden whitespace-pre-wrap min-w-0">
+                      {shouldAnimate ? (
+                        <TextAnimate
+                          animation="slideLeft"
+                          by="character"
+                          duration={0.5}
+                          startOnView={false}
+                          once={true}
+                          className="inline"
+                          as="span"
+                        >
+                          {message.text}
+                        </TextAnimate>
+                      ) : (
+                        formatMessage(message.text)
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

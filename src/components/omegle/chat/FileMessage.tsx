@@ -11,6 +11,8 @@ interface FileMessageProps {
   mimeType: string;
   fileSize?: number;
   caption?: string;
+  senderName?: string;
+  isYou?: boolean;
 }
 
 export const FileMessage = ({
@@ -19,6 +21,8 @@ export const FileMessage = ({
   mimeType,
   fileSize,
   caption,
+  senderName,
+  isYou,
 }: FileMessageProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
@@ -91,6 +95,14 @@ export const FileMessage = ({
               unoptimized
               onLoad={handleImageLoad}
             />
+            {/* Sender name overlaid at bottom-left like Instagram */}
+            {senderName && (
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-3 py-2">
+                <span className={`text-xs font-semibold ${isYou ? 'text-blue-400' : 'text-white'}`}>
+                  {senderName}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Image Modal */}
@@ -152,6 +164,14 @@ export const FileMessage = ({
                 <Video className="w-8 h-8 text-white" />
               </div>
             </div>
+            {/* Sender name overlaid at bottom-left like Instagram */}
+            {senderName && (
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-3 py-2 pointer-events-none">
+                <span className={`text-xs font-semibold ${isYou ? 'text-blue-400' : 'text-white'}`}>
+                  {senderName}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Video Modal */}

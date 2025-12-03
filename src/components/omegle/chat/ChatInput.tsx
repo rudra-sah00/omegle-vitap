@@ -229,25 +229,41 @@ export const ChatInput = ({ isConnected, onSend, onFileUpload, onTyping }: ChatI
           <span className="text-xl">😊</span>
         </button>
 
-        <input
-          ref={inputRef}
-          type="text"
-          value={message}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          placeholder={
-            selectedFile
-              ? 'Add a caption (optional)...'
-              : isConnected
-                ? 'Type your message...'
-                : 'Connect to start chatting'
-          }
-          disabled={!isConnected}
-          className="flex-1 px-4 py-3 text-sm rounded-xl border-2 border-slate-200 focus:outline-none focus:border-blue-400 transition-colors disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
-          maxLength={MAX_MESSAGE_LENGTH}
-          autoComplete="off"
-          spellCheck="true"
-        />
+        <div className="flex-1 relative">
+          <input
+            ref={inputRef}
+            type="text"
+            value={message}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              selectedFile
+                ? 'Add a caption (optional)...'
+                : isConnected
+                  ? 'Type your message...'
+                  : 'Connect to start chatting'
+            }
+            disabled={!isConnected}
+            className="w-full px-4 py-3 pr-16 text-sm rounded-xl border-2 border-slate-200 focus:outline-none focus:border-blue-400 transition-colors disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+            maxLength={MAX_MESSAGE_LENGTH}
+            autoComplete="off"
+            spellCheck="true"
+          />
+          {/* Character Counter - Inside Input */}
+          {message.length > 0 && (
+            <span
+              className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs pointer-events-none ${
+                message.length >= MAX_MESSAGE_LENGTH
+                  ? 'text-red-500 font-semibold'
+                  : message.length >= MAX_MESSAGE_LENGTH * 0.9
+                    ? 'text-orange-500'
+                    : 'text-slate-400'
+              }`}
+            >
+              {message.length}/{MAX_MESSAGE_LENGTH}
+            </span>
+          )}
+        </div>
         <button
           onClick={handleSend}
           disabled={!canSend}
@@ -294,23 +310,6 @@ export const ChatInput = ({ isConnected, onSend, onFileUpload, onTyping }: ChatI
           )}
         </button>
       </div>
-
-      {/* Character Counter */}
-      {message.length > 0 && (
-        <div className="mt-2 text-right">
-          <span
-            className={`text-xs ${
-              message.length >= MAX_MESSAGE_LENGTH
-                ? 'text-red-500 font-semibold'
-                : message.length >= MAX_MESSAGE_LENGTH * 0.9
-                  ? 'text-orange-500'
-                  : 'text-slate-400'
-            }`}
-          >
-            {message.length} / {MAX_MESSAGE_LENGTH}
-          </span>
-        </div>
-      )}
     </div>
   );
 };
