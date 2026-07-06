@@ -797,3 +797,4 @@ MIT License - see [LICENSE](LICENSE) file
 **Built with ❤️ for VIT-AP students**
 
 **Start chatting anonymously today!** 🎉
+
